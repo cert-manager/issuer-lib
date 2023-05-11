@@ -1,0 +1,39 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: simple-issuer-controller-role
+rules:
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificaterequests
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificaterequests/status
+  verbs:
+  - get
+  - patch
+- apiGroups:
+  - testing.cert-manager.io
+  resources:
+  - simpleclusterissuers
+  - simpleissuers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - testing.cert-manager.io
+  resources:
+  - simpleclusterissuers/status
+  - simpleissuers/status
+  verbs:
+  - get
+  - patch
