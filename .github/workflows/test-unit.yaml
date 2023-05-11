@@ -1,0 +1,27 @@
+# Run unit-tests
+#
+# These actions are skipped for draft PRs.
+# See https://github.community/t/dont-run-actions-on-draft-pull-requests/16817/19
+name: test-unit
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+jobs:
+  unit-tests:
+    permissions:
+      contents: write
+      id-token: write
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: actions/cache@v3
+        with:
+          path: _bin/downloaded
+          key: downloaded-${{ runner.os }}-${{ hashFiles('make/tools.mk') }}-${{ hashFiles('make/image-preload.mk') }}
+      - run: make -j tools images test

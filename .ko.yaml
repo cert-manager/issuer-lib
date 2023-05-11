@@ -1,0 +1,8 @@
+builds:
+- id: manager
+  main: .
+  env:
+  - CGO_ENABLED=0
+  ldflags:
+  - -s
+  - -w
