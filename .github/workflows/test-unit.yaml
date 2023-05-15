@@ -9,7 +9,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
 jobs:
-  unit-tests:
+  test-unit:
     permissions:
       contents: write
       id-token: write

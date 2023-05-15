@@ -9,12 +9,11 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
 jobs:
-  golangci-lint:
+  lint:
     # See https://github.com/golangci/golangci-lint-action
     # TODO(wallrj) Timeout is increased to 3m because the action sometimes takes
     # a long time. Remove this when the upstream issue is resolved.
     # See https://github.com/golangci/golangci-lint-action/issues/297
-    name: golangci-lint
     runs-on: ubuntu-20.04
     if: github.event.pull_request.draft == false
     steps:
