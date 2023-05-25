@@ -31,11 +31,9 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	ctrlzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/cert-manager/issuer-lib/internal/tests/ptr"
 	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/api"
 	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/controller"
 
@@ -144,14 +142,6 @@ func main() {
 		// if you are doing or is intended to do any operation such as perform cleanups
 		// after the manager stops then its usage might be unsafe.
 		LeaderElectionReleaseOnCancel: true,
-		Controller: v1alpha1.ControllerConfigurationSpec{
-			// CacheSyncTimeout refers to the time limit set on waiting for cache to sync.
-			// The default is 2 minutes and we manually set that here so that
-			// the same timeout can be used when setting up field indexers in
-			// the controllers SetupWithManager functions.
-			// https://github.com/kubernetes-sigs/controller-runtime/blob/c83076e9f79258f23bcb200cf2391cf4ade939cf/pkg/internal/controller/controller.go#L80-L82
-			CacheSyncTimeout: ptr.New(2 * time.Minute),
-		},
 	}
 
 	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())

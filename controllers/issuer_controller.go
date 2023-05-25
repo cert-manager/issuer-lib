@@ -228,7 +228,7 @@ func (r *IssuerReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manage
 				IssuerPredicate{},
 			),
 		).
-		Watches(
+		WatchesRawSource(
 			r.EventSource.AddConsumer(forObjectGvk),
 			nil,
 		)
