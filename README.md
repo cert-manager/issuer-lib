@@ -14,8 +14,15 @@ See `./internal/testsetups/simple` for an example of creating an issuer based on
 
 ---
 
-⚠️ Warning: This library is ready to be used in production, but the API is still subject to change.
-Developers using this library might have to update their code when updating to a newer version.
+⚠️ Warning: This library's API is still subject to change. Developers using this library will have to update their
+code when updating to a newer version.
+
+0. Currently, this library is used to build production Issuers, but no open-source Issuers/ examples are available yet. We advice to use this library only for experimentation.
+1. Once we have an open-source Issuer
+that uses this library & we have an example project that shows how to use this library, we will start advising developers to build all new issuers on top of this library.
+2. Once we have a 2nd or 3rd open-source Issuer that uses this library, we should be able to guarantee more stability.
+At this point, we will start advising developers to migrate their existing Issuers to this library.
+3. At 5+ open-source Issuers, we plan to make a stable v1 release of this library.
 
 ---
 
