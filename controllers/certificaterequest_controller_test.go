@@ -63,11 +63,13 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		expectedEvents      []string
 	}
 
-	fakeTime1 := time.Now().Truncate(time.Second)
+	randTime := randomTime()
+
+	fakeTime1 := randTime.Truncate(time.Second)
 	fakeTimeObj1 := metav1.NewTime(fakeTime1)
 	fakeClock1 := clocktesting.NewFakeClock(fakeTime1)
 
-	fakeTime2 := time.Now().Add(4 * time.Hour).Truncate(time.Second)
+	fakeTime2 := randTime.Add(4 * time.Hour).Truncate(time.Second)
 	fakeTimeObj2 := metav1.NewTime(fakeTime2)
 	fakeClock2 := clocktesting.NewFakeClock(fakeTime2)
 

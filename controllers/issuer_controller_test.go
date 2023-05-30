@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -46,6 +47,20 @@ import (
 	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/testutil"
 )
 
+// We are using a random time generator to generate random times for the
+// fakeClock. This will result in different times for each test run and
+// should make sure we don't incorrectly rely on `time.Now()` in the code.
+// WARNING: This approach does not guarantee that incorrect use of `time.Now()`
+// is always detected, but after a few test runs it should be very unlikely.
+func randomTime() time.Time {
+	min := time.Date(1970, 1, 0, 0, 0, 0, 0, time.UTC).Unix()
+	max := time.Date(2070, 1, 0, 0, 0, 0, 0, time.UTC).Unix()
+	delta := max - min
+
+	sec := rand.Int63n(delta) + min
+	return time.Unix(sec, 0)
+}
+
 func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 	t.Parallel()
 
@@ -62,11 +77,13 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 		expectedEvents      []string
 	}
 
-	fakeTime1 := time.Now().Truncate(time.Second)
+	randTime := randomTime()
+
+	fakeTime1 := randTime.Truncate(time.Second)
 	fakeTimeObj1 := metav1.NewTime(fakeTime1)
 	fakeClock1 := clocktesting.NewFakeClock(fakeTime1)
 
-	fakeTime2 := time.Now().Add(4 * time.Hour).Truncate(time.Second)
+	fakeTime2 := randTime.Add(4 * time.Hour).Truncate(time.Second)
 	fakeTimeObj2 := metav1.NewTime(fakeTime2)
 	fakeClock2 := clocktesting.NewFakeClock(fakeTime2)
 
