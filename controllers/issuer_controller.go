@@ -73,6 +73,7 @@ type IssuerReconciler struct {
 	// Clock is used to mock condition transition times in tests.
 	Clock clock.PassiveClock
 
+	PreSetupWithManager  func(context.Context, schema.GroupVersionKind, ctrl.Manager, *builder.Builder) error
 	PostSetupWithManager func(context.Context, schema.GroupVersionKind, ctrl.Manager, controller.Controller) error
 }
 
@@ -264,6 +265,14 @@ func (r *IssuerReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manage
 			r.EventSource.AddConsumer(forObjectGvk),
 			nil,
 		)
+
+	if r.PreSetupWithManager != nil {
+		err := r.PreSetupWithManager(ctx, forObjectGvk, mgr, build)
+		r.PreSetupWithManager = nil // free setup function
+		if err != nil {
+			return err
+		}
+	}
 
 	if controller, err := build.Build(r); err != nil {
 		return err
