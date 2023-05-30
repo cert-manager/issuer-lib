@@ -47,6 +47,13 @@ import (
 func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing.T) { //nolint:tparallel
 	t.Parallel()
 
+	t.Log(
+		"Tests to show that the CertificateRequest controller handles IssuerErrors from the Sign function correctly",
+		"i.e. that it updates the CertificateRequest status to Ready=false with a Pending reason",
+		"and that it updates the Issuer status to Ready=false with a Pending reason or Ready=false with a Failed reason if the IssuerError wraps a PermanentError",
+		"Additionally, it tests that the Issuer Controller is able to recover from a temporary IssuerError",
+	)
+
 	fieldOwner := "failed-certificate-request-should-retrigger-issuer"
 
 	ctx := testresource.EnsureTestDependencies(t, testcontext.ForTest(t), testresource.UnitTest)

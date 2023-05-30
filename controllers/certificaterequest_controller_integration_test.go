@@ -68,6 +68,12 @@ func addIdToNamespace(t *testing.T, testId int, namespace string) string {
 func TestCertificateRequestControllerIntegrationIssuerInitiallyNotFoundAndNotReady(t *testing.T) {
 	t.Parallel()
 
+	t.Log(
+		"Tests to show that the CertificateRequestController watches Issuer and ClusterIssuer resources ",
+		"and that it re-reconciles all related CertificateRequest resources",
+		"and that it waits for the issuer to become ready",
+	)
+
 	fieldOwner := "issuer-or-clusterissuer-initially-not-found-and-not-ready"
 
 	ctx := testresource.EnsureTestDependencies(t, testcontext.ForTest(t), testresource.UnitTest)
@@ -92,11 +98,6 @@ func TestCertificateRequestControllerIntegrationIssuerInitiallyNotFoundAndNotRea
 		},
 	)
 
-	t.Log(
-		"Tests to show that the controller watches Issuer and ClusterIssuer resources ",
-		"and that it re-reconciles all related CertificateRequest resources",
-		"and that it waits for the issuer to become ready",
-	)
 	type testCase struct {
 		name       string
 		issuerType string
@@ -201,6 +202,13 @@ func TestCertificateRequestControllerIntegrationIssuerInitiallyNotFoundAndNotRea
 // TestCertificateRequestControllerIntegrationSetCondition runs the
 // CertificateRequestController against a real Kubernetes API server.
 func TestCertificateRequestControllerIntegrationSetCondition(t *testing.T) {
+	t.Parallel()
+
+	t.Log(
+		"Tests to show that the CertificateRequestController handles SetCertificateRequestConditionError errors correctly",
+		"i.e. it sets the custom condition on the CertificateRequest",
+	)
+
 	fieldOwner := "cr-set-condition"
 
 	ctx := testresource.EnsureTestDependencies(t, testcontext.ForTest(t), testresource.UnitTest)
