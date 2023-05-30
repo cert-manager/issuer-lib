@@ -360,6 +360,7 @@ func createApprovedCR(t *testing.T, ctx context.Context, kc client.Client, cr *c
 
 	require.NoError(t, kc.Create(ctx, cr))
 	conditions.SetCertificateRequestStatusCondition(
+		cr.Status.Conditions,
 		&cr.Status.Conditions,
 		cmapi.CertificateRequestConditionApproved,
 		cmmeta.ConditionTrue,
@@ -399,6 +400,7 @@ func markIssuerReady(t *testing.T, ctx context.Context, kc client.Client, fieldO
 
 	issuerStatus := &v1alpha1.IssuerStatus{}
 	conditions.SetIssuerStatusCondition(
+		issuerStatus.Conditions,
 		&issuerStatus.Conditions,
 		issuer.GetGeneration(),
 		cmapi.IssuerConditionReady,

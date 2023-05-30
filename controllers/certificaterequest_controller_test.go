@@ -99,6 +99,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		}),
 		func(cr *cmapi.CertificateRequest) {
 			conditions.SetCertificateRequestStatusCondition(
+				cr.Status.Conditions,
 				&cr.Status.Conditions,
 				cmapi.CertificateRequestConditionReady,
 				cmmeta.ConditionUnknown,
@@ -106,6 +107,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				fieldOwner+" has begun reconciling this CertificateRequest",
 			)
 			conditions.SetCertificateRequestStatusCondition(
+				cr.Status.Conditions,
 				&cr.Status.Conditions,
 				cmapi.CertificateRequestConditionApproved,
 				cmmeta.ConditionTrue,

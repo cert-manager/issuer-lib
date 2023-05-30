@@ -70,6 +70,7 @@ func SetSimpleIssuerStatusCondition(
 ) SimpleIssuerModifier {
 	return func(si *api.SimpleIssuer) {
 		conditions.SetIssuerStatusCondition(
+			si.Status.Conditions,
 			&si.Status.Conditions,
 			si.Generation,
 			conditionType,
@@ -119,6 +120,7 @@ func SetSimpleClusterIssuerStatusCondition(
 ) SimpleClusterIssuerModifier {
 	return func(si *api.SimpleClusterIssuer) {
 		conditions.SetIssuerStatusCondition(
+			si.Status.Conditions,
 			&si.Status.Conditions,
 			si.Generation,
 			conditionType,
