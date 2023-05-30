@@ -40,7 +40,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	v1alpha1 "github.com/cert-manager/issuer-lib/api/v1alpha1"
 	"github.com/cert-manager/issuer-lib/conditions"
@@ -437,11 +436,20 @@ func (r *CertificateRequestReconciler) SetupWithManager(ctx context.Context, mgr
 		// API server. See:
 		// * https://github.com/kubernetes-sigs/controller-runtime/issues/562
 		// * https://github.com/kubernetes-sigs/controller-runtime/issues/1219
-		cacheSyncCTX, cancel := context.WithTimeout(ctx, *mgr.GetControllerOptions().CacheSyncTimeout)
+		//
+		// The defaulting logic is based on:
+		// https://github.com/kubernetes-sigs/controller-runtime/blob/30eae58f1b984c1b8139dd9b9f68dd2d530ed429/pkg/controller/controller.go#L138-L144
+		timeout := mgr.GetControllerOptions().CacheSyncTimeout
+		if timeout == 0 {
+			timeout = 2 * time.Minute
+		}
+		cacheSyncCtx, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
 
 		resourceHandler, err := kubeutil.NewLinkedResourceHandler(
-			cacheSyncCTX,
+			cacheSyncCtx,
+			mgr.GetLogger(),
+			mgr.GetScheme(),
 			mgr.GetCache(),
 			&cmapi.CertificateRequest{},
 			func(rawObj client.Object) []string {
@@ -461,7 +469,7 @@ func (r *CertificateRequestReconciler) SetupWithManager(ctx context.Context, mgr
 		}
 
 		build = build.Watches(
-			source.NewKindWithCache(issuerType, mgr.GetCache()),
+			issuerType,
 			resourceHandler,
 			builder.WithPredicates(
 				predicate.ResourceVersionChangedPredicate{},

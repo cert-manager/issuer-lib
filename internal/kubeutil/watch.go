@@ -31,7 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 type linkedResourceHandler struct {
@@ -66,6 +65,8 @@ type linkedResourceHandler struct {
 // add events to the queue.
 func NewLinkedResourceHandler(
 	cacheCtx context.Context,
+	logger logr.Logger,
+	scheme *runtime.Scheme,
 	cache cache.Cache,
 	objType client.Object,
 	toId func(obj client.Object) []string,
@@ -73,6 +74,10 @@ func NewLinkedResourceHandler(
 ) (handler.EventHandler, error) {
 	// a random index name prevents collisions with other indexes
 	refField := fmt.Sprintf(".x-index.%s", randStringRunes(10))
+
+	if err := SetGroupVersionKind(scheme, objType); err != nil {
+		return nil, err
+	}
 
 	// the registered index allows us to quickly list cached resources
 	// based on the index value which contains the unique identifier
@@ -82,6 +87,8 @@ func NewLinkedResourceHandler(
 	}
 
 	return &linkedResourceHandler{
+		logger:     logger,
+		scheme:     scheme,
 		cache:      cache,
 		objType:    objType,
 		addToQueue: addToQueue,
@@ -97,16 +104,11 @@ func NewLinkedResourceHandler(
 // interface. See
 // https://github.com/kubernetes-sigs/controller-runtime/issues/1996
 // https://github.com/kubernetes-sigs/controller-runtime/issues/1923
-func (r *linkedResourceHandler) findObjectsForKind(object client.Object) []reconcile.Request {
+func (r *linkedResourceHandler) findObjectsForKind(ctx context.Context, object client.Object) []reconcile.Request {
 	logger := r.logger.WithName("FindObjectsForKind").WithValues(
 		"object", client.ObjectKeyFromObject(object),
 		"objectType", fmt.Sprintf("%T", object),
 	)
-
-	if err := SetGroupVersionKind(r.scheme, object); err != nil {
-		logger.Error(err, "While setting GVK")
-		return nil
-	}
 
 	objList, err := NewListObject(r.scheme, r.objType.GetObjectKind().GroupVersionKind())
 	if err != nil {
@@ -117,10 +119,7 @@ func (r *linkedResourceHandler) findObjectsForKind(object client.Object) []recon
 		FieldSelector: fields.OneTermEqualSelector(r.refField, fmt.Sprintf("%s/%s", object.GetNamespace(), object.GetName())),
 	}
 
-	// we use context.TODO() here since we are just querying the cache,
-	// meaning no HTTP requests should be made to complete this call
-	// this call should be extra quick since we are using the index value
-	if err := r.cache.List(context.TODO(), objList, listOps); err != nil {
+	if err := r.cache.List(ctx, objList, listOps); err != nil {
 		logger.Error(err, "While listing liked resources")
 		return nil
 	}
@@ -153,61 +152,38 @@ func randStringRunes(n int) string {
 	return string(b)
 }
 
-// controller-runtime dependencies that we require to be injected
-
-var _ inject.Scheme = &linkedResourceHandler{}
-
-// InjectScheme is internal and should be called only by the Controller.
-// InjectScheme is used to inject the Client dependency initialized by the ControllerManager.
-func (ks *linkedResourceHandler) InjectScheme(scheme *runtime.Scheme) error {
-	ks.scheme = scheme
-	if err := SetGroupVersionKind(ks.scheme, ks.objType); err != nil {
-		return err
-	}
-	return nil
-}
-
-var _ inject.Logger = &linkedResourceHandler{}
-
-// InjectLogger is internal and should be called only by the Controller.
-// InjectLogger is used to inject the Client dependency initialized by the ControllerManager.
-func (ks *linkedResourceHandler) InjectLogger(logger logr.Logger) error {
-	ks.logger = logger
-	return nil
-}
-
 // Based on https://github.com/kubernetes-sigs/controller-runtime/blob/00f2425ce068525e0ff674dba51c3e76ee6ad2da/pkg/handler/enqueue_mapped.go
 // Copied to this linkedResourceHandler type such that dependencies can be injected.
 
 var _ handler.EventHandler = &linkedResourceHandler{}
 
 // Create implements EventHandler.
-func (e *linkedResourceHandler) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+func (e *linkedResourceHandler) Create(ctx context.Context, evt event.CreateEvent, q workqueue.RateLimitingInterface) {
 	reqs := map[reconcile.Request]struct{}{}
-	e.mapAndEnqueue(q, evt.Object, reqs)
+	e.mapAndEnqueue(ctx, q, evt.Object, reqs)
 }
 
 // Update implements EventHandler.
-func (e *linkedResourceHandler) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+func (e *linkedResourceHandler) Update(ctx context.Context, evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
 	reqs := map[reconcile.Request]struct{}{}
-	e.mapAndEnqueue(q, evt.ObjectOld, reqs)
-	e.mapAndEnqueue(q, evt.ObjectNew, reqs)
+	e.mapAndEnqueue(ctx, q, evt.ObjectOld, reqs)
+	e.mapAndEnqueue(ctx, q, evt.ObjectNew, reqs)
 }
 
 // Delete implements EventHandler.
-func (e *linkedResourceHandler) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+func (e *linkedResourceHandler) Delete(ctx context.Context, evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
 	reqs := map[reconcile.Request]struct{}{}
-	e.mapAndEnqueue(q, evt.Object, reqs)
+	e.mapAndEnqueue(ctx, q, evt.Object, reqs)
 }
 
 // Generic implements EventHandler.
-func (e *linkedResourceHandler) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
+func (e *linkedResourceHandler) Generic(ctx context.Context, evt event.GenericEvent, q workqueue.RateLimitingInterface) {
 	reqs := map[reconcile.Request]struct{}{}
-	e.mapAndEnqueue(q, evt.Object, reqs)
+	e.mapAndEnqueue(ctx, q, evt.Object, reqs)
 }
 
-func (e *linkedResourceHandler) mapAndEnqueue(q workqueue.RateLimitingInterface, object client.Object, reqs map[reconcile.Request]struct{}) {
-	for _, req := range e.findObjectsForKind(object) {
+func (e *linkedResourceHandler) mapAndEnqueue(ctx context.Context, q workqueue.RateLimitingInterface, object client.Object, reqs map[reconcile.Request]struct{}) {
+	for _, req := range e.findObjectsForKind(ctx, object) {
 		_, ok := reqs[req]
 		if !ok {
 			if e.addToQueue != nil {

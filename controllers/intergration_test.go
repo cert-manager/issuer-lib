@@ -20,7 +20,6 @@ import (
 	"context"
 	"os"
 	"testing"
-	"time"
 
 	logrtesting "github.com/go-logr/logr/testing"
 	"github.com/stretchr/testify/require"
@@ -31,10 +30,8 @@ import (
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrlconfigapi "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
-	"github.com/cert-manager/issuer-lib/internal/tests/ptr"
 	"github.com/cert-manager/issuer-lib/internal/tests/testresource"
 	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/api"
 )
@@ -91,9 +88,6 @@ func setupControllersAPIServerAndClient(t *testing.T, parentCtx context.Context,
 		Logger:             logger,
 		LeaderElection:     false,
 		MetricsBindAddress: "0",
-		Controller: ctrlconfigapi.ControllerConfigurationSpec{
-			CacheSyncTimeout: ptr.New(1 * time.Second),
-		},
 	})
 	require.NoError(t, err)
 
