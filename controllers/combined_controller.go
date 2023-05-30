@@ -23,6 +23,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/clock"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
@@ -44,8 +45,11 @@ type CombinedController struct {
 	// Sign connects to a CA and returns a signed certificate for the supplied CertificateRequest.
 	signer.Sign
 
-	// recorder is used for creating Kubernetes events on resources.
+	// EventRecorder is used for creating Kubernetes events on resources.
 	EventRecorder record.EventRecorder
+
+	// Clock is used to mock condition transition times in tests.
+	Clock clock.PassiveClock
 
 	PostSetupWithManager func(context.Context, schema.GroupVersionKind, ctrl.Manager, controller.Controller) error
 }
@@ -54,6 +58,10 @@ func (r *CombinedController) SetupWithManager(ctx context.Context, mgr ctrl.Mana
 	var err error
 	cl := mgr.GetClient()
 	eventSource := kubeutil.NewEventStore()
+
+	if r.Clock == nil {
+		r.Clock = clock.RealClock{}
+	}
 
 	for _, issuerType := range append(r.IssuerTypes, r.ClusterIssuerTypes...) {
 		if err = (&IssuerReconciler{
@@ -65,6 +73,7 @@ func (r *CombinedController) SetupWithManager(ctx context.Context, mgr ctrl.Mana
 			Client:        cl,
 			Check:         r.Check,
 			EventRecorder: r.EventRecorder,
+			Clock:         r.Clock,
 
 			PostSetupWithManager: r.PostSetupWithManager,
 		}).SetupWithManager(ctx, mgr); err != nil {
@@ -83,6 +92,7 @@ func (r *CombinedController) SetupWithManager(ctx context.Context, mgr ctrl.Mana
 		Client:        cl,
 		Sign:          r.Sign,
 		EventRecorder: r.EventRecorder,
+		Clock:         r.Clock,
 
 		PostSetupWithManager: r.PostSetupWithManager,
 	}).SetupWithManager(ctx, mgr); err != nil {

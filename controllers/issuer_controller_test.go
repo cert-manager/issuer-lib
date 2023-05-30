@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
@@ -31,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	clocktesting "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -38,7 +40,6 @@ import (
 
 	"github.com/cert-manager/issuer-lib/api/v1alpha1"
 	"github.com/cert-manager/issuer-lib/controllers/signer"
-	"github.com/cert-manager/issuer-lib/internal/tests/cmtime"
 	"github.com/cert-manager/issuer-lib/internal/tests/errormatch"
 	"github.com/cert-manager/issuer-lib/internal/tests/ptr"
 	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/api"
@@ -61,7 +62,13 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 		expectedEvents      []string
 	}
 
-	fakeTimeObj := metav1.NewTime(cmtime.FakeTime)
+	fakeTime1 := time.Now().Truncate(time.Second)
+	fakeTimeObj1 := metav1.NewTime(fakeTime1)
+	fakeClock1 := clocktesting.NewFakeClock(fakeTime1)
+
+	fakeTime2 := time.Now().Add(4 * time.Hour).Truncate(time.Second)
+	fakeTimeObj2 := metav1.NewTime(fakeTime2)
+	fakeClock2 := clocktesting.NewFakeClock(fakeTime2)
 
 	issuer1 := testutil.SimpleIssuer(
 		"issuer-1",
@@ -91,6 +98,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 				testutil.SimpleIssuerFrom(issuer1,
 					testutil.SetSimpleIssuerGeneration(80),
 					testutil.SetSimpleIssuerStatusCondition(
+						fakeClock1,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionTrue,
 						v1alpha1.IssuerConditionReasonChecked,
@@ -106,7 +114,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 						Reason:             v1alpha1.IssuerConditionReasonChecked,
 						Message:            "checked",
 						ObservedGeneration: 80,
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj1, // since the status is not updated, the LastTransitionTime is not updated either
 					},
 				},
 			},
@@ -123,6 +131,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 				testutil.SimpleIssuerFrom(issuer1,
 					testutil.SetSimpleIssuerGeneration(80),
 					testutil.SetSimpleIssuerStatusCondition(
+						fakeClock1,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionFalse,
 						v1alpha1.IssuerConditionReasonFailed,
@@ -141,6 +150,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 				testutil.SimpleIssuerFrom(issuer1,
 					testutil.SetSimpleIssuerGeneration(80),
 					testutil.SetSimpleIssuerStatusCondition(
+						fakeClock1,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionFalse,
 						v1alpha1.IssuerConditionReasonFailed,
@@ -160,6 +170,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 				testutil.SimpleIssuerFrom(issuer1,
 					testutil.SetSimpleIssuerGeneration(80),
 					testutil.SetSimpleIssuerStatusCondition(
+						fakeClock1,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionTrue,
 						v1alpha1.IssuerConditionReasonChecked,
@@ -176,7 +187,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 						Reason:             v1alpha1.IssuerConditionReasonPending,
 						Message:            "Issuer is not ready yet: [specific error]",
 						ObservedGeneration: 80,
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
@@ -199,6 +210,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 				testutil.SimpleIssuerFrom(issuer1,
 					testutil.SetSimpleIssuerGeneration(80),
 					testutil.SetSimpleIssuerStatusCondition(
+						fakeClock1,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionTrue,
 						v1alpha1.IssuerConditionReasonChecked,
@@ -214,7 +226,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 						Status:             cmmeta.ConditionTrue,
 						Reason:             v1alpha1.IssuerConditionReasonChecked,
 						Message:            "checked",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj1, // since the status is not updated, the LastTransitionTime is not updated either
 						ObservedGeneration: 81,
 					},
 				},
@@ -238,7 +250,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 						Status:             cmmeta.ConditionUnknown,
 						Reason:             v1alpha1.IssuerConditionReasonInitializing,
 						Message:            fieldOwner + " has started reconciling this Issuer",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
@@ -251,6 +263,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 			objects: []client.Object{
 				testutil.SimpleIssuerFrom(issuer1,
 					testutil.SetSimpleIssuerStatusCondition(
+						fakeClock1,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionUnknown,
 						v1alpha1.IssuerConditionReasonInitializing,
@@ -271,7 +284,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 						Status:             cmmeta.ConditionFalse,
 						Reason:             v1alpha1.IssuerConditionReasonPending,
 						Message:            "Issuer is not ready yet: a specific error",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
@@ -290,6 +303,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 			objects: []client.Object{
 				testutil.SimpleIssuerFrom(issuer1,
 					testutil.SetSimpleIssuerStatusCondition(
+						fakeClock1,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionUnknown,
 						v1alpha1.IssuerConditionReasonInitializing,
@@ -304,7 +318,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 						Status:             cmmeta.ConditionTrue,
 						Reason:             v1alpha1.IssuerConditionReasonChecked,
 						Message:            "checked",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
@@ -321,6 +335,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 				testutil.SimpleIssuerFrom(issuer1,
 					testutil.SetSimpleIssuerGeneration(80),
 					testutil.SetSimpleIssuerStatusCondition(
+						fakeClock1,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionFalse,
 						v1alpha1.IssuerConditionReasonInitializing,
@@ -336,7 +351,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 						Status:             cmmeta.ConditionTrue,
 						Reason:             v1alpha1.IssuerConditionReasonChecked,
 						Message:            "checked",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 						ObservedGeneration: 81,
 					},
 				},
@@ -382,6 +397,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 				Client:        fakeClient,
 				Check:         tc.check,
 				EventRecorder: fakeRecorder,
+				Clock:         fakeClock2,
 			}
 
 			res, crsPatch, err := controller.reconcileStatusPatch(logger, context.TODO(), req)

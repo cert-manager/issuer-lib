@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -56,8 +57,11 @@ type IssuerReconciler struct {
 	// Check connects to a CA and checks if it is available
 	signer.Check
 
-	// recorder is used for creating Kubernetes events on resources.
+	// EventRecorder is used for creating Kubernetes events on resources.
 	EventRecorder record.EventRecorder
+
+	// Clock is used to mock condition transition times in tests.
+	Clock clock.PassiveClock
 
 	PostSetupWithManager func(context.Context, schema.GroupVersionKind, ctrl.Manager, controller.Controller) error
 }
@@ -134,6 +138,7 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 	if readyCondition == nil {
 		logger.V(1).Info("Initializing Ready condition")
 		conditions.SetIssuerStatusCondition(
+			r.Clock,
 			issuer.GetStatus().Conditions,
 			&issuerStatusPatch.Conditions,
 			issuer.GetGeneration(),
@@ -162,6 +167,7 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 			// fail permanently
 			logger.V(1).Error(err, "Permanent Issuer error. Marking as failed.")
 			conditions.SetIssuerStatusCondition(
+				r.Clock,
 				issuer.GetStatus().Conditions,
 				&issuerStatusPatch.Conditions,
 				issuer.GetGeneration(),
@@ -176,6 +182,7 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 			// retry
 			logger.V(1).Error(err, "Retryable Issuer error.")
 			conditions.SetIssuerStatusCondition(
+				r.Clock,
 				issuer.GetStatus().Conditions,
 				&issuerStatusPatch.Conditions,
 				issuer.GetGeneration(),
@@ -199,6 +206,7 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 	}
 
 	conditions.SetIssuerStatusCondition(
+		r.Clock,
 		issuer.GetStatus().Conditions,
 		&issuerStatusPatch.Conditions,
 		issuer.GetGeneration(),

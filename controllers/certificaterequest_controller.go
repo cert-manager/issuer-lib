@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -62,8 +63,11 @@ type CertificateRequestReconciler struct {
 	// Sign connects to a CA and returns a signed certificate for the supplied CertificateRequest.
 	signer.Sign
 
-	// recorder is used for creating Kubernetes events on resources.
+	// EventRecorder is used for creating Kubernetes events on resources.
 	EventRecorder record.EventRecorder
+
+	// Clock is used to mock condition transition times in tests.
+	Clock clock.PassiveClock
 
 	PostSetupWithManager func(context.Context, schema.GroupVersionKind, ctrl.Manager, controller.Controller) error
 }
@@ -168,6 +172,7 @@ func (r *CertificateRequestReconciler) reconcileStatusPatch(
 	if ready := cmutil.GetCertificateRequestCondition(&cr, cmapi.CertificateRequestConditionReady); ready == nil {
 		logger.V(1).Info("Initializing Ready condition")
 		conditions.SetCertificateRequestStatusCondition(
+			r.Clock,
 			cr.Status.Conditions,
 			&crStatusPatch.Conditions,
 			cmapi.CertificateRequestConditionReady,
@@ -184,6 +189,7 @@ func (r *CertificateRequestReconciler) reconcileStatusPatch(
 	if cmutil.CertificateRequestIsDenied(&cr) {
 		logger.V(1).Info("CertificateRequest has been denied. Marking as failed.")
 		condition := conditions.SetCertificateRequestStatusCondition(
+			r.Clock,
 			cr.Status.Conditions,
 			&crStatusPatch.Conditions,
 			cmapi.CertificateRequestConditionReady,
@@ -199,6 +205,7 @@ func (r *CertificateRequestReconciler) reconcileStatusPatch(
 	if err := r.Client.Get(ctx, issuerName, issuerObject); err != nil && apierrors.IsNotFound(err) {
 		logger.V(1).Info("Issuer not found. Waiting for it to be created")
 		conditions.SetCertificateRequestStatusCondition(
+			r.Clock,
 			cr.Status.Conditions,
 			&crStatusPatch.Conditions,
 			cmapi.CertificateRequestConditionReady,
@@ -232,6 +239,7 @@ func (r *CertificateRequestReconciler) reconcileStatusPatch(
 
 		logger.V(1).Info("Issuer is not Ready yet. Waiting for it to become ready.", "issuer ready condition", readyCondition)
 		conditions.SetCertificateRequestStatusCondition(
+			r.Clock,
 			cr.Status.Conditions,
 			&crStatusPatch.Conditions,
 			cmapi.CertificateRequestConditionReady,
@@ -257,6 +265,7 @@ func (r *CertificateRequestReconciler) reconcileStatusPatch(
 
 			logger.V(1).Error(err, "Temporary CertificateRequest error.")
 			conditions.SetCertificateRequestStatusCondition(
+				r.Clock,
 				cr.Status.Conditions,
 				&crStatusPatch.Conditions,
 				cmapi.CertificateRequestConditionReady,
@@ -272,6 +281,7 @@ func (r *CertificateRequestReconciler) reconcileStatusPatch(
 		if targetCustom := new(signer.SetCertificateRequestConditionError); errors.As(err, targetCustom) {
 			logger.V(1).Info("Set CertificateRequestCondition error. Setting condition.", "error", err)
 			conditions.SetCertificateRequestStatusCondition(
+				r.Clock,
 				cr.Status.Conditions,
 				&crStatusPatch.Conditions,
 				targetCustom.ConditionType,
@@ -288,11 +298,12 @@ func (r *CertificateRequestReconciler) reconcileStatusPatch(
 		// Check if we have still time to requeue & retry
 		isPendingError := errors.As(err, &signer.PendingError{})
 		isPermanentError := errors.As(err, &signer.PermanentError{})
-		pastMaxRetryDuration := cmutil.Clock.Now().After(cr.CreationTimestamp.Add(r.MaxRetryDuration))
+		pastMaxRetryDuration := r.Clock.Now().After(cr.CreationTimestamp.Add(r.MaxRetryDuration))
 		if !isPendingError && (isPermanentError || pastMaxRetryDuration) {
 			// fail permanently
 			logger.V(1).Error(err, "Permanent CertificateRequest error. Marking as failed.")
 			condition := conditions.SetCertificateRequestStatusCondition(
+				r.Clock,
 				cr.Status.Conditions,
 				&crStatusPatch.Conditions,
 				cmapi.CertificateRequestConditionReady,
@@ -307,6 +318,7 @@ func (r *CertificateRequestReconciler) reconcileStatusPatch(
 			// retry
 			logger.V(1).Error(err, "Retryable CertificateRequest error.")
 			conditions.SetCertificateRequestStatusCondition(
+				r.Clock,
 				cr.Status.Conditions,
 				&crStatusPatch.Conditions,
 				cmapi.CertificateRequestConditionReady,
@@ -336,6 +348,7 @@ func (r *CertificateRequestReconciler) reconcileStatusPatch(
 
 	crStatusPatch.Certificate = signedCertificate
 	conditions.SetCertificateRequestStatusCondition(
+		r.Clock,
 		cr.Status.Conditions,
 		&crStatusPatch.Conditions,
 		cmapi.CertificateRequestConditionReady,

@@ -18,6 +18,7 @@ package controllers_test
 
 import (
 	"testing"
+	"time"
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
@@ -27,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	clocktesting "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	"github.com/cert-manager/issuer-lib/api/v1alpha1"
@@ -230,6 +232,9 @@ func TestLinkedIssuerPredicate(t *testing.T) {
 
 	issuer1 := testutil.SimpleIssuer("issuer-1")
 
+	fakeTime := time.Now()
+	fakeClock := clocktesting.NewFakeClock(fakeTime)
+
 	type testcase struct {
 		name            string
 		event           event.UpdateEvent
@@ -251,6 +256,7 @@ func TestLinkedIssuerPredicate(t *testing.T) {
 			event: event.UpdateEvent{
 				ObjectOld: testutil.SimpleIssuerFrom(issuer1,
 					testutil.SetSimpleIssuerStatusCondition(
+						fakeClock,
 						"random",
 						cmmeta.ConditionFalse,
 						"test1",
@@ -259,6 +265,7 @@ func TestLinkedIssuerPredicate(t *testing.T) {
 				),
 				ObjectNew: testutil.SimpleIssuerFrom(issuer1,
 					testutil.SetSimpleIssuerStatusCondition(
+						fakeClock,
 						"random",
 						cmmeta.ConditionTrue,
 						"test2",
@@ -274,6 +281,7 @@ func TestLinkedIssuerPredicate(t *testing.T) {
 				ObjectOld: &testissuer{Status: nil},
 				ObjectNew: testutil.SimpleIssuerFrom(issuer1,
 					testutil.SetSimpleIssuerStatusCondition(
+						fakeClock,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionFalse,
 						"reason",
@@ -289,6 +297,7 @@ func TestLinkedIssuerPredicate(t *testing.T) {
 				ObjectOld: testutil.SimpleIssuerFrom(issuer1),
 				ObjectNew: testutil.SimpleIssuerFrom(issuer1,
 					testutil.SetSimpleIssuerStatusCondition(
+						fakeClock,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionFalse,
 						"reason",
@@ -303,6 +312,7 @@ func TestLinkedIssuerPredicate(t *testing.T) {
 			event: event.UpdateEvent{
 				ObjectOld: testutil.SimpleIssuerFrom(issuer1,
 					testutil.SetSimpleIssuerStatusCondition(
+						fakeClock,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionFalse,
 						"reason1",
@@ -311,6 +321,7 @@ func TestLinkedIssuerPredicate(t *testing.T) {
 				),
 				ObjectNew: testutil.SimpleIssuerFrom(issuer1,
 					testutil.SetSimpleIssuerStatusCondition(
+						fakeClock,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionFalse,
 						"reason2",
@@ -325,6 +336,7 @@ func TestLinkedIssuerPredicate(t *testing.T) {
 			event: event.UpdateEvent{
 				ObjectOld: testutil.SimpleIssuerFrom(issuer1,
 					testutil.SetSimpleIssuerStatusCondition(
+						fakeClock,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionFalse,
 						"reason",
@@ -333,6 +345,7 @@ func TestLinkedIssuerPredicate(t *testing.T) {
 				),
 				ObjectNew: testutil.SimpleIssuerFrom(issuer1,
 					testutil.SetSimpleIssuerStatusCondition(
+						fakeClock,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionTrue,
 						"reason",
@@ -356,6 +369,9 @@ func TestIssuerPredicate(t *testing.T) {
 	predicate := controllers.IssuerPredicate{}
 
 	issuer1 := testutil.SimpleIssuer("issuer-1")
+
+	fakeTime := time.Now()
+	fakeClock := clocktesting.NewFakeClock(fakeTime)
 
 	type testcase struct {
 		name            string
@@ -428,6 +444,7 @@ func TestIssuerPredicate(t *testing.T) {
 				ObjectOld: testutil.SimpleIssuerFrom(issuer1),
 				ObjectNew: testutil.SimpleIssuerFrom(issuer1,
 					testutil.SetSimpleIssuerStatusCondition(
+						fakeClock,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionFalse,
 						"reason",

@@ -17,15 +17,16 @@ limitations under the License.
 package conditions
 
 import (
-	"github.com/cert-manager/cert-manager/pkg/api/util"
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/clock"
 )
 
 // Update the status with the provided condition details & return
 // the added condition.
 func SetCertificateRequestStatusCondition(
+	clock clock.PassiveClock,
 	existingConditions []cmapi.CertificateRequestCondition,
 	patchConditions *[]cmapi.CertificateRequestCondition,
 	conditionType cmapi.CertificateRequestConditionType,
@@ -39,7 +40,7 @@ func SetCertificateRequestStatusCondition(
 		Message: message,
 	}
 
-	nowTime := metav1.NewTime(util.Clock.Now())
+	nowTime := metav1.NewTime(clock.Now())
 	newCondition.LastTransitionTime = &nowTime
 
 	// Reset the LastTransitionTime if the status hasn't changed

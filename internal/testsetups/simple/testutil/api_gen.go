@@ -20,6 +20,7 @@ import (
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/clock"
 
 	"github.com/cert-manager/issuer-lib/conditions"
 	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/api"
@@ -64,12 +65,14 @@ func SetSimpleIssuerGeneration(generation int64) SimpleIssuerModifier {
 }
 
 func SetSimpleIssuerStatusCondition(
+	clock clock.PassiveClock,
 	conditionType cmapi.IssuerConditionType,
 	status cmmeta.ConditionStatus,
 	reason, message string,
 ) SimpleIssuerModifier {
 	return func(si *api.SimpleIssuer) {
 		conditions.SetIssuerStatusCondition(
+			clock,
 			si.Status.Conditions,
 			&si.Status.Conditions,
 			si.Generation,
@@ -114,12 +117,14 @@ func SetSimpleClusterIssuerGeneration(generation int64) SimpleClusterIssuerModif
 }
 
 func SetSimpleClusterIssuerStatusCondition(
+	clock clock.PassiveClock,
 	conditionType cmapi.IssuerConditionType,
 	status cmmeta.ConditionStatus,
 	reason, message string,
 ) SimpleClusterIssuerModifier {
 	return func(si *api.SimpleClusterIssuer) {
 		conditions.SetIssuerStatusCondition(
+			clock,
 			si.Status.Conditions,
 			&si.Status.Conditions,
 			si.Generation,

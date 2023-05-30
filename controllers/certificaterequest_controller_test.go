@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	clocktesting "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -41,7 +42,6 @@ import (
 	"github.com/cert-manager/issuer-lib/conditions"
 	"github.com/cert-manager/issuer-lib/controllers/signer"
 	"github.com/cert-manager/issuer-lib/internal/kubeutil"
-	"github.com/cert-manager/issuer-lib/internal/tests/cmtime"
 	"github.com/cert-manager/issuer-lib/internal/tests/errormatch"
 	"github.com/cert-manager/issuer-lib/internal/tests/ptr"
 	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/api"
@@ -63,13 +63,20 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		expectedEvents      []string
 	}
 
-	fakeTimeObj := metav1.NewTime(cmtime.FakeTime)
+	fakeTime1 := time.Now().Truncate(time.Second)
+	fakeTimeObj1 := metav1.NewTime(fakeTime1)
+	fakeClock1 := clocktesting.NewFakeClock(fakeTime1)
+
+	fakeTime2 := time.Now().Add(4 * time.Hour).Truncate(time.Second)
+	fakeTimeObj2 := metav1.NewTime(fakeTime2)
+	fakeClock2 := clocktesting.NewFakeClock(fakeTime2)
 
 	issuer1 := testutil.SimpleIssuer(
 		"issuer-1",
 		testutil.SetSimpleIssuerNamespace("ns1"),
 		testutil.SetSimpleIssuerGeneration(70),
 		testutil.SetSimpleIssuerStatusCondition(
+			fakeClock1,
 			cmapi.IssuerConditionReady,
 			cmmeta.ConditionTrue,
 			v1alpha1.IssuerConditionReasonChecked,
@@ -81,6 +88,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		"cluster-issuer-1",
 		testutil.SetSimpleClusterIssuerGeneration(70),
 		testutil.SetSimpleClusterIssuerStatusCondition(
+			fakeClock1,
 			cmapi.IssuerConditionReady,
 			cmmeta.ConditionTrue,
 			v1alpha1.IssuerConditionReasonChecked,
@@ -92,13 +100,14 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		"cr1",
 		cmgen.SetCertificateRequestNamespace("ns1"),
 		func(cr *cmapi.CertificateRequest) {
-			cr.CreationTimestamp = fakeTimeObj
+			cr.CreationTimestamp = fakeTimeObj1
 		},
 		cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
 			Group: api.SchemeGroupVersion.Group,
 		}),
 		func(cr *cmapi.CertificateRequest) {
 			conditions.SetCertificateRequestStatusCondition(
+				fakeClock1,
 				cr.Status.Conditions,
 				&cr.Status.Conditions,
 				cmapi.CertificateRequestConditionReady,
@@ -107,6 +116,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				fieldOwner+" has begun reconciling this CertificateRequest",
 			)
 			conditions.SetCertificateRequestStatusCondition(
+				fakeClock1,
 				cr.Status.Conditions,
 				&cr.Status.Conditions,
 				cmapi.CertificateRequestConditionApproved,
@@ -221,7 +231,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Status:             cmmeta.ConditionUnknown,
 						Reason:             v1alpha1.CertificateRequestConditionReasonInitializing,
 						Message:            fieldOwner + " has started reconciling this CertificateRequest",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
@@ -244,10 +254,10 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonDenied,
 						Message:            "The CertificateRequest was denied by an approval controller",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
-				FailureTime: &fakeTimeObj,
+				FailureTime: &fakeTimeObj2,
 			},
 			expectedEvents: []string{
 				"Normal DetectedDenied Detected that the CR is denied, will update Ready condition",
@@ -270,7 +280,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonPending,
 						Message:            "simpleissuers.testing.cert-manager.io \"issuer-1\" not found. Waiting for it to be created.",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
@@ -303,7 +313,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonPending,
 						Message:            "Issuer is not Ready yet. No ready condition found. Waiting for it to become ready.",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
@@ -324,6 +334,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				),
 				testutil.SimpleIssuerFrom(issuer1,
 					testutil.SetSimpleIssuerStatusCondition(
+						fakeClock1,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionFalse,
 						"[REASON]",
@@ -338,7 +349,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonPending,
 						Message:            "Issuer is not Ready yet. Current ready condition is \"[REASON]\": [MESSAGE]. Waiting for it to become ready.",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
@@ -369,7 +380,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonPending,
 						Message:            "Issuer is not Ready yet. Current ready condition is outdated. Waiting for it to become ready.",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
@@ -404,10 +415,10 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonFailed,
 						Message:            "CertificateRequest has failed permanently: a specific error",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
-				FailureTime: &fakeTimeObj,
+				FailureTime: &fakeTimeObj2,
 			},
 			expectedEvents: []string{
 				"Warning PermanentError Failed permanently to sign CertificateRequest: a specific error",
@@ -445,7 +456,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonPending,
 						Message:            "CertificateRequest is not ready yet: pending error",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
@@ -489,14 +500,14 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Status:             cmmeta.ConditionTrue,
 						Reason:             "[reason]",
 						Message:            "test error",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 					{
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonPending,
 						Message:            "CertificateRequest is not ready yet: test error",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
@@ -532,7 +543,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Status:             cmmeta.ConditionTrue,
 						Reason:             "[reason]",
 						Message:            "test error",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					}),
 				),
 				testutil.SimpleIssuerFrom(issuer1),
@@ -549,14 +560,14 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Status:             cmmeta.ConditionTrue,
 						Reason:             "[reason]",
 						Message:            "test error2",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 					{
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonPending,
 						Message:            "CertificateRequest is not ready yet: test error2",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
@@ -603,17 +614,17 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Status:             cmmeta.ConditionTrue,
 						Reason:             "[reason]",
 						Message:            "test error",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 					{
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonFailed,
 						Message:            "CertificateRequest has failed permanently: test error",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
-				FailureTime: &fakeTimeObj,
+				FailureTime: &fakeTimeObj2,
 			},
 			expectedEvents: []string{
 				"Warning PermanentError Failed permanently to sign CertificateRequest: test error",
@@ -650,7 +661,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Status:             cmmeta.ConditionTrue,
 						Reason:             "[reason]",
 						Message:            "test error",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj1,
 					}),
 				),
 				testutil.SimpleIssuerFrom(issuer1),
@@ -664,17 +675,17 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Status:             cmmeta.ConditionTrue,
 						Reason:             "[reason]",
 						Message:            "test error2",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj1, // since the status is not updated, the LastTransitionTime is not updated either
 					},
 					{
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonFailed,
 						Message:            "CertificateRequest has failed permanently: test error2",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
-				FailureTime: &fakeTimeObj,
+				FailureTime: &fakeTimeObj2,
 			},
 			expectedEvents: []string{
 				"Warning PermanentError Failed permanently to sign CertificateRequest: test error2",
@@ -718,14 +729,14 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Status:             cmmeta.ConditionTrue,
 						Reason:             "[reason]",
 						Message:            "test error",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 					{
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonPending,
 						Message:            "CertificateRequest is not ready yet: test error",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
@@ -768,17 +779,17 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Status:             cmmeta.ConditionTrue,
 						Reason:             "[reason]",
 						Message:            "test error",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 					{
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonFailed,
 						Message:            "CertificateRequest has failed permanently: test error",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
-				FailureTime: &fakeTimeObj,
+				FailureTime: &fakeTimeObj2,
 			},
 			expectedEvents: []string{
 				"Warning PermanentError Failed permanently to sign CertificateRequest: test error",
@@ -807,10 +818,10 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonFailed,
 						Message:            "CertificateRequest has failed permanently: a specific error",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
-				FailureTime: &fakeTimeObj,
+				FailureTime: &fakeTimeObj2,
 			},
 			expectedEvents: []string{
 				"Warning PermanentError Failed permanently to sign CertificateRequest: a specific error",
@@ -843,7 +854,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonPending,
 						Message:            "CertificateRequest is not ready yet: waiting for approval",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
@@ -870,7 +881,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Status:             cmmeta.ConditionTrue,
 						Reason:             cmapi.CertificateRequestReasonIssued,
 						Message:            "issued",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
@@ -897,7 +908,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Status:             cmmeta.ConditionTrue,
 						Reason:             cmapi.CertificateRequestReasonIssued,
 						Message:            "issued",
-						LastTransitionTime: &fakeTimeObj,
+						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
@@ -943,6 +954,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				Client:             fakeClient,
 				Sign:               tc.sign,
 				EventRecorder:      fakeRecorder,
+				Clock:              fakeClock2,
 			}
 
 			err = controller.setIssuersGroupVersionKind(scheme)
