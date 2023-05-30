@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -56,8 +57,11 @@ type IssuerReconciler struct {
 	// Check connects to a CA and checks if it is available
 	signer.Check
 
-	// recorder is used for creating Kubernetes events on resources.
+	// EventRecorder is used for creating Kubernetes events on resources.
 	EventRecorder record.EventRecorder
+
+	// Clock is used to mock condition transition times in tests.
+	Clock clock.PassiveClock
 
 	PostSetupWithManager func(context.Context, schema.GroupVersionKind, ctrl.Manager, controller.Controller) error
 }
@@ -67,10 +71,10 @@ func (r *IssuerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res
 
 	logger.V(2).Info("Starting reconcile loop", "name", req.Name, "namespace", req.Namespace)
 
-	result, isPatch, returnedError := r.reconcileStatusPatch(logger, ctx, req)
-	logger.V(2).Info("Got StatusPatch result", "result", result, "patch", isPatch, "error", returnedError)
-	if isPatch != nil {
-		cr, patch, err := ssaclient.GenerateIssuerStatusPatch(r.ForObject, req.Name, req.Namespace, isPatch)
+	result, issuerStatusPatch, returnedError := r.reconcileStatusPatch(logger, ctx, req)
+	logger.V(2).Info("Got StatusPatch result", "result", result, "patch", issuerStatusPatch, "error", returnedError)
+	if issuerStatusPatch != nil {
+		cr, patch, err := ssaclient.GenerateIssuerStatusPatch(r.ForObject, req.Name, req.Namespace, issuerStatusPatch)
 		if err != nil {
 			returnedError = utilerrors.NewAggregate([]error{err, returnedError})
 			result = ctrl.Result{}
@@ -99,27 +103,27 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 	logger logr.Logger,
 	ctx context.Context,
 	req ctrl.Request,
-) (result ctrl.Result, isPatch *v1alpha1.IssuerStatus, returnedError error) {
+) (result ctrl.Result, issuerStatusPatch *v1alpha1.IssuerStatus, returnedError error) {
 	// Get the ClusterIssuer
-	vi := r.ForObject.DeepCopyObject().(v1alpha1.Issuer)
+	issuer := r.ForObject.DeepCopyObject().(v1alpha1.Issuer)
 	forObjectGvk := r.ForObject.GetObjectKind().GroupVersionKind()
 	// calling IsInvalidated early to make sure the map is always cleared
 	reportedError := r.EventSource.HasReportedError(forObjectGvk, req.NamespacedName)
 
-	if err := r.Client.Get(ctx, req.NamespacedName, vi); err != nil && apierrors.IsNotFound(err) {
+	if err := r.Client.Get(ctx, req.NamespacedName, issuer); err != nil && apierrors.IsNotFound(err) {
 		logger.V(1).Info("Not found. Ignoring.")
 		return result, nil, nil // done
 	} else if err != nil {
 		return result, nil, fmt.Errorf("unexpected get error: %v", err) // retry
 	}
 
-	readyCondition := conditions.GetIssuerStatusCondition(vi.GetStatus().Conditions, cmapi.IssuerConditionReady)
+	readyCondition := conditions.GetIssuerStatusCondition(issuer.GetStatus().Conditions, cmapi.IssuerConditionReady)
 
 	// Ignore Issuer if it is already permanently Failed
 	isFailed := (readyCondition != nil) &&
 		(readyCondition.Status == cmmeta.ConditionFalse) &&
 		(readyCondition.Reason == v1alpha1.IssuerConditionReasonFailed) &&
-		(readyCondition.ObservedGeneration >= vi.GetGeneration())
+		(readyCondition.ObservedGeneration >= issuer.GetGeneration())
 	if isFailed {
 		logger.V(1).Info("Issuer is Failed. Ignoring.")
 		return result, nil, nil // done
@@ -127,15 +131,17 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 
 	// We now have a Issuer that belongs to us so we are responsible
 	// for updating its Status.
-	isPatch = &v1alpha1.IssuerStatus{}
+	issuerStatusPatch = &v1alpha1.IssuerStatus{}
 
 	// Add a Ready condition if one does not already exist. Set initial Status
 	// to Unknown.
 	if readyCondition == nil {
 		logger.V(1).Info("Initializing Ready condition")
 		conditions.SetIssuerStatusCondition(
-			&isPatch.Conditions,
-			vi.GetGeneration(),
+			r.Clock,
+			issuer.GetStatus().Conditions,
+			&issuerStatusPatch.Conditions,
+			issuer.GetGeneration(),
 			cmapi.IssuerConditionReady,
 			cmmeta.ConditionUnknown,
 			v1alpha1.IssuerConditionReasonInitializing,
@@ -144,7 +150,7 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 		// To continue reconciling this Issuer, we must re-run the reconcile loop
 		// after adding the Unknown Ready condition. This update will trigger a
 		// new reconcile loop, so we don't need to requeue here.
-		return result, isPatch, nil // apply patch, done
+		return result, issuerStatusPatch, nil // apply patch, done
 	}
 
 	var err error
@@ -153,7 +159,7 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 		// update the ready state of the issuer to reflect the error.
 		err = reportedError
 	} else {
-		err = r.Check(log.IntoContext(ctx, logger), vi)
+		err = r.Check(log.IntoContext(ctx, logger), issuer)
 	}
 	if err != nil {
 		isPermanentError := errors.As(err, &signer.PermanentError{})
@@ -161,27 +167,31 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 			// fail permanently
 			logger.V(1).Error(err, "Permanent Issuer error. Marking as failed.")
 			conditions.SetIssuerStatusCondition(
-				&isPatch.Conditions,
-				vi.GetGeneration(),
+				r.Clock,
+				issuer.GetStatus().Conditions,
+				&issuerStatusPatch.Conditions,
+				issuer.GetGeneration(),
 				cmapi.IssuerConditionReady,
 				cmmeta.ConditionFalse,
 				v1alpha1.IssuerConditionReasonFailed,
 				fmt.Sprintf("Issuer has failed permanently: %s", err),
 			)
-			r.EventRecorder.Eventf(vi, corev1.EventTypeWarning, "PermanentError", "Failed permanently to check issuer: %s", err)
-			return result, isPatch, nil // apply patch, retry
+			r.EventRecorder.Eventf(issuer, corev1.EventTypeWarning, "PermanentError", "Failed permanently to check issuer: %s", err)
+			return result, issuerStatusPatch, nil // apply patch, retry
 		} else {
 			// retry
 			logger.V(1).Error(err, "Retryable Issuer error.")
 			conditions.SetIssuerStatusCondition(
-				&isPatch.Conditions,
-				vi.GetGeneration(),
+				r.Clock,
+				issuer.GetStatus().Conditions,
+				&issuerStatusPatch.Conditions,
+				issuer.GetGeneration(),
 				cmapi.IssuerConditionReady,
 				cmmeta.ConditionFalse,
 				v1alpha1.IssuerConditionReasonPending,
 				fmt.Sprintf("Issuer is not ready yet: %s", err),
 			)
-			r.EventRecorder.Eventf(vi, corev1.EventTypeWarning, "RetryableError", "Failed to check issuer, will retry: %s", err)
+			r.EventRecorder.Eventf(issuer, corev1.EventTypeWarning, "RetryableError", "Failed to check issuer, will retry: %s", err)
 			// We trigger a reconciliation here. Controller-runtime will use exponential backoff to requeue
 			// the request. We don't return an error here because we don't want controller-runtime to log an
 			// additional error message and we want the metrics to show a requeue instead of an error to be
@@ -191,13 +201,15 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 			// apiserver failure (see "unexpected get error" above). The ReconcileTotal labelRequeue metric
 			// can be used instead to get some estimate of the number of requeues.
 			result.Requeue = true
-			return result, isPatch, nil // apply patch, retry
+			return result, issuerStatusPatch, nil // apply patch, retry
 		}
 	}
 
 	conditions.SetIssuerStatusCondition(
-		&isPatch.Conditions,
-		vi.GetGeneration(),
+		r.Clock,
+		issuer.GetStatus().Conditions,
+		&issuerStatusPatch.Conditions,
+		issuer.GetGeneration(),
 		cmapi.IssuerConditionReady,
 		cmmeta.ConditionTrue,
 		v1alpha1.IssuerConditionReasonChecked,
@@ -205,8 +217,8 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 	)
 
 	logger.V(1).Info("Successfully finished the reconciliation.")
-	r.EventRecorder.Eventf(vi, corev1.EventTypeNormal, "Checked", "Succeeded checking the issuer")
-	return result, isPatch, nil // done, apply patch
+	r.EventRecorder.Eventf(issuer, corev1.EventTypeNormal, "Checked", "Succeeded checking the issuer")
+	return result, issuerStatusPatch, nil // done, apply patch
 }
 
 // SetupWithManager sets up the controller with the Manager.

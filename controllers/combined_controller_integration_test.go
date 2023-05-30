@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/clock"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -146,6 +147,7 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 				testutil.SetSimpleIssuerNamespace(namespace),
 				testutil.SetSimpleIssuerGeneration(70),
 				testutil.SetSimpleIssuerStatusCondition(
+					clock.RealClock{},
 					cmapi.IssuerConditionReady,
 					cmmeta.ConditionTrue,
 					v1alpha1.IssuerConditionReasonChecked,
@@ -184,7 +186,7 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 			}, watch.Added, watch.Modified)
 			require.NoError(t, err)
 
-			createApprovedCR(t, ctx, kubeClients.Client, cr)
+			createApprovedCR(t, ctx, kubeClients.Client, clock.RealClock{}, cr)
 
 			checkCr1Complete := kubeClients.StartObjectWatch(t, ctx, cr)
 			checkCr2Complete := kubeClients.StartObjectWatch(t, ctx, cr)

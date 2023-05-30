@@ -17,59 +17,65 @@ limitations under the License.
 package conditions
 
 import (
-	cmutil "github.com/cert-manager/cert-manager/pkg/api/util"
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/clock"
 )
-
-// private struct; only used to implement the GenericIssuer interface
-// for use with the cmutil.SetIssuerCondition function
-type genericIssuer struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Status cmapi.IssuerStatus `json:"status"`
-}
-
-func (g *genericIssuer) DeepCopyObject() runtime.Object {
-	panic("[HACK]: this function should not get called")
-}
-
-func (g *genericIssuer) GetSpec() *cmapi.IssuerSpec {
-	panic("[HACK]: this function should not get called")
-}
-
-func (g *genericIssuer) GetObjectMeta() *metav1.ObjectMeta {
-	return &g.ObjectMeta
-}
-
-func (g *genericIssuer) GetStatus() *cmapi.IssuerStatus {
-	return &g.Status
-}
 
 // Update the status with the provided condition details & return
 // the added condition.
-// NOTE: this code is just a workaround for cmutil only accepting a GenericIssuer interface
 func SetIssuerStatusCondition(
-	conditions *[]cmapi.IssuerCondition,
+	clock clock.PassiveClock,
+	existingConditions []cmapi.IssuerCondition,
+	patchConditions *[]cmapi.IssuerCondition,
 	observedGeneration int64,
 	conditionType cmapi.IssuerConditionType,
 	status cmmeta.ConditionStatus,
 	reason, message string,
-) *cmapi.IssuerCondition {
-	gi := genericIssuer{
-		Status: cmapi.IssuerStatus{
-			Conditions: *conditions,
-		},
+) (*cmapi.IssuerCondition, *metav1.Time) {
+	newCondition := cmapi.IssuerCondition{
+		Type:               conditionType,
+		Status:             status,
+		Reason:             reason,
+		Message:            message,
+		ObservedGeneration: observedGeneration,
 	}
 
-	cmutil.SetIssuerCondition(&gi, observedGeneration, conditionType, status, reason, message)
+	nowTime := metav1.NewTime(clock.Now())
+	newCondition.LastTransitionTime = &nowTime
 
-	*conditions = gi.Status.Conditions
+	// Reset the LastTransitionTime if the status hasn't changed
+	for _, cond := range existingConditions {
+		if cond.Type != conditionType {
+			continue
+		}
 
-	return GetIssuerStatusCondition(*conditions, conditionType)
+		// If this update doesn't contain a state transition, we don't update
+		// the conditions LastTransitionTime to Now()
+		if cond.Status == status {
+			newCondition.LastTransitionTime = cond.LastTransitionTime
+		}
+	}
+
+	// Search through existing conditions
+	for idx, cond := range *patchConditions {
+		// Skip unrelated conditions
+		if cond.Type != conditionType {
+			continue
+		}
+
+		// Overwrite the existing condition
+		(*patchConditions)[idx] = newCondition
+
+		return &newCondition, &nowTime
+	}
+
+	// If we've not found an existing condition of this type, we simply insert
+	// the new condition into the slice.
+	*patchConditions = append(*patchConditions, newCondition)
+
+	return &newCondition, &nowTime
 }
 
 func GetIssuerStatusCondition(

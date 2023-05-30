@@ -57,7 +57,7 @@ func (CertificateRequestPredicate) Update(e event.UpdateEvent) bool {
 	}
 
 	for _, oldCond := range oldCr.Status.Conditions {
-		if oldCond.Type == "Ready" {
+		if oldCond.Type == cmapi.CertificateRequestConditionReady {
 			// we can skip the Ready conditions
 			continue
 		}

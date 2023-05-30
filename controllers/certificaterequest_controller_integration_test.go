@@ -35,6 +35,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/clock"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -94,6 +95,7 @@ func TestCertificateRequestControllerIntegrationIssuerInitiallyNotFoundAndNotRea
 					return []byte("ok"), nil
 				},
 				EventRecorder: record.NewFakeRecorder(100),
+				Clock:         clock.RealClock{},
 			}
 		},
 	)
@@ -142,7 +144,7 @@ func TestCertificateRequestControllerIntegrationIssuerInitiallyNotFoundAndNotRea
 
 			checkComplete := kubeClients.StartObjectWatch(t, ctx, cr)
 			t.Log("Creating & approving the CertificateRequest")
-			createApprovedCR(t, ctx, kubeClients.Client, cr)
+			createApprovedCR(t, ctx, kubeClients.Client, clock.RealClock{}, cr)
 			t.Log("Waiting for controller to mark the CertificateRequest as IssuerNotFound")
 			err := checkComplete(func(obj runtime.Object) error {
 				readyCondition := cmutil.GetCertificateRequestCondition(obj.(*cmapi.CertificateRequest), cmapi.CertificateRequestConditionReady)
@@ -178,7 +180,7 @@ func TestCertificateRequestControllerIntegrationIssuerInitiallyNotFoundAndNotRea
 
 			checkComplete = kubeClients.StartObjectWatch(t, ctx, cr)
 			t.Log("Marking the Issuer as ready to trigger the controller to re-reconcile the CertificateRequest")
-			markIssuerReady(t, ctx, kubeClients.Client, fieldOwner, issuer)
+			markIssuerReady(t, ctx, kubeClients.Client, clock.RealClock{}, fieldOwner, issuer)
 			t.Log("Waiting for the controller to marks the CertificateRequest as Ready")
 			err = checkComplete(func(obj runtime.Object) error {
 				readyCondition := cmutil.GetCertificateRequestCondition(obj.(*cmapi.CertificateRequest), cmapi.CertificateRequestConditionReady)
@@ -235,6 +237,7 @@ func TestCertificateRequestControllerIntegrationSetCondition(t *testing.T) {
 					}
 				},
 				EventRecorder: record.NewFakeRecorder(100),
+				Clock:         clock.RealClock{},
 			}
 		},
 	)
@@ -263,7 +266,7 @@ func TestCertificateRequestControllerIntegrationSetCondition(t *testing.T) {
 
 	checkComplete := kubeClients.StartObjectWatch(t, ctx, cr)
 	t.Log("Creating & approving the CertificateRequest")
-	createApprovedCR(t, ctx, kubeClients.Client, cr)
+	createApprovedCR(t, ctx, kubeClients.Client, clock.RealClock{}, cr)
 	t.Log("Waiting for controller to mark the CertificateRequest as IssuerNotFound")
 	err := checkComplete(func(obj runtime.Object) error {
 		readyCondition := cmutil.GetCertificateRequestCondition(obj.(*cmapi.CertificateRequest), cmapi.CertificateRequestConditionReady)
@@ -299,7 +302,7 @@ func TestCertificateRequestControllerIntegrationSetCondition(t *testing.T) {
 
 	t.Log("Marking the Issuer as ready to trigger the controller to re-reconcile the CertificateRequest")
 
-	markIssuerReady(t, ctx, kubeClients.Client, fieldOwner, issuer)
+	markIssuerReady(t, ctx, kubeClients.Client, clock.RealClock{}, fieldOwner, issuer)
 
 	checkComplete = kubeClients.StartObjectWatch(t, ctx, cr)
 	signResult <- signer.SetCertificateRequestConditionError{
@@ -363,11 +366,13 @@ func TestCertificateRequestControllerIntegrationSetCondition(t *testing.T) {
 	require.Equal(t, uint64(3), atomic.LoadUint64(&counter))
 }
 
-func createApprovedCR(t *testing.T, ctx context.Context, kc client.Client, cr *cmapi.CertificateRequest) {
+func createApprovedCR(t *testing.T, ctx context.Context, kc client.Client, clock clock.PassiveClock, cr *cmapi.CertificateRequest) {
 	t.Helper()
 
 	require.NoError(t, kc.Create(ctx, cr))
 	conditions.SetCertificateRequestStatusCondition(
+		clock,
+		cr.Status.Conditions,
 		&cr.Status.Conditions,
 		cmapi.CertificateRequestConditionApproved,
 		cmmeta.ConditionTrue,
@@ -402,11 +407,13 @@ func createIssuerForCR(t *testing.T, ctx context.Context, kc client.Client, cr *
 	return issuer
 }
 
-func markIssuerReady(t *testing.T, ctx context.Context, kc client.Client, fieldOwner string, issuer v1alpha1.Issuer) {
+func markIssuerReady(t *testing.T, ctx context.Context, kc client.Client, clock clock.PassiveClock, fieldOwner string, issuer v1alpha1.Issuer) {
 	t.Helper()
 
 	issuerStatus := &v1alpha1.IssuerStatus{}
 	conditions.SetIssuerStatusCondition(
+		clock,
+		issuerStatus.Conditions,
 		&issuerStatus.Conditions,
 		issuer.GetGeneration(),
 		cmapi.IssuerConditionReady,
