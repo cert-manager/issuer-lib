@@ -99,9 +99,6 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 	cr1 := cmgen.CertificateRequest(
 		"cr1",
 		cmgen.SetCertificateRequestNamespace("ns1"),
-		func(cr *cmapi.CertificateRequest) {
-			cr.CreationTimestamp = fakeTimeObj1
-		},
 		cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
 			Group: api.SchemeGroupVersion.Group,
 		}),
@@ -403,7 +400,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Group: api.SchemeGroupVersion.Group,
 					}),
 					func(cr *cmapi.CertificateRequest) {
-						cr.CreationTimestamp.Time = cr.CreationTimestamp.Time.Add(-2 * time.Minute)
+						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
 					},
 				),
 				testutil.SimpleIssuerFrom(issuer1),
@@ -439,7 +436,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Group: api.SchemeGroupVersion.Group,
 					}),
 					func(cr *cmapi.CertificateRequest) {
-						cr.CreationTimestamp.Time = cr.CreationTimestamp.Time.Add(-2 * time.Minute)
+						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
 					},
 				),
 				testutil.SimpleIssuerFrom(issuer1),
@@ -483,6 +480,9 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 			},
 			objects: []client.Object{
 				cmgen.CertificateRequestFrom(cr1,
+					func(cr *cmapi.CertificateRequest) {
+						cr.CreationTimestamp = fakeTimeObj2
+					},
 					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
 						Name:  issuer1.Name,
 						Group: api.SchemeGroupVersion.Group,
@@ -534,6 +534,9 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 			},
 			objects: []client.Object{
 				cmgen.CertificateRequestFrom(cr1,
+					func(cr *cmapi.CertificateRequest) {
+						cr.CreationTimestamp = fakeTimeObj2
+					},
 					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
 						Name:  issuer1.Name,
 						Group: api.SchemeGroupVersion.Group,
@@ -599,7 +602,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Group: api.SchemeGroupVersion.Group,
 					}),
 					func(cr *cmapi.CertificateRequest) {
-						cr.CreationTimestamp.Time = cr.CreationTimestamp.Time.Add(-2 * time.Minute)
+						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
 					},
 				),
 				testutil.SimpleIssuerFrom(issuer1),
@@ -654,7 +657,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Group: api.SchemeGroupVersion.Group,
 					}),
 					func(cr *cmapi.CertificateRequest) {
-						cr.CreationTimestamp.Time = cr.CreationTimestamp.Time.Add(-2 * time.Minute)
+						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
 					},
 					cmgen.AddCertificateRequestStatusCondition(cmapi.CertificateRequestCondition{
 						Type:               "[condition type]",
@@ -714,7 +717,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Group: api.SchemeGroupVersion.Group,
 					}),
 					func(cr *cmapi.CertificateRequest) {
-						cr.CreationTimestamp.Time = cr.CreationTimestamp.Time.Add(-2 * time.Minute)
+						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
 					},
 				),
 				testutil.SimpleIssuerFrom(issuer1),
@@ -836,10 +839,15 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				return nil, errors.New("waiting for approval")
 			},
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1, func(cr *cmapi.CertificateRequest) {
-					cr.Spec.IssuerRef.Name = issuer1.Name
-					cr.Spec.IssuerRef.Kind = issuer1.Kind
-				}),
+				cmgen.CertificateRequestFrom(cr1,
+					func(cr *cmapi.CertificateRequest) {
+						cr.CreationTimestamp = fakeTimeObj2
+					},
+					func(cr *cmapi.CertificateRequest) {
+						cr.Spec.IssuerRef.Name = issuer1.Name
+						cr.Spec.IssuerRef.Kind = issuer1.Kind
+					},
+				),
 				testutil.SimpleIssuerFrom(issuer1),
 			},
 			// instead of returning an error, we trigger a new reconciliation by setting requeue=true
