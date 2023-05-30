@@ -33,7 +33,7 @@ func SetIssuerStatusCondition(
 	conditionType cmapi.IssuerConditionType,
 	status cmmeta.ConditionStatus,
 	reason, message string,
-) *cmapi.IssuerCondition {
+) (*cmapi.IssuerCondition, *metav1.Time) {
 	newCondition := cmapi.IssuerCondition{
 		Type:               conditionType,
 		Status:             status,
@@ -68,14 +68,14 @@ func SetIssuerStatusCondition(
 		// Overwrite the existing condition
 		(*patchConditions)[idx] = newCondition
 
-		return &newCondition
+		return &newCondition, &nowTime
 	}
 
 	// If we've not found an existing condition of this type, we simply insert
 	// the new condition into the slice.
 	*patchConditions = append(*patchConditions, newCondition)
 
-	return &newCondition
+	return &newCondition, &nowTime
 }
 
 func GetIssuerStatusCondition(

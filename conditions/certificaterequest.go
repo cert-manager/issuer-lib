@@ -32,7 +32,7 @@ func SetCertificateRequestStatusCondition(
 	conditionType cmapi.CertificateRequestConditionType,
 	status cmmeta.ConditionStatus,
 	reason, message string,
-) *cmapi.CertificateRequestCondition {
+) (*cmapi.CertificateRequestCondition, *metav1.Time) {
 	newCondition := cmapi.CertificateRequestCondition{
 		Type:    conditionType,
 		Status:  status,
@@ -66,12 +66,12 @@ func SetCertificateRequestStatusCondition(
 		// Overwrite the existing condition
 		(*patchConditions)[idx] = newCondition
 
-		return &newCondition
+		return &newCondition, &nowTime
 	}
 
 	// If we've not found an existing condition of this type, we simply insert
 	// the new condition into the slice.
 	*patchConditions = append(*patchConditions, newCondition)
 
-	return &newCondition
+	return &newCondition, &nowTime
 }

@@ -188,7 +188,7 @@ func (r *CertificateRequestReconciler) reconcileStatusPatch(
 
 	if cmutil.CertificateRequestIsDenied(&cr) {
 		logger.V(1).Info("CertificateRequest has been denied. Marking as failed.")
-		condition := conditions.SetCertificateRequestStatusCondition(
+		_, failedAt := conditions.SetCertificateRequestStatusCondition(
 			r.Clock,
 			cr.Status.Conditions,
 			&crStatusPatch.Conditions,
@@ -197,7 +197,7 @@ func (r *CertificateRequestReconciler) reconcileStatusPatch(
 			cmapi.CertificateRequestReasonDenied,
 			"The CertificateRequest was denied by an approval controller",
 		)
-		crStatusPatch.FailureTime = condition.LastTransitionTime.DeepCopy()
+		crStatusPatch.FailureTime = failedAt.DeepCopy()
 		r.EventRecorder.Eventf(&cr, corev1.EventTypeNormal, "DetectedDenied", "Detected that the CR is denied, will update Ready condition")
 		return result, crStatusPatch, nil // done, apply patch
 	}
@@ -302,7 +302,7 @@ func (r *CertificateRequestReconciler) reconcileStatusPatch(
 		if !isPendingError && (isPermanentError || pastMaxRetryDuration) {
 			// fail permanently
 			logger.V(1).Error(err, "Permanent CertificateRequest error. Marking as failed.")
-			condition := conditions.SetCertificateRequestStatusCondition(
+			_, failedAt := conditions.SetCertificateRequestStatusCondition(
 				r.Clock,
 				cr.Status.Conditions,
 				&crStatusPatch.Conditions,
@@ -311,7 +311,7 @@ func (r *CertificateRequestReconciler) reconcileStatusPatch(
 				cmapi.CertificateRequestReasonFailed,
 				fmt.Sprintf("CertificateRequest has failed permanently: %s", err),
 			)
-			crStatusPatch.FailureTime = condition.LastTransitionTime.DeepCopy()
+			crStatusPatch.FailureTime = failedAt.DeepCopy()
 			r.EventRecorder.Eventf(&cr, corev1.EventTypeWarning, "PermanentError", "Failed permanently to sign CertificateRequest: %s", err)
 			return result, crStatusPatch, nil // done, apply patch
 		} else {
