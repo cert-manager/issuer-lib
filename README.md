@@ -10,9 +10,7 @@
 
 > issuer-lib is the Go library for building cert-manager issuers.
 
-See `./internal/testsetups/simple` for an example of creating an issuer based on this library.
-
----
+## Stability disclaimer
 
 ⚠️ Warning: This library's API is still subject to change. Developers using this library will have to update their
 code when updating to a newer version.
@@ -24,7 +22,37 @@ that uses this library & we have an example project that shows how to use this l
 At this point, we will start advising developers to migrate their existing Issuers to this library.
 3. At 5+ open-source Issuers, we plan to make a stable v1 release of this library.
 
----
+## Introduction
+
+cert-manager issuers are responsible for watching CertificateRequest resources and updating
+their status with the signed certificate data. An issuer must only respond to
+CertificateRequests that have an IssuerRef that matches the Name, Kind and group
+of one of its Issuer resources. Additionally, the CertificateRequest must have been approved.
+
+This library provides all the controllers necessary to implement a cert-manager
+issuer, these controllers contain all the common logic required to implement
+an issuer. The only thing you need to provide is the business logic for
+communicating with your CA, this is done by implementing the `Sign` and `Check`
+functions.
+
+## Goals
+
+This library makes it easy to create a cert-manager issuer that integrates with
+your CA.
+
+It takes care of:
+
+- Watching CertificateRequests and your custom Issuer resources
+- Updating the Issuer status with status of the CA
+- Updating the CertificateRequest status with the signed certificate data
+- Handling errors and retries
+- Handling CertificateRequest approval and denial
+- [FUTURE] Handle issuance of Kubernetes CSR resources
+- [FUTURE] Provide a set of conformance tests for issuers
+
+## Usage
+
+An example issuer implementation can be found in the [`./internal/testsetups/simple`](./internal/testsetups/simple) subdirectory.
 
 ## How it works
 
