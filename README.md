@@ -12,8 +12,6 @@
 
 ## Stability disclaimer
 
----
-
 ⚠️ Warning: This library's API is still subject to change. Developers using this library will have to update their
 code when updating to a newer version.
 
@@ -23,8 +21,6 @@ that uses this library & we have an example project that shows how to use this l
 2. Once we have a 2nd or 3rd open-source Issuer that uses this library, we should be able to guarantee more stability.
 At this point, we will start advising developers to migrate their existing Issuers to this library.
 3. At 5+ open-source Issuers, we plan to make a stable v1 release of this library.
-
----
 
 ## Introduction
 
