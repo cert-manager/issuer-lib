@@ -277,8 +277,7 @@ func (r *CertificateSigningRequestReconciler) setIssuersGroupVersionKind(scheme 
 // The signerName of the CertificateSigningRequest should be in the format
 // "<issuer-type-id>/<issuer-id>". The issuer-type-id is obtained from the
 // GetIssuerTypeIdentifier function of the IssuerType.
-// The issuer-id is "<namespace>.<name>" for an Issuer or "<name>" for a
-// ClusterIssuer resource.
+// The issuer-id is "<name>" for a ClusterIssuer resource.
 func (r *CertificateSigningRequestReconciler) matchIssuerType(csr *certificatesv1.CertificateSigningRequest) (v1alpha1.Issuer, types.NamespacedName, error) {
 	if csr == nil {
 		return nil, types.NamespacedName{}, fmt.Errorf("invalid signer name, should have format <issuer-type-id>/<issuer-id>")
@@ -308,13 +307,7 @@ func (r *CertificateSigningRequestReconciler) matchIssuerType(csr *certificatesv
 		}
 
 		if isNamespaced {
-			split := strings.SplitN(issuerIdentifier, ".", 2)
-			if len(split) != 2 {
-				return nil, types.NamespacedName{}, fmt.Errorf("invalid issuer identifier, should have format %s/<namespace>.<name>: %q", issuerTypeIdentifier, csr.Spec.SignerName)
-			}
-
-			issuerName.Namespace = split[0]
-			issuerName.Name = split[1]
+			return nil, types.NamespacedName{}, fmt.Errorf("invalid SignerName, %q is a namespaced issuer type, namespaced issuers are not supported for Kubernetes CSRs", issuerTypeIdentifier)
 		}
 
 		return issuerObject, issuerName, nil

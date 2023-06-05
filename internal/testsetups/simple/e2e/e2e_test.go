@@ -93,12 +93,9 @@ func TestSimpleCertificateSigningRequest(t *testing.T) {
 
 	kubeClients := testresource.KubeClients(t, ctx)
 
-	namespace, cleanup := kubeClients.SetupNamespace(t, ctx)
-	defer cleanup()
+	csrName := "test-" + randStringRunes(20)
 
-	issuer := testutil.SimpleIssuer("issuer-test",
-		testutil.SetSimpleIssuerNamespace(namespace),
-	)
+	clusterIssuer := testutil.SimpleClusterIssuer("cluster-issuer-" + csrName)
 
 	privateKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	require.NoError(t, err)
@@ -109,14 +106,14 @@ func TestSimpleCertificateSigningRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	csr := cmgen.CertificateSigningRequest(
-		"test-csr-"+randStringRunes(20),
+		"csr-"+csrName,
 		cmgen.SetCertificateSigningRequestDuration("1h"),
 		cmgen.SetCertificateSigningRequestRequest(csrBlob),
 		cmgen.SetCertificateSigningRequestUsages([]certificatesv1.KeyUsage{certificatesv1.UsageDigitalSignature}),
-		cmgen.SetCertificateSigningRequestSignerName(fmt.Sprintf("simpleissuers.issuer.cert-manager.io/%s.%s", issuer.Namespace, issuer.Name)),
+		cmgen.SetCertificateSigningRequestSignerName(fmt.Sprintf("simpleclusterissuers.issuer.cert-manager.io/%s", clusterIssuer.Name)),
 	)
 
-	err = kubeClients.Client.Create(ctx, issuer)
+	err = kubeClients.Client.Create(ctx, clusterIssuer)
 	require.NoError(t, err)
 
 	complete := kubeClients.StartObjectWatch(t, ctx, csr)
@@ -155,7 +152,7 @@ func TestSimpleCertificateSigningRequest(t *testing.T) {
 	require.NoError(t, err)
 }
 
-var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz")
 
 // RandStringRunes - generate random string using random int
 func randStringRunes(n int) string {

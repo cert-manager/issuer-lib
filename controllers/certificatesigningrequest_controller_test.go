@@ -205,7 +205,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			name: "set-ready-pending-missing-issuer",
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1, func(cr *certificatesv1.CertificateSigningRequest) {
-					cr.Spec.SignerName = fmt.Sprintf("%s/%s.%s", issuer1.GetIssuerTypeIdentifier(), issuer1.Namespace, issuer1.Name)
+					cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
 				}),
 			},
 			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
@@ -222,10 +222,10 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			name: "set-ready-pending-issuer-has-no-ready-condition",
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1, func(cr *certificatesv1.CertificateSigningRequest) {
-					cr.Spec.SignerName = fmt.Sprintf("%s/%s.%s", issuer1.GetIssuerTypeIdentifier(), issuer1.Namespace, issuer1.Name)
+					cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
 				}),
-				testutil.SimpleIssuerFrom(issuer1,
-					func(si *api.SimpleIssuer) {
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1,
+					func(si *api.SimpleClusterIssuer) {
 						si.Status.Conditions = nil
 					},
 				),
@@ -243,10 +243,10 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			name: "set-ready-pending-issuer-is-not-ready",
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1, func(cr *certificatesv1.CertificateSigningRequest) {
-					cr.Spec.SignerName = fmt.Sprintf("%s/%s.%s", issuer1.GetIssuerTypeIdentifier(), issuer1.Namespace, issuer1.Name)
+					cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
 				}),
-				testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerStatusCondition(
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1,
+					testutil.SetSimpleClusterIssuerStatusCondition(
 						fakeClock1,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionFalse,
@@ -269,10 +269,10 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			name: "set-ready-pending-issuer-ready-outdated",
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1, func(cr *certificatesv1.CertificateSigningRequest) {
-					cr.Spec.SignerName = fmt.Sprintf("%s/%s.%s", issuer1.GetIssuerTypeIdentifier(), issuer1.Namespace, issuer1.Name)
+					cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
 				}),
-				testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerGeneration(issuer1.Generation+1),
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1,
+					testutil.SetSimpleClusterIssuerGeneration(issuer1.Generation+1),
 				),
 			},
 			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
@@ -293,13 +293,13 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1,
 					func(cr *certificatesv1.CertificateSigningRequest) {
-						cr.Spec.SignerName = fmt.Sprintf("%s/%s.%s", issuer1.GetIssuerTypeIdentifier(), issuer1.Namespace, issuer1.Name)
+						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
 					},
 					func(cr *certificatesv1.CertificateSigningRequest) {
 						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
 					},
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
 			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
 				Conditions: []certificatesv1.CertificateSigningRequestCondition{
@@ -328,13 +328,13 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1,
 					func(cr *certificatesv1.CertificateSigningRequest) {
-						cr.Spec.SignerName = fmt.Sprintf("%s/%s.%s", issuer1.GetIssuerTypeIdentifier(), issuer1.Namespace, issuer1.Name)
+						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
 					},
 					func(cr *certificatesv1.CertificateSigningRequest) {
 						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
 					},
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
 			// instead of returning an error, we trigger a new reconciliation by setting requeue=true
 			validateError: errormatch.NoError(),
@@ -371,10 +371,10 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 						cr.CreationTimestamp = fakeTimeObj2
 					},
 					func(cr *certificatesv1.CertificateSigningRequest) {
-						cr.Spec.SignerName = fmt.Sprintf("%s/%s.%s", issuer1.GetIssuerTypeIdentifier(), issuer1.Namespace, issuer1.Name)
+						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
 					},
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
 			// no error should be returned because the reconciliation should be triggered
 			// when the custom condition is added
@@ -418,7 +418,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 						cr.CreationTimestamp = fakeTimeObj2
 					},
 					func(cr *certificatesv1.CertificateSigningRequest) {
-						cr.Spec.SignerName = fmt.Sprintf("%s/%s.%s", issuer1.GetIssuerTypeIdentifier(), issuer1.Namespace, issuer1.Name)
+						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
 					},
 					cmgen.SetCertificateSigningRequestStatusCondition(certificatesv1.CertificateSigningRequestCondition{
 						Type:               "[condition type]",
@@ -429,7 +429,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 						LastUpdateTime:     fakeTimeObj2,
 					}),
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
 			// instead of returning an error, we trigger a new reconciliation by setting requeue=true
 			validateError: errormatch.NoError(),
@@ -472,13 +472,13 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1,
 					func(cr *certificatesv1.CertificateSigningRequest) {
-						cr.Spec.SignerName = fmt.Sprintf("%s/%s.%s", issuer1.GetIssuerTypeIdentifier(), issuer1.Namespace, issuer1.Name)
+						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
 					},
 					func(cr *certificatesv1.CertificateSigningRequest) {
 						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
 					},
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
 			// no error should be returned because the reconciliation should be triggered when the
 			// custom condition is added
@@ -527,7 +527,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1,
 					func(cr *certificatesv1.CertificateSigningRequest) {
-						cr.Spec.SignerName = fmt.Sprintf("%s/%s.%s", issuer1.GetIssuerTypeIdentifier(), issuer1.Namespace, issuer1.Name)
+						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
 					},
 					func(cr *certificatesv1.CertificateSigningRequest) {
 						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
@@ -541,7 +541,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 						LastUpdateTime:     fakeTimeObj1,
 					}),
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
 			// since we got into a permanent failure state, we should not return an error
 			validateError: errormatch.NoError(),
@@ -588,13 +588,13 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1,
 					func(cr *certificatesv1.CertificateSigningRequest) {
-						cr.Spec.SignerName = fmt.Sprintf("%s/%s.%s", issuer1.GetIssuerTypeIdentifier(), issuer1.Namespace, issuer1.Name)
+						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
 					},
 					func(cr *certificatesv1.CertificateSigningRequest) {
 						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
 					},
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
 			// no error should be returned because the reconciliation should be triggered
 			// when the custom condition is added
@@ -634,10 +634,10 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1,
 					func(cr *certificatesv1.CertificateSigningRequest) {
-						cr.Spec.SignerName = fmt.Sprintf("%s/%s.%s", issuer1.GetIssuerTypeIdentifier(), issuer1.Namespace, issuer1.Name)
+						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
 					},
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
 			// no error should be returned because we are in a permanent failure state no further
 			// retries should be made
@@ -676,10 +676,10 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1,
 					func(cr *certificatesv1.CertificateSigningRequest) {
-						cr.Spec.SignerName = fmt.Sprintf("%s/%s.%s", issuer1.GetIssuerTypeIdentifier(), issuer1.Namespace, issuer1.Name)
+						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
 					},
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
 			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
 				Conditions: []certificatesv1.CertificateSigningRequestCondition{
@@ -708,13 +708,13 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1,
 					func(cr *certificatesv1.CertificateSigningRequest) {
-						cr.Spec.SignerName = fmt.Sprintf("%s/%s.%s", issuer1.GetIssuerTypeIdentifier(), issuer1.Namespace, issuer1.Name)
+						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
 					},
 					func(cr *certificatesv1.CertificateSigningRequest) {
 						cr.CreationTimestamp = fakeTimeObj2
 					},
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
 			// instead of returning an error, we trigger a new reconciliation by setting requeue=true
 			validateError: errormatch.NoError(),
@@ -738,13 +738,8 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 				}),
 				testutil.SimpleIssuerFrom(issuer1),
 			},
-			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
-				Certificate: []byte("a-signed-certificate"),
-				Conditions:  nil,
-			},
-			expectedEvents: []string{
-				"Normal Issued Succeeded signing the CertificateRequest",
-			},
+			expectedStatusPatch: nil,
+			expectedEvents:      []string{},
 		},
 
 		{
@@ -884,8 +879,9 @@ func TestCertificateSigningRequestMatchIssuerType(t *testing.T) {
 			clusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
 			csr:                createCsr("simpleissuers.issuer.cert-manager.io/namespace.name"),
 
-			expectedIssuerType: &api.SimpleIssuer{},
-			expectedIssuerName: types.NamespacedName{Name: "name", Namespace: "namespace"},
+			expectedIssuerType: nil,
+			expectedIssuerName: types.NamespacedName{},
+			expectedError:      errormatch.ErrorContains("invalid SignerName, \"simpleissuers.issuer.cert-manager.io\" is a namespaced issuer type, namespaced issuers are not supported for Kubernetes CSRs"),
 		},
 		{
 			name:               "match cluster issuer",
@@ -895,43 +891,6 @@ func TestCertificateSigningRequestMatchIssuerType(t *testing.T) {
 
 			expectedIssuerType: &api.SimpleClusterIssuer{},
 			expectedIssuerName: types.NamespacedName{Name: "name"},
-		},
-		{
-			name:               "issuer with dot in name",
-			issuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
-			clusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
-			csr:                createCsr("simpleissuers.issuer.cert-manager.io/namespace.name.test"),
-
-			expectedIssuerType: &api.SimpleIssuer{},
-			expectedIssuerName: types.NamespacedName{Namespace: "namespace", Name: "name.test"},
-		},
-		{
-			name:               "issuer with empty namespace",
-			issuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
-			clusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
-			csr:                createCsr("simpleissuers.issuer.cert-manager.io/.name.test"),
-
-			expectedIssuerType: &api.SimpleIssuer{},
-			expectedIssuerName: types.NamespacedName{Namespace: "", Name: "name.test"},
-		},
-		{
-			name:               "issuer without dot in ID",
-			issuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
-			clusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
-			csr:                createCsr("simpleissuers.issuer.cert-manager.io/test"),
-
-			expectedIssuerType: nil,
-			expectedIssuerName: types.NamespacedName{},
-			expectedError:      errormatch.ErrorContains("invalid issuer identifier, should have format simpleissuers.issuer.cert-manager.io/<namespace>.<name>: \"simpleissuers.issuer.cert-manager.io/test\""),
-		},
-		{
-			name:               "issuer with empty name",
-			issuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
-			clusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
-			csr:                createCsr("simpleissuers.issuer.cert-manager.io/namespace."),
-
-			expectedIssuerType: &api.SimpleIssuer{},
-			expectedIssuerName: types.NamespacedName{Namespace: "namespace", Name: ""},
 		},
 		{
 			name:               "cluster issuer with dot in name",
