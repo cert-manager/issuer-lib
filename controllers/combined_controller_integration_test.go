@@ -32,7 +32,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1alpha1 "github.com/cert-manager/issuer-lib/api/v1alpha1"
 	"github.com/cert-manager/issuer-lib/conditions"
@@ -68,7 +67,7 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 				ClusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
 				FieldOwner:         fieldOwner,
 				MaxRetryDuration:   time.Minute,
-				Check: func(_ context.Context, _ client.Object) error {
+				Check: func(_ context.Context, _ v1alpha1.Issuer) error {
 					select {
 					case err := <-checkResult:
 						return err
@@ -76,7 +75,7 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 						return ctx.Err()
 					}
 				},
-				Sign: func(_ context.Context, _ *cmapi.CertificateRequest, _ client.Object) ([]byte, error) {
+				Sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) ([]byte, error) {
 					select {
 					case err := <-signResult:
 						return nil, err

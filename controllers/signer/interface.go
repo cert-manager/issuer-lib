@@ -18,10 +18,21 @@ package signer
 
 import (
 	"context"
+	"crypto/x509"
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/cert-manager/issuer-lib/api/v1alpha1"
 )
 
-type Sign func(ctx context.Context, cr *cmapi.CertificateRequest, issuerObject client.Object) ([]byte, error)
-type Check func(ctx context.Context, issuerObject client.Object) error
+type Sign func(ctx context.Context, cr CertificateRequestObject, issuerObject v1alpha1.Issuer) ([]byte, error)
+type Check func(ctx context.Context, issuerObject v1alpha1.Issuer) error
+
+type CertificateRequestObject interface {
+	metav1.Object
+
+	GetRequest() (template *x509.Certificate, csr []byte, err error)
+
+	GetConditions() []cmapi.CertificateRequestCondition
+}

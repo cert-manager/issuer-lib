@@ -27,6 +27,7 @@ import (
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/stretchr/testify/require"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -56,6 +57,7 @@ func KubeClients(tb testing.TB, ctx context.Context) *OwnedKubeClients {
 
 	scheme := runtime.NewScheme()
 	require.NoError(tb, corev1.AddToScheme(scheme))
+	require.NoError(tb, certificatesv1.AddToScheme(scheme))
 	require.NoError(tb, cmapi.AddToScheme(scheme))
 	require.NoError(tb, api.AddToScheme(scheme))
 

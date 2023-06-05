@@ -28,4 +28,5 @@ type Issuer interface {
 	runtime.Object
 	metav1.Object
 	GetStatus() *IssuerStatus
+	GetIssuerTypeIdentifier() string
 }

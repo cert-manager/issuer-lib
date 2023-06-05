@@ -93,7 +93,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 	)
 
 	staticChecker := func(err error) signer.Check {
-		return func(_ context.Context, _ client.Object) error {
+		return func(_ context.Context, _ v1alpha1.Issuer) error {
 			return err
 		}
 	}

@@ -45,6 +45,10 @@ func (vi *SimpleIssuer) GetStatus() *v1alpha1.IssuerStatus {
 	return &vi.Status
 }
 
+func (vi *SimpleIssuer) GetIssuerTypeIdentifier() string {
+	return "simpleissuers.issuer.cert-manager.io"
+}
+
 var _ v1alpha1.Issuer = &SimpleIssuer{}
 
 // +kubebuilder:object:root=true
