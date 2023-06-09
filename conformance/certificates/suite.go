@@ -19,12 +19,13 @@ package certificates
 import (
 	"context"
 
-	. "github.com/onsi/ginkgo/v2"
+	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 
-	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	"github.com/cert-manager/issuer-lib/conformance/framework"
 	"github.com/cert-manager/issuer-lib/conformance/framework/helper/featureset"
+
+	. "github.com/onsi/ginkgo/v2"
 )
 
 // Suite defines a reusable conformance test suite that can be used against any
@@ -113,15 +114,11 @@ func (s *Suite) it(f *framework.Framework, name string, fn func(cmmeta.ObjectRef
 // It will return 'true' if all features are supported and the test should run,
 // or return 'false' if any required feature is not supported.
 func (s *Suite) checkFeatures(fs ...featureset.Feature) bool {
-	unsupported := make(featureset.FeatureSet)
 	for _, f := range fs {
 		if s.UnsupportedFeatures.Contains(f) {
-			unsupported.Add(f)
+			return false
 		}
 	}
-	// all features supported, return early!
-	if len(unsupported) == 0 {
-		return true
-	}
-	return false
+
+	return true
 }

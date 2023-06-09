@@ -54,16 +54,16 @@ func (fs FeatureSet) Contains(f Feature) bool {
 // Copy returns a new copy of an existing Feature Set.
 // It is not safe to be called by multiple goroutines.
 func (fs FeatureSet) Copy() FeatureSet {
-	new := make(FeatureSet)
+	newSet := make(FeatureSet, len(fs))
 	for k, v := range fs {
-		new[k] = v
+		newSet[k] = v
 	}
-	return new
+	return newSet
 }
 
 // List returns a slice of all features in the set.
 func (fs FeatureSet) List() []Feature {
-	var ret []Feature
+	ret := make([]Feature, 0, len(fs))
 	for k := range fs {
 		ret = append(ret, k)
 	}
@@ -72,14 +72,10 @@ func (fs FeatureSet) List() []Feature {
 
 // String returns this FeatureSet as a comma separated string
 func (fs FeatureSet) String() string {
-	featsSlice := make([]string, len(fs))
-
-	i := 0
+	featsSlice := make([]string, 0, len(fs))
 	for f := range fs {
-		featsSlice[i] = string(f)
-		i++
+		featsSlice = append(featsSlice, string(f))
 	}
-
 	return strings.Join(featsSlice, ", ")
 }
 

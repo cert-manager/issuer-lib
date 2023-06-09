@@ -25,22 +25,23 @@ import (
 	"reflect"
 	"time"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
+	"github.com/cert-manager/cert-manager/pkg/util/pki"
+	"github.com/cert-manager/cert-manager/test/unit/gen"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 
-	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
-	"github.com/cert-manager/cert-manager/pkg/util/pki"
-	"github.com/cert-manager/cert-manager/test/unit/gen"
 	"github.com/cert-manager/issuer-lib/conformance/framework"
 	"github.com/cert-manager/issuer-lib/conformance/framework/helper/featureset"
 	"github.com/cert-manager/issuer-lib/conformance/framework/helper/validation"
 	"github.com/cert-manager/issuer-lib/conformance/framework/helper/validation/certificates"
 	e2eutil "github.com/cert-manager/issuer-lib/conformance/util"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
 // Define defines simple conformance tests that can be run against any issuer type.
@@ -392,12 +393,12 @@ func (s *Suite) Define() {
 				Expect(err).NotTo(HaveOccurred())
 
 				By("Waiting for the Certificate to be issued...")
-				certificate, err = f.Helper().WaitForCertificateReadyAndDoneIssuing(certificate, time.Minute*8)
+				certificate, err = f.Helper().WaitForCertificateReadyAndDoneIssuing(ctx, certificate, time.Minute*8)
 				Expect(err).NotTo(HaveOccurred())
 
 				By("Validating the issued Certificate...")
 				validations := append(test.extraValidations, validation.CertificateSetForUnsupportedFeatureSet(s.UnsupportedFeatures)...)
-				err = f.Helper().ValidateCertificate(certificate, validations...)
+				err = f.Helper().ValidateCertificate(ctx, certificate, validations...)
 				Expect(err).NotTo(HaveOccurred())
 			}, test.requiredFeatures...)
 		}
@@ -423,11 +424,11 @@ func (s *Suite) Define() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Waiting for the Certificate to be issued...")
-			testCertificate, err = f.Helper().WaitForCertificateReadyAndDoneIssuing(testCertificate, time.Minute*8)
+			testCertificate, err = f.Helper().WaitForCertificateReadyAndDoneIssuing(ctx, testCertificate, time.Minute*8)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Validating the issued Certificate...")
-			err = f.Helper().ValidateCertificate(testCertificate, validation.CertificateSetForUnsupportedFeatureSet(s.UnsupportedFeatures)...)
+			err = f.Helper().ValidateCertificate(ctx, testCertificate, validation.CertificateSetForUnsupportedFeatureSet(s.UnsupportedFeatures)...)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Deleting existing certificate data in Secret")
@@ -446,7 +447,7 @@ func (s *Suite) Define() {
 			Expect(err).NotTo(HaveOccurred(), "failed to update secret by deleting the signed certificate data")
 
 			By("Waiting for the Certificate to re-issue a certificate")
-			sec, err = f.Helper().WaitForSecretCertificateData(f.Namespace.Name, sec.Name, time.Minute*8)
+			sec, err = f.Helper().WaitForSecretCertificateData(ctx, f.Namespace.Name, sec.Name, time.Minute*8)
 			Expect(err).NotTo(HaveOccurred(), "failed to wait for secret to have a valid 2nd certificate")
 
 			crtPEM2 := sec.Data[corev1.TLSCertKey]
@@ -481,17 +482,17 @@ func (s *Suite) Define() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Waiting for the Certificate to be ready")
-			testCertificate, err = f.Helper().WaitForCertificateReadyAndDoneIssuing(testCertificate, time.Minute*8)
+			testCertificate, err = f.Helper().WaitForCertificateReadyAndDoneIssuing(ctx, testCertificate, time.Minute*8)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Sanity-check the issued Certificate")
-			err = f.Helper().ValidateCertificate(testCertificate, validations...)
+			err = f.Helper().ValidateCertificate(ctx, testCertificate, validations...)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Updating the Certificate after having added an additional dnsName")
 			newDNSName := e2eutil.RandomSubdomain(s.DomainSuffix)
-			retry.RetryOnConflict(retry.DefaultRetry, func() error {
-				err = f.CRClient.Get(context.Background(), types.NamespacedName{Name: testCertificate.Name, Namespace: testCertificate.Namespace}, testCertificate)
+			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				err := f.CRClient.Get(context.Background(), types.NamespacedName{Name: testCertificate.Name, Namespace: testCertificate.Namespace}, testCertificate)
 				if err != nil {
 					return err
 				}
@@ -503,15 +504,14 @@ func (s *Suite) Define() {
 				}
 				return nil
 			})
-
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Waiting for the Certificate Ready condition to be updated")
-			testCertificate, err = f.Helper().WaitForCertificateReadyAndDoneIssuing(testCertificate, time.Minute*8)
+			testCertificate, err = f.Helper().WaitForCertificateReadyAndDoneIssuing(ctx, testCertificate, time.Minute*8)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Sanity-check the issued Certificate")
-			err = f.Helper().ValidateCertificate(testCertificate, validations...)
+			err = f.Helper().ValidateCertificate(ctx, testCertificate, validations...)
 			Expect(err).NotTo(HaveOccurred())
 		}, featureset.OnlySAN)
 	})

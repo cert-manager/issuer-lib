@@ -20,11 +20,10 @@ import (
 	"fmt"
 	"time"
 
-	. "github.com/onsi/ginkgo/v2"
-
 	"k8s.io/component-base/featuregate"
 
 	. "github.com/cert-manager/issuer-lib/conformance/framework/log"
+	. "github.com/onsi/ginkgo/v2"
 )
 
 func nowStamp() string {

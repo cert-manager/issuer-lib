@@ -21,24 +21,24 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cert-manager/cert-manager/pkg/controller/certificatesigningrequests/util"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	"github.com/cert-manager/cert-manager/pkg/controller/certificatesigningrequests/util"
 	"github.com/cert-manager/issuer-lib/conformance/framework/log"
 )
 
 // WaitForCertificateSigningRequestSigned waits for the
 // CertificateSigningRequest resource to be signed.
-func (h *Helper) WaitForCertificateSigningRequestSigned(name string, timeout time.Duration) (*certificatesv1.CertificateSigningRequest, error) {
+func (h *Helper) WaitForCertificateSigningRequestSigned(pollCtx context.Context, name string, timeout time.Duration) (*certificatesv1.CertificateSigningRequest, error) {
 	var csr *certificatesv1.CertificateSigningRequest
 	logf, done := log.LogBackoff()
 	defer done()
-	err := wait.PollUntilContextTimeout(context.TODO(), time.Second, timeout, true, func(ctx context.Context) (bool, error) {
+	err := wait.PollUntilContextTimeout(pollCtx, time.Second, timeout, true, func(ctx context.Context) (bool, error) {
 		var err error
 		logf("Waiting for CertificateSigningRequest %s to be ready", name)
-		csr, err = h.KubeClient.CertificatesV1().CertificateSigningRequests().Get(context.TODO(), name, metav1.GetOptions{})
+		csr, err = h.KubeClient.CertificatesV1().CertificateSigningRequests().Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return false, fmt.Errorf("error getting CertificateSigningRequest %s: %v", name, err)
 		}

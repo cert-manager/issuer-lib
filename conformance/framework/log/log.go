@@ -31,12 +31,8 @@ func nowStamp() string {
 	return time.Now().Format(time.StampMilli)
 }
 
-func log(level string, format string, args ...interface{}) {
-	fmt.Fprintf(Writer, nowStamp()+": "+level+": "+format+"\n", args...)
-}
-
 func Logf(format string, args ...interface{}) {
-	log("INFO", format, args...)
+	fmt.Fprintf(Writer, nowStamp()+": INFO: "+format+"\n", args...)
 }
 
 // LogBackoff gives you a logger with an exponential backoff. If the

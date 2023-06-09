@@ -27,14 +27,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kr/pretty"
-	corev1 "k8s.io/api/core/v1"
-
 	apiutil "github.com/cert-manager/cert-manager/pkg/api/util"
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	"github.com/cert-manager/cert-manager/pkg/util"
 	"github.com/cert-manager/cert-manager/pkg/util/pki"
+	"github.com/kr/pretty"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // ValidationFunc describes a Certificate validation helper function

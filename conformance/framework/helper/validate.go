@@ -21,20 +21,20 @@ import (
 	"crypto"
 	"fmt"
 
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/cert-manager/issuer-lib/conformance/framework/helper/validation/certificates"
 	"github.com/cert-manager/issuer-lib/conformance/framework/helper/validation/certificatesigningrequests"
 )
 
 // ValidateCertificate retrieves the issued certificate and runs all validation functions
-func (h *Helper) ValidateCertificate(certificate *cmapi.Certificate, validations ...certificates.ValidationFunc) error {
+func (h *Helper) ValidateCertificate(ctx context.Context, certificate *cmapi.Certificate, validations ...certificates.ValidationFunc) error {
 	if len(validations) == 0 {
 		return fmt.Errorf("no validation functions provided")
 	}
 
-	secret, err := h.KubeClient.CoreV1().Secrets(certificate.Namespace).Get(context.TODO(), certificate.Spec.SecretName, metav1.GetOptions{})
+	secret, err := h.KubeClient.CoreV1().Secrets(certificate.Namespace).Get(ctx, certificate.Spec.SecretName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -50,12 +50,12 @@ func (h *Helper) ValidateCertificate(certificate *cmapi.Certificate, validations
 }
 
 // ValidateCertificateSigningRequest retrieves the issued certificate and runs all validation functions
-func (h *Helper) ValidateCertificateSigningRequest(name string, key crypto.Signer, validations ...certificatesigningrequests.ValidationFunc) error {
+func (h *Helper) ValidateCertificateSigningRequest(ctx context.Context, name string, key crypto.Signer, validations ...certificatesigningrequests.ValidationFunc) error {
 	if len(validations) == 0 {
 		return fmt.Errorf("no validation functions provided")
 	}
 
-	csr, err := h.KubeClient.CertificatesV1().CertificateSigningRequests().Get(context.TODO(), name, metav1.GetOptions{})
+	csr, err := h.KubeClient.CertificatesV1().CertificateSigningRequests().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}

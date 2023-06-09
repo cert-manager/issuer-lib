@@ -17,13 +17,13 @@ limitations under the License.
 package framework
 
 import (
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-
+	clientset "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned"
+	certmgrscheme "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned/scheme"
 	api "k8s.io/api/core/v1"
 	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -31,9 +31,10 @@ import (
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 	gwapi "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	clientset "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned"
-	certmgrscheme "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned/scheme"
 	"github.com/cert-manager/issuer-lib/conformance/framework/helper"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
 // TODO: not all this code is required to be externally accessible. Separate the
@@ -43,10 +44,10 @@ import (
 var Scheme = runtime.NewScheme()
 
 func init() {
-	kscheme.AddToScheme(Scheme)
-	certmgrscheme.AddToScheme(Scheme)
-	apiext.AddToScheme(Scheme)
-	apireg.AddToScheme(Scheme)
+	utilruntime.Must(kscheme.AddToScheme(Scheme))
+	utilruntime.Must(certmgrscheme.AddToScheme(Scheme))
+	utilruntime.Must(apiext.AddToScheme(Scheme))
+	utilruntime.Must(apireg.AddToScheme(Scheme))
 }
 
 // Framework supports common operations used by e2e tests; it will keep a client & a namespace for you.

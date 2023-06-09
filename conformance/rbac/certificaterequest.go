@@ -17,10 +17,10 @@ limitations under the License.
 package rbac
 
 import (
+	"github.com/cert-manager/issuer-lib/conformance/framework"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
-	"github.com/cert-manager/issuer-lib/conformance/framework"
 )
 
 func (s *Suite) defineCertificateRequests() {
