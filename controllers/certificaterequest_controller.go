@@ -82,9 +82,7 @@ func (r *CertificateRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
 	if crStatusPatch != nil {
 		cr, patch, err := ssaclient.GenerateCertificateRequestStatusPatch(req.Name, req.Namespace, crStatusPatch)
 		if err != nil {
-			returnedError = utilerrors.NewAggregate([]error{err, returnedError})
-			result = ctrl.Result{}
-			return
+			return ctrl.Result{}, utilerrors.NewAggregate([]error{err, returnedError})
 		}
 
 		if err := r.Client.Status().Patch(ctx, &cr, patch, &client.SubResourcePatchOptions{
@@ -94,9 +92,7 @@ func (r *CertificateRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
 			},
 		}); err != nil {
 			if err := client.IgnoreNotFound(err); err != nil {
-				returnedError = utilerrors.NewAggregate([]error{err, returnedError})
-				result = ctrl.Result{}
-				return
+				return ctrl.Result{}, utilerrors.NewAggregate([]error{err, returnedError})
 			}
 			logger.V(1).Info("Not found. Ignoring.")
 		}
