@@ -170,7 +170,24 @@ func ExpectCertificateURIsToMatch(certificate *cmapi.Certificate, secret *corev1
 	actualURIs := pki.URLsToString(cert.URIs)
 	expectedURIs := pki.URLsToString(uris)
 	if !util.EqualUnsorted(actualURIs, expectedURIs) {
-		return fmt.Errorf("Expected certificate valid for URIs %v, but got a certificate valid for URIs %v", expectedURIs, pki.URLsToString(cert.URIs))
+		return fmt.Errorf("Expected certificate valid for URIs %v, but got a certificate valid for URIs %v", expectedURIs, actualURIs)
+	}
+
+	return nil
+}
+
+// ExpectCertificateIPsToMatch checks if the issued certificate has all IP SANs names it requested
+func ExpectCertificateIPsToMatch(certificate *cmapi.Certificate, secret *corev1.Secret) error {
+	cert, err := pki.DecodeX509CertificateBytes(secret.Data[corev1.TLSCertKey])
+	if err != nil {
+		return err
+	}
+
+	ips := pki.IPAddressesForCertificate(certificate)
+	actualIPs := pki.IPAddressesToString(cert.IPAddresses)
+	expectedIPs := pki.IPAddressesToString(ips)
+	if !util.EqualUnsorted(actualIPs, expectedIPs) {
+		return fmt.Errorf("Expected certificate valid for IPs %v, but got a certificate valid for IPs %v", expectedIPs, actualIPs)
 	}
 
 	return nil
@@ -230,14 +247,16 @@ func ExpectDurationToMatch(certificate *cmapi.Certificate, secret *corev1.Secret
 		return err
 	}
 
-	duration := apiutil.DefaultCertDuration(certificate.Spec.Duration)
+	expectedDuration := apiutil.DefaultCertDuration(certificate.Spec.Duration)
+	actualDuration := cert.NotAfter.Sub(cert.NotBefore)
 	fuzz := 30 * time.Second
 
-	certDuration := cert.NotAfter.Sub(cert.NotBefore)
-	if certDuration > (duration+fuzz) || certDuration < (duration-fuzz) {
+	// Here we ensure that the requested duration is what is signed on the
+	// certificate. We tolerate a 30 second fuzz either way.
+	if actualDuration > (expectedDuration+fuzz) || actualDuration < (expectedDuration-fuzz) {
 		return fmt.Errorf(
 			"Expected duration of %s, got %s (fuzz: %s) [NotBefore: %s, NotAfter: %s]",
-			duration, certDuration, fuzz,
+			expectedDuration, actualDuration, fuzz,
 			cert.NotBefore.Format(time.RFC3339), cert.NotAfter.Format(time.RFC3339),
 		)
 	}

@@ -184,8 +184,8 @@ func ExpectValidCommonName(csr *certificatesv1.CertificateSigningRequest, _ cryp
 	return nil
 }
 
-// ExpectValidDuration checks if the issued certificate matches the requested duration
-func ExpectValidDuration(csr *certificatesv1.CertificateSigningRequest, _ crypto.Signer) error {
+// ExpectDurationToMatch checks if the issued certificate matches the requested duration
+func ExpectDurationToMatch(csr *certificatesv1.CertificateSigningRequest, _ crypto.Signer) error {
 	cert, err := pki.DecodeX509CertificateBytes(csr.Status.Certificate)
 	if err != nil {
 		return err
@@ -206,13 +206,17 @@ func ExpectValidDuration(csr *certificatesv1.CertificateSigningRequest, _ crypto
 			return err
 		}
 	}
-
 	actualDuration := cert.NotAfter.Sub(cert.NotBefore)
+	fuzz := 30 * time.Second
 
 	// Here we ensure that the requested duration is what is signed on the
 	// certificate. We tolerate a 30 second fuzz either way.
-	if actualDuration > expectedDuration+time.Second*30 || actualDuration < expectedDuration-time.Second*30 {
-		return fmt.Errorf("Expected certificate expiry date to be %v, but got %v", expectedDuration, actualDuration)
+	if actualDuration > (expectedDuration+fuzz) || actualDuration < (expectedDuration-fuzz) {
+		return fmt.Errorf(
+			"Expected duration of %s, got %s (fuzz: %s) [NotBefore: %s, NotAfter: %s]",
+			expectedDuration, actualDuration, fuzz,
+			cert.NotBefore.Format(time.RFC3339), cert.NotAfter.Format(time.RFC3339),
+		)
 	}
 
 	return nil
@@ -313,8 +317,8 @@ func ExpectEmailsToMatch(csr *certificatesv1.CertificateSigningRequest, _ crypto
 	return nil
 }
 
-// ExpectIsCA checks the certificate is a CA if requested
-func ExpectIsCA(csr *certificatesv1.CertificateSigningRequest, _ crypto.Signer) error {
+// ExpectValidBasicConstraints checks the certificate is a CA if requested
+func ExpectValidBasicConstraints(csr *certificatesv1.CertificateSigningRequest, _ crypto.Signer) error {
 	cert, err := pki.DecodeX509CertificateBytes(csr.Status.Certificate)
 	if err != nil {
 		return err
@@ -334,6 +338,8 @@ func ExpectIsCA(csr *certificatesv1.CertificateSigningRequest, _ crypto.Signer) 
 	if hasCertSign != markedIsCA {
 		return fmt.Errorf("Expected certificate to have KeyUsageCertSign=%t, but got=%t", markedIsCA, hasCertSign)
 	}
+
+	// TODO: also validate pathLen
 
 	return nil
 }
