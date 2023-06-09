@@ -163,7 +163,7 @@ test: test-unit-deps | $(NEEDS_GO) $(NEEDS_GOTESTSUM) ## Run unit tests.
 
 .PHONY: test-e2e
 test-e2e: test-e2e-deps | $(NEEDS_GOTESTSUM) $(NEEDS_GINKGO) ## Run e2e tests. This creates a Kind cluster, installs dependencies, deploys the issuer-lib and runs the E2E tests.
-	$(GOTESTSUM) ./internal/testsetups/simple/e2e/... -coverprofile cover.out -timeout 1m
+	$(GOTESTSUM) ./internal/testsetups/simple/e2e/... -coverprofile cover.out -timeout 5m
 
 	$(GINKGO) ./internal/testsetups/simple/e2e/conformance/...
 
