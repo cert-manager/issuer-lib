@@ -3,10 +3,11 @@ package conformance
 import (
 	"testing"
 
-	"github.com/cert-manager/issuer-lib/internal/tests/testcontext"
-	"github.com/cert-manager/issuer-lib/internal/tests/testresource"
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
+
+	"github.com/cert-manager/issuer-lib/internal/tests/testcontext"
+	"github.com/cert-manager/issuer-lib/internal/tests/testresource"
 )
 
 func TestConformance(t *testing.T) {
