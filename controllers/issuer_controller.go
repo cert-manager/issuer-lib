@@ -76,9 +76,7 @@ func (r *IssuerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res
 	if issuerStatusPatch != nil {
 		cr, patch, err := ssaclient.GenerateIssuerStatusPatch(r.ForObject, req.Name, req.Namespace, issuerStatusPatch)
 		if err != nil {
-			returnedError = utilerrors.NewAggregate([]error{err, returnedError})
-			result = ctrl.Result{}
-			return
+			return ctrl.Result{}, utilerrors.NewAggregate([]error{err, returnedError})
 		}
 
 		if err := r.Client.Status().Patch(ctx, cr, patch, &client.SubResourcePatchOptions{
@@ -88,9 +86,7 @@ func (r *IssuerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res
 			},
 		}); err != nil {
 			if err := client.IgnoreNotFound(err); err != nil {
-				returnedError = utilerrors.NewAggregate([]error{err, returnedError})
-				result = ctrl.Result{}
-				return
+				return ctrl.Result{}, utilerrors.NewAggregate([]error{err, returnedError})
 			}
 			logger.V(1).Info("Not found. Ignoring.")
 		}
