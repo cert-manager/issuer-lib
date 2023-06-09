@@ -338,8 +338,6 @@ func ExpectValidBasicConstraints(csr *certificatesv1.CertificateSigningRequest, 
 		return fmt.Errorf("Expected certificate to have KeyUsageCertSign=%t, but got=%t", markedIsCA, hasCertSign)
 	}
 
-	// TODO: also validate pathLen
-
 	return nil
 }
 

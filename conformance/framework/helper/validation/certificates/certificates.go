@@ -18,9 +18,6 @@ package certificates
 
 import (
 	"bytes"
-	"crypto/ecdsa"
-	"crypto/ed25519"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -82,31 +79,15 @@ func ExpectValidPrivateKeyData(certificate *cmapi.Certificate, secret *corev1.Se
 		return err
 	}
 
-	// validate private key is of the correct type (rsa, ed25519 or ecdsa)
-	if certificate.Spec.PrivateKey != nil {
-		switch certificate.Spec.PrivateKey.Algorithm {
-		case cmapi.PrivateKeyAlgorithm(""),
-			cmapi.RSAKeyAlgorithm:
-			_, ok := key.(*rsa.PrivateKey)
-			if !ok {
-				return fmt.Errorf("Expected private key of type RSA, but it was: %T", key)
-			}
-		case cmapi.ECDSAKeyAlgorithm:
-			_, ok := key.(*ecdsa.PrivateKey)
-			if !ok {
-				return fmt.Errorf("Expected private key of type ECDSA, but it was: %T", key)
-			}
-		case cmapi.Ed25519KeyAlgorithm:
-			_, ok := key.(ed25519.PrivateKey)
-			if !ok {
-				return fmt.Errorf("Expected private key of type Ed25519, but it was: %T", key)
-			}
-		default:
-			return fmt.Errorf("unrecognised requested private key algorithm %q", certificate.Spec.PrivateKey.Algorithm)
-		}
+	violations, err := pki.PrivateKeyMatchesSpec(key, certificate.Spec)
+	if err != nil {
+		return err
 	}
 
-	// TODO: validate private key KeySize
+	if len(violations) > 0 {
+		return fmt.Errorf("private key does not match CertificateRequest: %s", strings.Join(violations, ", "))
+	}
+
 	return nil
 }
 
@@ -411,8 +392,6 @@ func ExpectValidBasicConstraints(certificate *cmapi.Certificate, secret *corev1.
 	if certificate.Spec.IsCA != cert.IsCA {
 		return fmt.Errorf("Expected CA basicConstraint to be %v, but got %v", certificate.Spec.IsCA, cert.IsCA)
 	}
-
-	// TODO: also validate pathLen
 
 	return nil
 }

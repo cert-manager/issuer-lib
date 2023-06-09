@@ -23,7 +23,6 @@ import (
 	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -36,19 +35,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
-
-// TODO: not all this code is required to be externally accessible. Separate the
-// bits that do and the bits that don't. Perhaps we should have an external
-// testing lib shared across projects?
-// TODO: this really should be done somewhere in cert-manager proper
-var Scheme = runtime.NewScheme()
-
-func init() {
-	utilruntime.Must(kscheme.AddToScheme(Scheme))
-	utilruntime.Must(certmgrscheme.AddToScheme(Scheme))
-	utilruntime.Must(apiext.AddToScheme(Scheme))
-	utilruntime.Must(apireg.AddToScheme(Scheme))
-}
 
 // Framework supports common operations used by e2e tests; it will keep a client & a namespace for you.
 type Framework struct {
@@ -117,7 +103,12 @@ func (f *Framework) BeforeEach() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Creating a controller-runtime client")
-	f.CRClient, err = crclient.New(kubeConfig, crclient.Options{Scheme: Scheme})
+	scheme := runtime.NewScheme()
+	Expect(kscheme.AddToScheme(scheme)).NotTo(HaveOccurred())
+	Expect(certmgrscheme.AddToScheme(scheme)).NotTo(HaveOccurred())
+	Expect(apiext.AddToScheme(scheme)).NotTo(HaveOccurred())
+	Expect(apireg.AddToScheme(scheme)).NotTo(HaveOccurred())
+	f.CRClient, err = crclient.New(kubeConfig, crclient.Options{Scheme: scheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Creating a gateway-api client")
