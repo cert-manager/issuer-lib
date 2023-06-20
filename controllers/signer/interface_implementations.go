@@ -2,7 +2,9 @@ package signer
 
 import (
 	"crypto/x509"
+	"time"
 
+	apiutil "github.com/cert-manager/cert-manager/pkg/api/util"
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	"github.com/cert-manager/cert-manager/pkg/util/pki"
@@ -19,13 +21,15 @@ func CertificateRequestObjectFromCertificateRequest(cr *cmapi.CertificateRequest
 	return &certificateRequestImpl{cr}
 }
 
-func (c *certificateRequestImpl) GetRequest() (*x509.Certificate, []byte, error) {
+func (c *certificateRequestImpl) GetRequest() (*x509.Certificate, time.Duration, []byte, error) {
+	duration := apiutil.DefaultCertDuration(c.CertificateRequest.Spec.Duration)
+
 	template, err := pki.GenerateTemplateFromCertificateRequest(c.CertificateRequest)
 	if err != nil {
-		return nil, nil, err
+		return nil, 0, nil, err
 	}
 
-	return template, c.Spec.Request, nil
+	return template, duration, c.Spec.Request, nil
 }
 
 func (c *certificateRequestImpl) GetConditions() []cmapi.CertificateRequestCondition {
@@ -42,13 +46,18 @@ func CertificateRequestObjectFromCertificateSigningRequest(csr *certificatesv1.C
 	return &certificateSigningRequestImpl{csr}
 }
 
-func (c *certificateSigningRequestImpl) GetRequest() (*x509.Certificate, []byte, error) {
-	template, err := pki.GenerateTemplateFromCertificateSigningRequest(c.CertificateSigningRequest)
+func (c *certificateSigningRequestImpl) GetRequest() (*x509.Certificate, time.Duration, []byte, error) {
+	duration, err := pki.DurationFromCertificateSigningRequest(c.CertificateSigningRequest)
 	if err != nil {
-		return nil, nil, err
+		return nil, 0, nil, err
 	}
 
-	return template, c.Spec.Request, nil
+	template, err := pki.GenerateTemplateFromCertificateSigningRequest(c.CertificateSigningRequest)
+	if err != nil {
+		return nil, 0, nil, err
+	}
+
+	return template, duration, c.Spec.Request, nil
 }
 
 func (c *certificateSigningRequestImpl) GetConditions() []cmapi.CertificateRequestCondition {

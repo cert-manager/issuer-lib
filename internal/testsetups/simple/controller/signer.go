@@ -88,7 +88,7 @@ func (Signer) Sign(ctx context.Context, cr signer.CertificateRequestObject, issu
 	}
 
 	// load client certificate request
-	clientCRTTemplate, _, err := cr.GetRequest()
+	clientCRTTemplate, _, _, err := cr.GetRequest()
 	if err != nil {
 		return nil, err
 	}

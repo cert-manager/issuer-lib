@@ -19,6 +19,7 @@ package signer
 import (
 	"context"
 	"crypto/x509"
+	"time"
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,7 +45,7 @@ type Check func(ctx context.Context, issuerObject v1alpha1.Issuer) error
 type CertificateRequestObject interface {
 	metav1.Object
 
-	GetRequest() (template *x509.Certificate, csr []byte, err error)
+	GetRequest() (template *x509.Certificate, duration time.Duration, csr []byte, err error)
 
 	GetConditions() []cmapi.CertificateRequestCondition
 }
