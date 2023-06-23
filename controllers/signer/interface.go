@@ -40,8 +40,8 @@ type Check func(ctx context.Context, issuerObject v1alpha1.Issuer) error
 // labels and annotations of the underlying resource or any other metadata
 // fields that might be useful to the signer. Also, the signer can use the
 // GetConditions method to retrieve the conditions of the underlying resource.
-// To update the conditions, the signer should return an appropriate error
-// from the Sign method.
+// To update the conditions, the special error "SetCertificateRequestConditionError"
+// can be returned from the Sign method.
 type CertificateRequestObject interface {
 	metav1.Object
 

@@ -29,7 +29,8 @@ import (
 	"github.com/cert-manager/issuer-lib/conditions"
 )
 
-// Predicate for CertificateRequest changes that should trigger the CertificateRequest reconciler
+// This predicate is used to indicate when a CertificateRequest event should
+// trigger a reconciliation of itself.
 //
 // In these cases we want to trigger:
 // - an annotation changed/ was added or removed
@@ -53,7 +54,7 @@ func (CertificateRequestPredicate) Update(e event.UpdateEvent) bool {
 	}
 
 	if len(oldCr.Status.Conditions) != len(newCr.Status.Conditions) {
-		// fast-fail in case we are certain a non-ready condition was added/ removed
+		// Fail fast in case we are certain a non-ready condition was added or removed.
 		return true
 	}
 
@@ -74,7 +75,8 @@ func (CertificateRequestPredicate) Update(e event.UpdateEvent) bool {
 	return !reflect.DeepEqual(e.ObjectNew.GetAnnotations(), e.ObjectOld.GetAnnotations())
 }
 
-// Predicate for CertificateSigningRequest changes that should trigger the CertificateSigningRequest reconciler
+// This predicate is used to indicate when a CertificateSigningRequest event should
+// trigger a reconciliation of itself.
 //
 // In these cases we want to trigger:
 // - an annotation changed/ was added or removed
@@ -98,7 +100,7 @@ func (CertificateSigningRequestPredicate) Update(e event.UpdateEvent) bool {
 	}
 
 	if len(oldCr.Status.Conditions) != len(newCr.Status.Conditions) {
-		// fast-fail in case we are certain a non-ready condition was added/ removed
+		// Fail fast in case we are certain a non-ready condition was added or removed.
 		return true
 	}
 
@@ -114,7 +116,7 @@ func (CertificateSigningRequestPredicate) Update(e event.UpdateEvent) bool {
 	return !reflect.DeepEqual(e.ObjectNew.GetAnnotations(), e.ObjectOld.GetAnnotations())
 }
 
-// Predicate for Issuer changes that should trigger the CertificateRequest reconciler
+// Predicate for Issuer events that should trigger the CertificateRequest reconciler
 //
 // In these cases we want to trigger:
 // - the Ready condition was added/ removed
@@ -157,7 +159,7 @@ func (LinkedIssuerPredicate) Update(e event.UpdateEvent) bool {
 	return readyNew.Status != readyOld.Status
 }
 
-// Predicate for Issuer changes that should trigger the Issuer reconciler
+// Predicate for Issuer events that should trigger the Issuer reconciler
 //
 // In these cases we want to trigger:
 // - an annotation changed/ was added or removed
