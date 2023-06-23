@@ -24,6 +24,7 @@ import (
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	cmgen "github.com/cert-manager/cert-manager/test/unit/gen"
 	"github.com/stretchr/testify/require"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -208,6 +209,177 @@ func TestCertificateRequestPredicate(t *testing.T) {
 	}
 }
 
+func TestCertificateSigningRequestPredicate(t *testing.T) {
+	predicate := controllers.CertificateSigningRequestPredicate{}
+
+	csr1 := cmgen.CertificateSigningRequest("cr1")
+
+	type testcase struct {
+		name            string
+		event           event.UpdateEvent
+		shouldReconcile bool
+	}
+
+	testcases := []testcase{
+		{
+			name:            "nil",
+			shouldReconcile: true,
+			event: event.UpdateEvent{
+				ObjectOld: csr1,
+				ObjectNew: nil,
+			},
+		},
+		{
+			name:            "wrong-type",
+			shouldReconcile: true,
+			event: event.UpdateEvent{
+				ObjectOld: csr1,
+				ObjectNew: &corev1.ConfigMap{},
+			},
+		},
+		{
+			name:            "label-changed",
+			shouldReconcile: false,
+			event: event.UpdateEvent{
+				ObjectOld: cmgen.CertificateSigningRequestFrom(csr1,
+					func(cr *certificatesv1.CertificateSigningRequest) {
+						cr.Labels = map[string]string{
+							"test-label1": "value",
+						}
+					},
+					cmgen.AddCertificateSigningRequestAnnotations(map[string]string{
+						"test-annotation1": "value1",
+					}),
+				),
+				ObjectNew: cmgen.CertificateSigningRequestFrom(csr1,
+					cmgen.AddCertificateSigningRequestAnnotations(map[string]string{
+						"test-annotation1": "value1",
+					}),
+				),
+			},
+		},
+		{
+			name:            "annotation-added",
+			shouldReconcile: true,
+			event: event.UpdateEvent{
+				ObjectOld: cmgen.CertificateSigningRequestFrom(csr1,
+					cmgen.AddCertificateSigningRequestAnnotations(map[string]string{
+						"test-annotation1": "value1",
+					}),
+				),
+				ObjectNew: cmgen.CertificateSigningRequestFrom(csr1,
+					cmgen.AddCertificateSigningRequestAnnotations(map[string]string{
+						"test-annotation1": "value1",
+						"test-annotation2": "value2",
+					}),
+				),
+			},
+		},
+		{
+			name:            "failed-condition-changed",
+			shouldReconcile: true,
+			event: event.UpdateEvent{
+				ObjectOld: cmgen.CertificateSigningRequestFrom(csr1,
+					cmgen.SetCertificateSigningRequestStatusCondition(certificatesv1.CertificateSigningRequestCondition{
+						Type:   certificatesv1.CertificateFailed,
+						Reason: cmapi.CertificateRequestReasonPending,
+						Status: corev1.ConditionFalse,
+					}),
+				),
+				ObjectNew: cmgen.CertificateSigningRequestFrom(csr1,
+					cmgen.SetCertificateSigningRequestStatusCondition(certificatesv1.CertificateSigningRequestCondition{
+						Type:   certificatesv1.CertificateFailed,
+						Reason: cmapi.CertificateRequestReasonIssued,
+						Status: corev1.ConditionTrue,
+					}),
+				),
+			},
+		},
+		{
+			name:            "failed-condition-added",
+			shouldReconcile: true,
+			event: event.UpdateEvent{
+				ObjectOld: cmgen.CertificateSigningRequestFrom(csr1),
+				ObjectNew: cmgen.CertificateSigningRequestFrom(csr1,
+					cmgen.SetCertificateSigningRequestStatusCondition(certificatesv1.CertificateSigningRequestCondition{
+						Type:   certificatesv1.CertificateFailed,
+						Reason: cmapi.CertificateRequestReasonIssued,
+						Status: corev1.ConditionTrue,
+					}),
+				),
+			},
+		},
+		{
+			name:            "failed-condition-added-other-removed",
+			shouldReconcile: true,
+			event: event.UpdateEvent{
+				ObjectOld: cmgen.CertificateSigningRequestFrom(csr1,
+					cmgen.SetCertificateSigningRequestStatusCondition(certificatesv1.CertificateSigningRequestCondition{
+						Type:   certificatesv1.CertificateApproved,
+						Reason: "",
+						Status: corev1.ConditionTrue,
+					}),
+				),
+				ObjectNew: cmgen.CertificateSigningRequestFrom(csr1,
+					cmgen.SetCertificateSigningRequestStatusCondition(certificatesv1.CertificateSigningRequestCondition{
+						Type:   certificatesv1.CertificateFailed,
+						Reason: "",
+						Status: corev1.ConditionTrue,
+					}),
+				),
+			},
+		},
+		{
+			name:            "approved-condition-changed",
+			shouldReconcile: true,
+			event: event.UpdateEvent{
+				ObjectOld: cmgen.CertificateSigningRequestFrom(csr1,
+					cmgen.SetCertificateSigningRequestStatusCondition(certificatesv1.CertificateSigningRequestCondition{
+						Type:   certificatesv1.CertificateApproved,
+						Reason: "",
+						Status: corev1.ConditionFalse,
+					}),
+				),
+				ObjectNew: cmgen.CertificateSigningRequestFrom(csr1,
+					cmgen.SetCertificateSigningRequestStatusCondition(certificatesv1.CertificateSigningRequestCondition{
+						Type:   certificatesv1.CertificateApproved,
+						Reason: "",
+						Status: corev1.ConditionTrue,
+					}),
+				),
+			},
+		},
+		{
+			name:            "approved-condition-changed-only-reason",
+			shouldReconcile: false,
+			event: event.UpdateEvent{
+				ObjectOld: cmgen.CertificateSigningRequestFrom(csr1,
+					cmgen.SetCertificateSigningRequestStatusCondition(certificatesv1.CertificateSigningRequestCondition{
+						Type:   certificatesv1.CertificateApproved,
+						Reason: "test1",
+						Status: corev1.ConditionTrue,
+					}),
+				),
+				ObjectNew: cmgen.CertificateSigningRequestFrom(csr1,
+					cmgen.SetCertificateSigningRequestStatusCondition(certificatesv1.CertificateSigningRequestCondition{
+						Type:   certificatesv1.CertificateApproved,
+						Reason: "test2",
+						Status: corev1.ConditionTrue,
+					}),
+				),
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			result := predicate.Update(tc.event)
+			require.Equal(t, tc.shouldReconcile, result)
+		})
+	}
+}
+
 type testissuer struct {
 	Status *v1alpha1.IssuerStatus
 	metav1.Object
@@ -225,6 +397,10 @@ func (*testissuer) DeepCopyObject() runtime.Object {
 
 func (ti *testissuer) GetStatus() *v1alpha1.IssuerStatus {
 	return ti.Status
+}
+
+func (ti *testissuer) GetIssuerTypeIdentifier() string {
+	return "test"
 }
 
 func TestLinkedIssuerPredicate(t *testing.T) {

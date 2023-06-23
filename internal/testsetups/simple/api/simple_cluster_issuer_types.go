@@ -46,6 +46,10 @@ func (vi *SimpleClusterIssuer) GetStatus() *v1alpha1.IssuerStatus {
 	return &vi.Status
 }
 
+func (vi *SimpleClusterIssuer) GetIssuerTypeIdentifier() string {
+	return "simpleclusterissuers.issuer.cert-manager.io"
+}
+
 var _ v1alpha1.Issuer = &SimpleClusterIssuer{}
 
 // +kubebuilder:object:root=true

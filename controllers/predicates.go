@@ -21,6 +21,7 @@ import (
 
 	cmutil "github.com/cert-manager/cert-manager/pkg/api/util"
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -28,7 +29,8 @@ import (
 	"github.com/cert-manager/issuer-lib/conditions"
 )
 
-// Predicate for CertificateRequest changes that should trigger the CertificateRequest reconciler
+// This predicate is used to indicate when a CertificateRequest event should
+// trigger a reconciliation of itself.
 //
 // In these cases we want to trigger:
 // - an annotation changed/ was added or removed
@@ -52,7 +54,7 @@ func (CertificateRequestPredicate) Update(e event.UpdateEvent) bool {
 	}
 
 	if len(oldCr.Status.Conditions) != len(newCr.Status.Conditions) {
-		// fast-fail in case we are certain a non-ready condition was added/ removed
+		// Fail fast in case we are certain a non-ready condition was added or removed.
 		return true
 	}
 
@@ -73,7 +75,48 @@ func (CertificateRequestPredicate) Update(e event.UpdateEvent) bool {
 	return !reflect.DeepEqual(e.ObjectNew.GetAnnotations(), e.ObjectOld.GetAnnotations())
 }
 
-// Predicate for Issuer changes that should trigger the CertificateRequest reconciler
+// This predicate is used to indicate when a CertificateSigningRequest event should
+// trigger a reconciliation of itself.
+//
+// In these cases we want to trigger:
+// - an annotation changed/ was added or removed
+// - a status condition was added or removed
+// - a status condition was changed
+type CertificateSigningRequestPredicate struct {
+	predicate.Funcs
+}
+
+func (CertificateSigningRequestPredicate) Update(e event.UpdateEvent) bool {
+	if e.ObjectOld == nil || e.ObjectNew == nil {
+		// a reference object is missing, just reconcile to be safe
+		return true
+	}
+
+	oldCr, oldOk := e.ObjectOld.(*certificatesv1.CertificateSigningRequest)
+	newCr, newOk := e.ObjectNew.(*certificatesv1.CertificateSigningRequest)
+	if !oldOk || !newOk {
+		// a reference object is invalid, just reconcile to be safe
+		return true
+	}
+
+	if len(oldCr.Status.Conditions) != len(newCr.Status.Conditions) {
+		// Fail fast in case we are certain a non-ready condition was added or removed.
+		return true
+	}
+
+	for _, oldCond := range oldCr.Status.Conditions {
+		newCond := conditions.GetCertificateSigningRequestStatusCondition(newCr.Status.Conditions, oldCond.Type)
+		if (newCond == nil) || (oldCond.Status != newCond.Status) {
+			// we found a missing or changed condition
+			return true
+		}
+	}
+
+	// check if any of the annotations changed
+	return !reflect.DeepEqual(e.ObjectNew.GetAnnotations(), e.ObjectOld.GetAnnotations())
+}
+
+// Predicate for Issuer events that should trigger the CertificateRequest reconciler
 //
 // In these cases we want to trigger:
 // - the Ready condition was added/ removed
@@ -116,7 +159,7 @@ func (LinkedIssuerPredicate) Update(e event.UpdateEvent) bool {
 	return readyNew.Status != readyOld.Status
 }
 
-// Predicate for Issuer changes that should trigger the Issuer reconciler
+// Predicate for Issuer events that should trigger the Issuer reconciler
 //
 // In these cases we want to trigger:
 // - an annotation changed/ was added or removed

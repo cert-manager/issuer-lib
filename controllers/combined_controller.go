@@ -99,5 +99,23 @@ func (r *CombinedController) SetupWithManager(ctx context.Context, mgr ctrl.Mana
 		return fmt.Errorf("CertificateRequestReconciler: %w", err)
 	}
 
+	if err = (&CertificateSigningRequestReconciler{
+		IssuerTypes:        r.IssuerTypes,
+		ClusterIssuerTypes: r.ClusterIssuerTypes,
+
+		FieldOwner:       r.FieldOwner,
+		MaxRetryDuration: r.MaxRetryDuration,
+		EventSource:      eventSource,
+
+		Client:        cl,
+		Sign:          r.Sign,
+		EventRecorder: r.EventRecorder,
+		Clock:         r.Clock,
+
+		PostSetupWithManager: r.PostSetupWithManager,
+	}).SetupWithManager(ctx, mgr); err != nil {
+		return fmt.Errorf("CertificateRequestReconciler: %w", err)
+	}
+
 	return nil
 }

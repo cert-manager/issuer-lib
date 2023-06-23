@@ -18,7 +18,36 @@ rules:
   resources:
   - certificaterequests/status
   verbs:
+  - patch
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - certificatesigningrequests
+  verbs:
   - get
+  - list
+  - watch
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - certificatesigningrequests/status
+  verbs:
+  - patch
+- apiGroups:
+  - certificates.k8s.io
+  resourceNames:
+  - simpleclusterissuers.issuer.cert-manager.io/*
+  - simpleissuers.issuer.cert-manager.io/*
+  resources:
+  - signers
+  verbs:
+  - sign
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
   - patch
 - apiGroups:
   - testing.cert-manager.io
@@ -35,5 +64,4 @@ rules:
   - simpleclusterissuers/status
   - simpleissuers/status
   verbs:
-  - get
   - patch

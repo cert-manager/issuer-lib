@@ -90,8 +90,8 @@ func TestCertificateRequestControllerIntegrationIssuerInitiallyNotFoundAndNotRea
 				MaxRetryDuration:   time.Minute,
 				EventSource:        kubeutil.NewEventStore(),
 				Client:             mgr.GetClient(),
-				Sign: func(_ context.Context, cr *cmapi.CertificateRequest, _ client.Object) ([]byte, error) {
-					atomic.AddUint64(&counters[extractIdFromNamespace(t, cr.Namespace)], 1)
+				Sign: func(_ context.Context, cr signer.CertificateRequestObject, _ v1alpha1.Issuer) ([]byte, error) {
+					atomic.AddUint64(&counters[extractIdFromNamespace(t, cr.GetNamespace())], 1)
 					return []byte("ok"), nil
 				},
 				EventRecorder: record.NewFakeRecorder(100),
@@ -227,7 +227,7 @@ func TestCertificateRequestControllerIntegrationSetCondition(t *testing.T) {
 				MaxRetryDuration:   time.Minute,
 				EventSource:        kubeutil.NewEventStore(),
 				Client:             mgr.GetClient(),
-				Sign: func(ctx context.Context, cr *cmapi.CertificateRequest, _ client.Object) ([]byte, error) {
+				Sign: func(ctx context.Context, cr signer.CertificateRequestObject, _ v1alpha1.Issuer) ([]byte, error) {
 					atomic.AddUint64(&counter, 1)
 					select {
 					case err := <-signResult:

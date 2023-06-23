@@ -24,24 +24,28 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"fmt"
 	"math/big"
 	"time"
 
-	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/cert-manager/issuer-lib/api/v1alpha1"
 	"github.com/cert-manager/issuer-lib/controllers"
+	"github.com/cert-manager/issuer-lib/controllers/signer"
 	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/api"
 )
 
 // +kubebuilder:rbac:groups=cert-manager.io,resources=certificaterequests,verbs=get;list;watch
-// +kubebuilder:rbac:groups=cert-manager.io,resources=certificaterequests/status,verbs=get;patch
+// +kubebuilder:rbac:groups=cert-manager.io,resources=certificaterequests/status,verbs=patch
+
+// +kubebuilder:rbac:groups=certificates.k8s.io,resources=certificatesigningrequests,verbs=get;list;watch
+// +kubebuilder:rbac:groups=certificates.k8s.io,resources=certificatesigningrequests/status,verbs=patch
+// +kubebuilder:rbac:groups=certificates.k8s.io,resources=signers,verbs=sign,resourceNames=simpleissuers.issuer.cert-manager.io/*;simpleclusterissuers.issuer.cert-manager.io/*
 
 // +kubebuilder:rbac:groups=testing.cert-manager.io,resources=simpleissuers;simpleclusterissuers,verbs=get;list;watch
-// +kubebuilder:rbac:groups=testing.cert-manager.io,resources=simpleissuers/status;simpleclusterissuers/status,verbs=get;patch
+// +kubebuilder:rbac:groups=testing.cert-manager.io,resources=simpleissuers/status;simpleclusterissuers/status,verbs=patch
+
+// +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
 
 type Signer struct{}
 
@@ -59,11 +63,11 @@ func (s Signer) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	}).SetupWithManager(ctx, mgr)
 }
 
-func (Signer) Check(ctx context.Context, issuerObject client.Object) error {
+func (Signer) Check(ctx context.Context, issuerObject v1alpha1.Issuer) error {
 	return nil
 }
 
-func (Signer) Sign(ctx context.Context, cr *cmapi.CertificateRequest, issuerObject client.Object) ([]byte, error) {
+func (Signer) Sign(ctx context.Context, cr signer.CertificateRequestObject, issuerObject v1alpha1.Issuer) ([]byte, error) {
 	// generate random ca private key
 	caPrivateKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	if err != nil {
@@ -84,31 +88,13 @@ func (Signer) Sign(ctx context.Context, cr *cmapi.CertificateRequest, issuerObje
 	}
 
 	// load client certificate request
-	pemBlock, _ := pem.Decode(cr.Spec.Request)
-	if pemBlock == nil {
-		return nil, fmt.Errorf("pem.Decode failed")
-	}
-	clientCSR, err := x509.ParseCertificateRequest(pemBlock.Bytes)
+	clientCRTTemplate, _, _, err := cr.GetRequest()
 	if err != nil {
 		return nil, err
 	}
-	if err = clientCSR.CheckSignature(); err != nil {
-		return nil, err
-	}
-
-	// create client certificate template
-	clientCRTTemplate := x509.Certificate{
-		SerialNumber: big.NewInt(2),
-		Issuer:       caCRT.Subject,
-		Subject:      clientCSR.Subject,
-		NotBefore:    time.Now(),
-		NotAfter:     time.Now().Add(24 * time.Hour),
-		KeyUsage:     x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
-	}
 
 	// create client certificate from template and CA public key
-	clientCRTRaw, err := x509.CreateCertificate(rand.Reader, &clientCRTTemplate, caCRT, clientCSR.PublicKey, caPrivateKey)
+	clientCRTRaw, err := x509.CreateCertificate(rand.Reader, clientCRTTemplate, caCRT, clientCRTTemplate.PublicKey, caPrivateKey)
 	if err != nil {
 		panic(err)
 	}

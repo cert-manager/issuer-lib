@@ -29,6 +29,8 @@ import (
 	logrtesting "github.com/go-logr/logr/testing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	certificatesv1 "k8s.io/api/certificates/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -48,7 +50,7 @@ import (
 	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/testutil"
 )
 
-func TestCertificateRequestReconcilerReconcile(t *testing.T) {
+func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 	t.Parallel()
 
 	fieldOwner := "test-certificate-request-reconciler-reconcile"
@@ -59,7 +61,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		objects             []client.Object
 		validateError       *errormatch.Matcher
 		expectedResult      reconcile.Result
-		expectedStatusPatch *cmapi.CertificateRequestStatus
+		expectedStatusPatch *certificatesv1.CertificateSigningRequestStatus
 		expectedEvents      []string
 	}
 
@@ -98,28 +100,16 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		),
 	)
 
-	cr1 := cmgen.CertificateRequest(
+	cr1 := cmgen.CertificateSigningRequest(
 		"cr1",
-		cmgen.SetCertificateRequestNamespace("ns1"),
-		cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-			Group: api.SchemeGroupVersion.Group,
-		}),
-		func(cr *cmapi.CertificateRequest) {
-			conditions.SetCertificateRequestStatusCondition(
+		cmgen.SetCertificateSigningRequestSignerName("simpleissuers.issuer.cert-manager.io/unknown-namespace.unknown-name"),
+		func(cr *certificatesv1.CertificateSigningRequest) {
+			conditions.SetCertificateSigningRequestStatusCondition(
 				fakeClock1,
 				cr.Status.Conditions,
 				&cr.Status.Conditions,
-				cmapi.CertificateRequestConditionReady,
-				cmmeta.ConditionUnknown,
-				v1alpha1.CertificateRequestConditionReasonInitializing,
-				fieldOwner+" has begun reconciling this CertificateRequest",
-			)
-			conditions.SetCertificateRequestStatusCondition(
-				fakeClock1,
-				cr.Status.Conditions,
-				&cr.Status.Conditions,
-				cmapi.CertificateRequestConditionApproved,
-				cmmeta.ConditionTrue,
+				certificatesv1.CertificateApproved,
+				v1.ConditionTrue,
 				"ApprovedReason",
 				"ApprovedMessage",
 			)
@@ -146,28 +136,28 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		{
 			name: "ignore-unless-approved-or-denied",
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1, func(cr *cmapi.CertificateRequest) {
+				cmgen.CertificateSigningRequestFrom(cr1, func(cr *certificatesv1.CertificateSigningRequest) {
 					cr.Status.Conditions = nil
 				}),
 			},
 		},
 
-		// Ignore CertificateRequest with an unknown issuerRef group.
+		// Ignore CertificateRequest with an unknown SignerName group.
 		{
 			name: "issuer-ref-unknown-group",
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1, func(cr *cmapi.CertificateRequest) {
-					cr.Spec.IssuerRef.Group = "unknown-group"
+				cmgen.CertificateSigningRequestFrom(cr1, func(cr *certificatesv1.CertificateSigningRequest) {
+					cr.Spec.SignerName = "simpleclusterissuers.unknown-group/name"
 				}),
 			},
 		},
 
-		// Ignore CertificateRequest with an unknown issuerRef kind.
+		// Ignore CertificateRequest with an unknown SignerName kind.
 		{
 			name: "issuer-ref-unknown-kind",
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1, func(cr *cmapi.CertificateRequest) {
-					cr.Spec.IssuerRef.Kind = "unknown-kind"
+				cmgen.CertificateSigningRequestFrom(cr1, func(cr *certificatesv1.CertificateSigningRequest) {
+					cr.Spec.SignerName = "unknown-kind.issuer.cert-manager.io/name"
 				}),
 			},
 		},
@@ -176,12 +166,10 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		{
 			name: "already-ready",
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1,
-					cmgen.SetCertificateRequestStatusCondition(cmapi.CertificateRequestCondition{
-						Type:   cmapi.CertificateRequestConditionReady,
-						Reason: cmapi.CertificateRequestReasonIssued,
-						Status: cmmeta.ConditionTrue,
-					}),
+				cmgen.CertificateSigningRequestFrom(cr1,
+					func(csr *certificatesv1.CertificateSigningRequest) {
+						csr.Status.Certificate = []byte("certificate")
+					},
 				),
 			},
 		},
@@ -190,11 +178,10 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		{
 			name: "already-failed",
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1,
-					cmgen.SetCertificateRequestStatusCondition(cmapi.CertificateRequestCondition{
-						Type:   cmapi.CertificateRequestConditionReady,
-						Status: cmmeta.ConditionFalse,
-						Reason: cmapi.CertificateRequestReasonFailed,
+				cmgen.CertificateSigningRequestFrom(cr1,
+					cmgen.SetCertificateSigningRequestStatusCondition(certificatesv1.CertificateSigningRequestCondition{
+						Type:   certificatesv1.CertificateFailed,
+						Status: v1.ConditionTrue,
 					}),
 				),
 			},
@@ -204,62 +191,12 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		{
 			name: "already-denied",
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1,
-					cmgen.SetCertificateRequestStatusCondition(cmapi.CertificateRequestCondition{
-						Type:   cmapi.CertificateRequestConditionReady,
-						Status: cmmeta.ConditionFalse,
-						Reason: cmapi.CertificateRequestReasonDenied,
+				cmgen.CertificateSigningRequestFrom(cr1,
+					cmgen.SetCertificateSigningRequestStatusCondition(certificatesv1.CertificateSigningRequestCondition{
+						Type:   certificatesv1.CertificateDenied,
+						Status: v1.ConditionTrue,
 					}),
 				),
-			},
-		},
-
-		// Initialize the CertificateRequest Ready condition if it is missing.
-		{
-			name: "initialize-ready-condition",
-			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1, func(cr *cmapi.CertificateRequest) {
-					removeCertificateRequestCondition(cr, cmapi.CertificateRequestConditionReady)
-				}),
-			},
-			expectedResult: reconcile.Result{},
-			expectedStatusPatch: &cmapi.CertificateRequestStatus{
-				Conditions: []cmapi.CertificateRequestCondition{
-					{
-						Type:               cmapi.CertificateRequestConditionReady,
-						Status:             cmmeta.ConditionUnknown,
-						Reason:             v1alpha1.CertificateRequestConditionReasonInitializing,
-						Message:            fieldOwner + " has started reconciling this CertificateRequest",
-						LastTransitionTime: &fakeTimeObj2,
-					},
-				},
-			},
-		},
-
-		// If denied, set Ready condition status to false and reason to denied.
-		{
-			name: "set-ready-denied",
-			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1, cmgen.SetCertificateRequestStatusCondition(cmapi.CertificateRequestCondition{
-					Type:   cmapi.CertificateRequestConditionDenied,
-					Status: cmmeta.ConditionTrue,
-					Reason: "",
-				})),
-			},
-			expectedStatusPatch: &cmapi.CertificateRequestStatus{
-				Conditions: []cmapi.CertificateRequestCondition{
-					{
-						Type:               cmapi.CertificateRequestConditionReady,
-						Status:             cmmeta.ConditionFalse,
-						Reason:             cmapi.CertificateRequestReasonDenied,
-						Message:            "The CertificateRequest was denied by an approval controller",
-						LastTransitionTime: &fakeTimeObj2,
-					},
-				},
-				FailureTime: &fakeTimeObj2,
-			},
-			expectedEvents: []string{
-				"Normal DetectedDenied Detected that the CR is denied, will update Ready condition",
 			},
 		},
 
@@ -267,21 +204,12 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		{
 			name: "set-ready-pending-missing-issuer",
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1, func(cr *cmapi.CertificateRequest) {
-					cr.Spec.IssuerRef.Name = issuer1.Name
-					cr.Spec.IssuerRef.Kind = issuer1.Kind
+				cmgen.CertificateSigningRequestFrom(cr1, func(cr *certificatesv1.CertificateSigningRequest) {
+					cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
 				}),
 			},
-			expectedStatusPatch: &cmapi.CertificateRequestStatus{
-				Conditions: []cmapi.CertificateRequestCondition{
-					{
-						Type:               cmapi.CertificateRequestConditionReady,
-						Status:             cmmeta.ConditionFalse,
-						Reason:             cmapi.CertificateRequestReasonPending,
-						Message:            "simpleissuers.testing.cert-manager.io \"issuer-1\" not found. Waiting for it to be created.",
-						LastTransitionTime: &fakeTimeObj2,
-					},
-				},
+			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
+				Conditions: nil,
 			},
 			expectedEvents: []string{
 				"Normal WaitingForIssuerExist Waiting for the issuer to exist",
@@ -293,28 +221,17 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		{
 			name: "set-ready-pending-issuer-has-no-ready-condition",
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1,
-					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-						Name:  issuer1.Name,
-						Group: api.SchemeGroupVersion.Group,
-					}),
-				),
-				testutil.SimpleIssuerFrom(issuer1,
-					func(si *api.SimpleIssuer) {
+				cmgen.CertificateSigningRequestFrom(cr1, func(cr *certificatesv1.CertificateSigningRequest) {
+					cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+				}),
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1,
+					func(si *api.SimpleClusterIssuer) {
 						si.Status.Conditions = nil
 					},
 				),
 			},
-			expectedStatusPatch: &cmapi.CertificateRequestStatus{
-				Conditions: []cmapi.CertificateRequestCondition{
-					{
-						Type:               cmapi.CertificateRequestConditionReady,
-						Status:             cmmeta.ConditionFalse,
-						Reason:             cmapi.CertificateRequestReasonPending,
-						Message:            "Issuer is not Ready yet. No ready condition found. Waiting for it to become ready.",
-						LastTransitionTime: &fakeTimeObj2,
-					},
-				},
+			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
+				Conditions: nil,
 			},
 			expectedEvents: []string{
 				"Normal WaitingForIssuerReady Waiting for the issuer to become ready",
@@ -325,14 +242,11 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		{
 			name: "set-ready-pending-issuer-is-not-ready",
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1,
-					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-						Name:  issuer1.Name,
-						Group: api.SchemeGroupVersion.Group,
-					}),
-				),
-				testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerStatusCondition(
+				cmgen.CertificateSigningRequestFrom(cr1, func(cr *certificatesv1.CertificateSigningRequest) {
+					cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+				}),
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1,
+					testutil.SetSimpleClusterIssuerStatusCondition(
 						fakeClock1,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionFalse,
@@ -341,16 +255,8 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 					),
 				),
 			},
-			expectedStatusPatch: &cmapi.CertificateRequestStatus{
-				Conditions: []cmapi.CertificateRequestCondition{
-					{
-						Type:               cmapi.CertificateRequestConditionReady,
-						Status:             cmmeta.ConditionFalse,
-						Reason:             cmapi.CertificateRequestReasonPending,
-						Message:            "Issuer is not Ready yet. Current ready condition is \"[REASON]\": [MESSAGE]. Waiting for it to become ready.",
-						LastTransitionTime: &fakeTimeObj2,
-					},
-				},
+			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
+				Conditions: nil,
 			},
 			expectedEvents: []string{
 				"Normal WaitingForIssuerReady Waiting for the issuer to become ready",
@@ -362,26 +268,15 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		{
 			name: "set-ready-pending-issuer-ready-outdated",
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1,
-					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-						Name:  issuer1.Name,
-						Group: api.SchemeGroupVersion.Group,
-					}),
-				),
-				testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerGeneration(issuer1.Generation+1),
+				cmgen.CertificateSigningRequestFrom(cr1, func(cr *certificatesv1.CertificateSigningRequest) {
+					cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+				}),
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1,
+					testutil.SetSimpleClusterIssuerGeneration(issuer1.Generation+1),
 				),
 			},
-			expectedStatusPatch: &cmapi.CertificateRequestStatus{
-				Conditions: []cmapi.CertificateRequestCondition{
-					{
-						Type:               cmapi.CertificateRequestConditionReady,
-						Status:             cmmeta.ConditionFalse,
-						Reason:             cmapi.CertificateRequestReasonPending,
-						Message:            "Issuer is not Ready yet. Current ready condition is outdated. Waiting for it to become ready.",
-						LastTransitionTime: &fakeTimeObj2,
-					},
-				},
+			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
+				Conditions: nil,
 			},
 			expectedEvents: []string{
 				"Normal WaitingForIssuerReady Waiting for the issuer to become ready",
@@ -396,28 +291,27 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				return nil, fmt.Errorf("a specific error")
 			},
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1,
-					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-						Name:  issuer1.Name,
-						Group: api.SchemeGroupVersion.Group,
-					}),
-					func(cr *cmapi.CertificateRequest) {
+				cmgen.CertificateSigningRequestFrom(cr1,
+					func(cr *certificatesv1.CertificateSigningRequest) {
+						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+					},
+					func(cr *certificatesv1.CertificateSigningRequest) {
 						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
 					},
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
-			expectedStatusPatch: &cmapi.CertificateRequestStatus{
-				Conditions: []cmapi.CertificateRequestCondition{
+			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
+				Conditions: []certificatesv1.CertificateSigningRequestCondition{
 					{
-						Type:               cmapi.CertificateRequestConditionReady,
-						Status:             cmmeta.ConditionFalse,
+						Type:               certificatesv1.CertificateFailed,
+						Status:             v1.ConditionTrue,
 						Reason:             cmapi.CertificateRequestReasonFailed,
 						Message:            "CertificateRequest has failed permanently: a specific error",
-						LastTransitionTime: &fakeTimeObj2,
+						LastTransitionTime: fakeTimeObj2,
+						LastUpdateTime:     fakeTimeObj2,
 					},
 				},
-				FailureTime: &fakeTimeObj2,
 			},
 			expectedEvents: []string{
 				"Warning PermanentError Failed permanently to sign CertificateRequest: a specific error",
@@ -432,32 +326,23 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				return nil, signer.PendingError{Err: fmt.Errorf("pending error")}
 			},
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1,
-					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-						Name:  issuer1.Name,
-						Group: api.SchemeGroupVersion.Group,
-					}),
-					func(cr *cmapi.CertificateRequest) {
+				cmgen.CertificateSigningRequestFrom(cr1,
+					func(cr *certificatesv1.CertificateSigningRequest) {
+						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+					},
+					func(cr *certificatesv1.CertificateSigningRequest) {
 						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
 					},
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
 			// instead of returning an error, we trigger a new reconciliation by setting requeue=true
 			validateError: errormatch.NoError(),
 			expectedResult: reconcile.Result{
 				Requeue: true,
 			},
-			expectedStatusPatch: &cmapi.CertificateRequestStatus{
-				Conditions: []cmapi.CertificateRequestCondition{
-					{
-						Type:               cmapi.CertificateRequestConditionReady,
-						Status:             cmmeta.ConditionFalse,
-						Reason:             cmapi.CertificateRequestReasonPending,
-						Message:            "CertificateRequest is not ready yet: pending error",
-						LastTransitionTime: &fakeTimeObj2,
-					},
-				},
+			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
+				Conditions: nil,
 			},
 			expectedEvents: []string{
 				"Warning RetryableError Failed to sign CertificateRequest, will retry: pending error",
@@ -481,35 +366,28 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				}
 			},
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1,
-					func(cr *cmapi.CertificateRequest) {
+				cmgen.CertificateSigningRequestFrom(cr1,
+					func(cr *certificatesv1.CertificateSigningRequest) {
 						cr.CreationTimestamp = fakeTimeObj2
 					},
-					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-						Name:  issuer1.Name,
-						Group: api.SchemeGroupVersion.Group,
-					}),
+					func(cr *certificatesv1.CertificateSigningRequest) {
+						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+					},
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
 			// no error should be returned because the reconciliation should be triggered
 			// when the custom condition is added
 			validateError: errormatch.NoError(),
-			expectedStatusPatch: &cmapi.CertificateRequestStatus{
-				Conditions: []cmapi.CertificateRequestCondition{
+			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
+				Conditions: []certificatesv1.CertificateSigningRequestCondition{
 					{
 						Type:               "[condition type]",
-						Status:             cmmeta.ConditionTrue,
+						Status:             v1.ConditionTrue,
 						Reason:             "[reason]",
 						Message:            "test error",
-						LastTransitionTime: &fakeTimeObj2,
-					},
-					{
-						Type:               cmapi.CertificateRequestConditionReady,
-						Status:             cmmeta.ConditionFalse,
-						Reason:             cmapi.CertificateRequestReasonPending,
-						Message:            "CertificateRequest is not ready yet: test error",
-						LastTransitionTime: &fakeTimeObj2,
+						LastTransitionTime: fakeTimeObj2,
+						LastUpdateTime:     fakeTimeObj2,
 					},
 				},
 			},
@@ -535,44 +413,38 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				}
 			},
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1,
-					func(cr *cmapi.CertificateRequest) {
+				cmgen.CertificateSigningRequestFrom(cr1,
+					func(cr *certificatesv1.CertificateSigningRequest) {
 						cr.CreationTimestamp = fakeTimeObj2
 					},
-					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-						Name:  issuer1.Name,
-						Group: api.SchemeGroupVersion.Group,
-					}),
-					cmgen.AddCertificateRequestStatusCondition(cmapi.CertificateRequestCondition{
+					func(cr *certificatesv1.CertificateSigningRequest) {
+						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+					},
+					cmgen.SetCertificateSigningRequestStatusCondition(certificatesv1.CertificateSigningRequestCondition{
 						Type:               "[condition type]",
-						Status:             cmmeta.ConditionTrue,
+						Status:             v1.ConditionTrue,
 						Reason:             "[reason]",
 						Message:            "test error",
-						LastTransitionTime: &fakeTimeObj2,
+						LastTransitionTime: fakeTimeObj2,
+						LastUpdateTime:     fakeTimeObj2,
 					}),
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
 			// instead of returning an error, we trigger a new reconciliation by setting requeue=true
 			validateError: errormatch.NoError(),
 			expectedResult: reconcile.Result{
 				Requeue: true,
 			},
-			expectedStatusPatch: &cmapi.CertificateRequestStatus{
-				Conditions: []cmapi.CertificateRequestCondition{
+			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
+				Conditions: []certificatesv1.CertificateSigningRequestCondition{
 					{
 						Type:               "[condition type]",
-						Status:             cmmeta.ConditionTrue,
+						Status:             v1.ConditionTrue,
 						Reason:             "[reason]",
 						Message:            "test error2",
-						LastTransitionTime: &fakeTimeObj2,
-					},
-					{
-						Type:               cmapi.CertificateRequestConditionReady,
-						Status:             cmmeta.ConditionFalse,
-						Reason:             cmapi.CertificateRequestReasonPending,
-						Message:            "CertificateRequest is not ready yet: test error2",
-						LastTransitionTime: &fakeTimeObj2,
+						LastTransitionTime: fakeTimeObj2,
+						LastUpdateTime:     fakeTimeObj2,
 					},
 				},
 			},
@@ -598,38 +470,38 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				}
 			},
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1,
-					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-						Name:  issuer1.Name,
-						Group: api.SchemeGroupVersion.Group,
-					}),
-					func(cr *cmapi.CertificateRequest) {
+				cmgen.CertificateSigningRequestFrom(cr1,
+					func(cr *certificatesv1.CertificateSigningRequest) {
+						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+					},
+					func(cr *certificatesv1.CertificateSigningRequest) {
 						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
 					},
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
 			// no error should be returned because the reconciliation should be triggered when the
 			// custom condition is added
 			validateError: errormatch.NoError(),
-			expectedStatusPatch: &cmapi.CertificateRequestStatus{
-				Conditions: []cmapi.CertificateRequestCondition{
+			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
+				Conditions: []certificatesv1.CertificateSigningRequestCondition{
 					{
 						Type:               "[condition type]",
-						Status:             cmmeta.ConditionTrue,
+						Status:             v1.ConditionTrue,
 						Reason:             "[reason]",
 						Message:            "test error",
-						LastTransitionTime: &fakeTimeObj2,
+						LastTransitionTime: fakeTimeObj2,
+						LastUpdateTime:     fakeTimeObj2,
 					},
 					{
-						Type:               cmapi.CertificateRequestConditionReady,
-						Status:             cmmeta.ConditionFalse,
+						Type:               certificatesv1.CertificateFailed,
+						Status:             v1.ConditionTrue,
 						Reason:             cmapi.CertificateRequestReasonFailed,
 						Message:            "CertificateRequest has failed permanently: test error",
-						LastTransitionTime: &fakeTimeObj2,
+						LastTransitionTime: fakeTimeObj2,
+						LastUpdateTime:     fakeTimeObj2,
 					},
 				},
-				FailureTime: &fakeTimeObj2,
 			},
 			expectedEvents: []string{
 				"Warning PermanentError Failed permanently to sign CertificateRequest: test error",
@@ -653,44 +525,45 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				}
 			},
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1,
-					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-						Name:  issuer1.Name,
-						Group: api.SchemeGroupVersion.Group,
-					}),
-					func(cr *cmapi.CertificateRequest) {
+				cmgen.CertificateSigningRequestFrom(cr1,
+					func(cr *certificatesv1.CertificateSigningRequest) {
+						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+					},
+					func(cr *certificatesv1.CertificateSigningRequest) {
 						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
 					},
-					cmgen.AddCertificateRequestStatusCondition(cmapi.CertificateRequestCondition{
+					cmgen.SetCertificateSigningRequestStatusCondition(certificatesv1.CertificateSigningRequestCondition{
 						Type:               "[condition type]",
-						Status:             cmmeta.ConditionTrue,
+						Status:             v1.ConditionTrue,
 						Reason:             "[reason]",
 						Message:            "test error",
-						LastTransitionTime: &fakeTimeObj1,
+						LastTransitionTime: fakeTimeObj1,
+						LastUpdateTime:     fakeTimeObj1,
 					}),
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
 			// since we got into a permanent failure state, we should not return an error
 			validateError: errormatch.NoError(),
-			expectedStatusPatch: &cmapi.CertificateRequestStatus{
-				Conditions: []cmapi.CertificateRequestCondition{
+			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
+				Conditions: []certificatesv1.CertificateSigningRequestCondition{
 					{
 						Type:               "[condition type]",
-						Status:             cmmeta.ConditionTrue,
+						Status:             v1.ConditionTrue,
 						Reason:             "[reason]",
 						Message:            "test error2",
-						LastTransitionTime: &fakeTimeObj1, // since the status is not updated, the LastTransitionTime is not updated either
+						LastTransitionTime: fakeTimeObj1, // since the status is not updated, the LastTransitionTime is not updated either
+						LastUpdateTime:     fakeTimeObj2,
 					},
 					{
-						Type:               cmapi.CertificateRequestConditionReady,
-						Status:             cmmeta.ConditionFalse,
+						Type:               certificatesv1.CertificateFailed,
+						Status:             v1.ConditionTrue,
 						Reason:             cmapi.CertificateRequestReasonFailed,
 						Message:            "CertificateRequest has failed permanently: test error2",
-						LastTransitionTime: &fakeTimeObj2,
+						LastTransitionTime: fakeTimeObj2,
+						LastUpdateTime:     fakeTimeObj2,
 					},
 				},
-				FailureTime: &fakeTimeObj2,
 			},
 			expectedEvents: []string{
 				"Warning PermanentError Failed permanently to sign CertificateRequest: test error2",
@@ -713,35 +586,28 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				}
 			},
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1,
-					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-						Name:  issuer1.Name,
-						Group: api.SchemeGroupVersion.Group,
-					}),
-					func(cr *cmapi.CertificateRequest) {
+				cmgen.CertificateSigningRequestFrom(cr1,
+					func(cr *certificatesv1.CertificateSigningRequest) {
+						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+					},
+					func(cr *certificatesv1.CertificateSigningRequest) {
 						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
 					},
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
 			// no error should be returned because the reconciliation should be triggered
 			// when the custom condition is added
 			validateError: errormatch.NoError(),
-			expectedStatusPatch: &cmapi.CertificateRequestStatus{
-				Conditions: []cmapi.CertificateRequestCondition{
+			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
+				Conditions: []certificatesv1.CertificateSigningRequestCondition{
 					{
 						Type:               "[condition type]",
-						Status:             cmmeta.ConditionTrue,
+						Status:             v1.ConditionTrue,
 						Reason:             "[reason]",
 						Message:            "test error",
-						LastTransitionTime: &fakeTimeObj2,
-					},
-					{
-						Type:               cmapi.CertificateRequestConditionReady,
-						Status:             cmmeta.ConditionFalse,
-						Reason:             cmapi.CertificateRequestReasonPending,
-						Message:            "CertificateRequest is not ready yet: test error",
-						LastTransitionTime: &fakeTimeObj2,
+						LastTransitionTime: fakeTimeObj2,
+						LastUpdateTime:     fakeTimeObj2,
 					},
 				},
 			},
@@ -766,35 +632,35 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				}
 			},
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1,
-					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-						Name:  issuer1.Name,
-						Group: api.SchemeGroupVersion.Group,
-					}),
+				cmgen.CertificateSigningRequestFrom(cr1,
+					func(cr *certificatesv1.CertificateSigningRequest) {
+						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+					},
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
 			// no error should be returned because we are in a permanent failure state no further
 			// retries should be made
 			validateError: errormatch.NoError(),
-			expectedStatusPatch: &cmapi.CertificateRequestStatus{
-				Conditions: []cmapi.CertificateRequestCondition{
+			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
+				Conditions: []certificatesv1.CertificateSigningRequestCondition{
 					{
 						Type:               "[condition type]",
-						Status:             cmmeta.ConditionTrue,
+						Status:             v1.ConditionTrue,
 						Reason:             "[reason]",
 						Message:            "test error",
-						LastTransitionTime: &fakeTimeObj2,
+						LastTransitionTime: fakeTimeObj2,
+						LastUpdateTime:     fakeTimeObj2,
 					},
 					{
-						Type:               cmapi.CertificateRequestConditionReady,
-						Status:             cmmeta.ConditionFalse,
+						Type:               certificatesv1.CertificateFailed,
+						Status:             v1.ConditionTrue,
 						Reason:             cmapi.CertificateRequestReasonFailed,
 						Message:            "CertificateRequest has failed permanently: test error",
-						LastTransitionTime: &fakeTimeObj2,
+						LastTransitionTime: fakeTimeObj2,
+						LastUpdateTime:     fakeTimeObj2,
 					},
 				},
-				FailureTime: &fakeTimeObj2,
 			},
 			expectedEvents: []string{
 				"Warning PermanentError Failed permanently to sign CertificateRequest: test error",
@@ -808,25 +674,24 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				return nil, signer.PermanentError{Err: fmt.Errorf("a specific error")}
 			},
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1,
-					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-						Name:  issuer1.Name,
-						Group: api.SchemeGroupVersion.Group,
-					}),
+				cmgen.CertificateSigningRequestFrom(cr1,
+					func(cr *certificatesv1.CertificateSigningRequest) {
+						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+					},
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
-			expectedStatusPatch: &cmapi.CertificateRequestStatus{
-				Conditions: []cmapi.CertificateRequestCondition{
+			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
+				Conditions: []certificatesv1.CertificateSigningRequestCondition{
 					{
-						Type:               cmapi.CertificateRequestConditionReady,
-						Status:             cmmeta.ConditionFalse,
+						Type:               certificatesv1.CertificateFailed,
+						Status:             v1.ConditionTrue,
 						Reason:             cmapi.CertificateRequestReasonFailed,
 						Message:            "CertificateRequest has failed permanently: a specific error",
-						LastTransitionTime: &fakeTimeObj2,
+						LastTransitionTime: fakeTimeObj2,
+						LastUpdateTime:     fakeTimeObj2,
 					},
 				},
-				FailureTime: &fakeTimeObj2,
 			},
 			expectedEvents: []string{
 				"Warning PermanentError Failed permanently to sign CertificateRequest: a specific error",
@@ -841,32 +706,23 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				return nil, errors.New("waiting for approval")
 			},
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1,
-					func(cr *cmapi.CertificateRequest) {
+				cmgen.CertificateSigningRequestFrom(cr1,
+					func(cr *certificatesv1.CertificateSigningRequest) {
+						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+					},
+					func(cr *certificatesv1.CertificateSigningRequest) {
 						cr.CreationTimestamp = fakeTimeObj2
 					},
-					func(cr *cmapi.CertificateRequest) {
-						cr.Spec.IssuerRef.Name = issuer1.Name
-						cr.Spec.IssuerRef.Kind = issuer1.Kind
-					},
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
 			// instead of returning an error, we trigger a new reconciliation by setting requeue=true
 			validateError: errormatch.NoError(),
 			expectedResult: reconcile.Result{
 				Requeue: true,
 			},
-			expectedStatusPatch: &cmapi.CertificateRequestStatus{
-				Conditions: []cmapi.CertificateRequestCondition{
-					{
-						Type:               cmapi.CertificateRequestConditionReady,
-						Status:             cmmeta.ConditionFalse,
-						Reason:             cmapi.CertificateRequestReasonPending,
-						Message:            "CertificateRequest is not ready yet: waiting for approval",
-						LastTransitionTime: &fakeTimeObj2,
-					},
-				},
+			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
+				Conditions: nil,
 			},
 			expectedEvents: []string{
 				"Warning RetryableError Failed to sign CertificateRequest, will retry: waiting for approval",
@@ -877,50 +733,27 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 			name: "success-issuer",
 			sign: successSigner("a-signed-certificate"),
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1, func(cr *cmapi.CertificateRequest) {
-					cr.Spec.IssuerRef.Name = issuer1.Name
-					cr.Spec.IssuerRef.Kind = issuer1.Kind
+				cmgen.CertificateSigningRequestFrom(cr1, func(cr *certificatesv1.CertificateSigningRequest) {
+					cr.Spec.SignerName = fmt.Sprintf("%s/%s.%s", issuer1.GetIssuerTypeIdentifier(), issuer1.Namespace, issuer1.Name)
 				}),
 				testutil.SimpleIssuerFrom(issuer1),
 			},
-			expectedStatusPatch: &cmapi.CertificateRequestStatus{
-				Certificate: []byte("a-signed-certificate"),
-				Conditions: []cmapi.CertificateRequestCondition{
-					{
-						Type:               cmapi.CertificateRequestConditionReady,
-						Status:             cmmeta.ConditionTrue,
-						Reason:             cmapi.CertificateRequestReasonIssued,
-						Message:            "issued",
-						LastTransitionTime: &fakeTimeObj2,
-					},
-				},
-			},
-			expectedEvents: []string{
-				"Normal Issued Succeeded signing the CertificateRequest",
-			},
+			expectedStatusPatch: nil,
+			expectedEvents:      []string{},
 		},
 
 		{
 			name: "success-clusterissuer",
 			sign: successSigner("a-signed-certificate"),
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1, func(cr *cmapi.CertificateRequest) {
-					cr.Spec.IssuerRef.Name = clusterIssuer1.Name
-					cr.Spec.IssuerRef.Kind = clusterIssuer1.Kind
+				cmgen.CertificateSigningRequestFrom(cr1, func(cr *certificatesv1.CertificateSigningRequest) {
+					cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
 				}),
 				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
-			expectedStatusPatch: &cmapi.CertificateRequestStatus{
+			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
 				Certificate: []byte("a-signed-certificate"),
-				Conditions: []cmapi.CertificateRequestCondition{
-					{
-						Type:               cmapi.CertificateRequestConditionReady,
-						Status:             cmmeta.ConditionTrue,
-						Reason:             cmapi.CertificateRequestReasonIssued,
-						Message:            "issued",
-						LastTransitionTime: &fakeTimeObj2,
-					},
-				},
+				Conditions:  nil,
 			},
 			expectedEvents: []string{
 				"Normal Issued Succeeded signing the CertificateRequest",
@@ -934,7 +767,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 			t.Parallel()
 
 			scheme := runtime.NewScheme()
-			require.NoError(t, setupCertificateRequestReconcilerScheme(scheme))
+			require.NoError(t, setupCertificateSigningRequestReconcilerScheme(scheme))
 			require.NoError(t, api.AddToScheme(scheme))
 			fakeClient := fake.NewClientBuilder().
 				WithScheme(scheme).
@@ -948,14 +781,14 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				},
 			}
 
-			var crBefore cmapi.CertificateRequest
+			var crBefore certificatesv1.CertificateSigningRequest
 			err := fakeClient.Get(context.TODO(), req.NamespacedName, &crBefore)
 			require.NoError(t, client.IgnoreNotFound(err), "unexpected error from fake client")
 
 			logger := logrtesting.NewTestLoggerWithOptions(t, logrtesting.Options{LogTimestamp: true, Verbosity: 10})
 			fakeRecorder := record.NewFakeRecorder(100)
 
-			controller := CertificateRequestReconciler{
+			controller := CertificateSigningRequestReconciler{
 				IssuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
 				ClusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
 				FieldOwner:         fieldOwner,
@@ -986,24 +819,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 	}
 }
 
-func chanToSlice(ch <-chan string) []string {
-	out := make([]string, 0, len(ch))
-	for i := 0; i < len(ch); i++ {
-		out = append(out, <-ch)
-	}
-	return out
-}
-
-func removeCertificateRequestCondition(cr *cmapi.CertificateRequest, conditionType cmapi.CertificateRequestConditionType) {
-	for i, cond := range cr.Status.Conditions {
-		if cond.Type == conditionType {
-			cr.Status.Conditions = append(cr.Status.Conditions[:i], cr.Status.Conditions[i+1:]...)
-			return
-		}
-	}
-}
-
-func TestCertificateRequestMatchIssuerType(t *testing.T) {
+func TestCertificateSigningRequestMatchIssuerType(t *testing.T) {
 	t.Parallel()
 
 	type testcase struct {
@@ -1011,23 +827,17 @@ func TestCertificateRequestMatchIssuerType(t *testing.T) {
 
 		issuerTypes        []v1alpha1.Issuer
 		clusterIssuerTypes []v1alpha1.Issuer
-		cr                 *cmapi.CertificateRequest
+		csr                *certificatesv1.CertificateSigningRequest
 
 		expectedIssuerType v1alpha1.Issuer
 		expectedIssuerName types.NamespacedName
+		expectedError      *errormatch.Matcher
 	}
 
-	createCr := func(name string, namespace string, kind string, group string) *cmapi.CertificateRequest {
-		return &cmapi.CertificateRequest{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: namespace,
-			},
-			Spec: cmapi.CertificateRequestSpec{
-				IssuerRef: cmmeta.ObjectReference{
-					Name:  name,
-					Kind:  kind,
-					Group: group,
-				},
+	createCsr := func(signerName string) *certificatesv1.CertificateSigningRequest {
+		return &certificatesv1.CertificateSigningRequest{
+			Spec: certificatesv1.CertificateSigningRequestSpec{
+				SignerName: signerName,
 			},
 		}
 	}
@@ -1037,64 +847,68 @@ func TestCertificateRequestMatchIssuerType(t *testing.T) {
 			name:               "empty",
 			issuerTypes:        nil,
 			clusterIssuerTypes: nil,
-			cr:                 nil,
+			csr:                nil,
 
 			expectedIssuerType: nil,
 			expectedIssuerName: types.NamespacedName{},
+			expectedError:      errormatch.ErrorContains("invalid signer name, should have format <issuer-type-id>/<issuer-id>"),
 		},
 		{
-			name:               "no issuers",
+			name:               "invalid signer name format",
 			issuerTypes:        nil,
 			clusterIssuerTypes: nil,
-			cr:                 createCr("name", "namespace", "", "test"),
+			csr:                createCsr("aaaaaa"),
 
 			expectedIssuerType: nil,
 			expectedIssuerName: types.NamespacedName{},
+			expectedError:      errormatch.ErrorContains("invalid signer name, should have format <issuer-type-id>/<issuer-id>: \"aaaaaa\""),
+		},
+		{
+			name:               "unknown issuer type identifier",
+			issuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
+			clusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
+			csr:                createCsr("aaaaa.issuer.cert-manager.io/namespace.name"),
+
+			expectedIssuerType: nil,
+			expectedIssuerName: types.NamespacedName{},
+			expectedError:      errormatch.ErrorContains("no issuer found for signer name: \"aaaaa.issuer.cert-manager.io/namespace.name\""),
 		},
 		{
 			name:               "match issuer",
 			issuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
 			clusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
-			cr:                 createCr("name", "namespace", "SimpleIssuer", "testing.cert-manager.io"),
+			csr:                createCsr("simpleissuers.issuer.cert-manager.io/namespace.name"),
 
-			expectedIssuerType: &api.SimpleIssuer{},
-			expectedIssuerName: types.NamespacedName{Name: "name", Namespace: "namespace"},
+			expectedIssuerType: nil,
+			expectedIssuerName: types.NamespacedName{},
+			expectedError:      errormatch.ErrorContains("invalid SignerName, \"simpleissuers.issuer.cert-manager.io\" is a namespaced issuer type, namespaced issuers are not supported for Kubernetes CSRs"),
 		},
 		{
 			name:               "match cluster issuer",
 			issuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
 			clusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
-			cr:                 createCr("name", "namespace", "SimpleClusterIssuer", "testing.cert-manager.io"),
+			csr:                createCsr("simpleclusterissuers.issuer.cert-manager.io/name"),
 
 			expectedIssuerType: &api.SimpleClusterIssuer{},
 			expectedIssuerName: types.NamespacedName{Name: "name"},
 		},
 		{
-			name:               "select kind if empty",
-			issuerTypes:        []v1alpha1.Issuer{},
+			name:               "cluster issuer with dot in name",
+			issuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
 			clusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
-			cr:                 createCr("name", "namespace", "", "testing.cert-manager.io"),
+			csr:                createCsr("simpleclusterissuers.issuer.cert-manager.io/name.test"),
 
 			expectedIssuerType: &api.SimpleClusterIssuer{},
-			expectedIssuerName: types.NamespacedName{Name: "name"},
+			expectedIssuerName: types.NamespacedName{Name: "name.test"},
 		},
 		{
-			name:               "prefer issuer over cluster issuer (v1)",
+			name:               "cluster issuer with empty name",
 			issuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
 			clusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
-			cr:                 createCr("name", "namespace", "", "testing.cert-manager.io"),
+			csr:                createCsr("simpleclusterissuers.issuer.cert-manager.io/"),
 
-			expectedIssuerType: &api.SimpleIssuer{},
-			expectedIssuerName: types.NamespacedName{Name: "name", Namespace: "namespace"},
-		},
-		{
-			name:               "prefer issuer over cluster issuer (v2)",
-			issuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
-			clusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleIssuer{}},
-			cr:                 createCr("name", "namespace", "", "testing.cert-manager.io"),
-
-			expectedIssuerType: &api.SimpleIssuer{},
-			expectedIssuerName: types.NamespacedName{Name: "name", Namespace: "namespace"},
+			expectedIssuerType: &api.SimpleClusterIssuer{},
+			expectedIssuerName: types.NamespacedName{Name: ""},
 		},
 	}
 
@@ -1106,14 +920,14 @@ func TestCertificateRequestMatchIssuerType(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			crr := &CertificateRequestReconciler{
+			crr := &CertificateSigningRequestReconciler{
 				IssuerTypes:        tc.issuerTypes,
 				ClusterIssuerTypes: tc.clusterIssuerTypes,
 			}
 
 			require.NoError(t, crr.setIssuersGroupVersionKind(scheme))
 
-			issuerType, issuerName := crr.matchIssuerType(tc.cr)
+			issuerType, issuerName, err := crr.matchIssuerType(tc.csr)
 
 			if tc.expectedIssuerType != nil {
 				require.NoError(t, kubeutil.SetGroupVersionKind(scheme, tc.expectedIssuerType))
@@ -1121,6 +935,9 @@ func TestCertificateRequestMatchIssuerType(t *testing.T) {
 
 			assert.Equal(t, tc.expectedIssuerType, issuerType)
 			assert.Equal(t, tc.expectedIssuerName, issuerName)
+			if !ptr.Default(tc.expectedError, *errormatch.NoError())(t, err) {
+				t.Fail()
+			}
 		})
 	}
 }
