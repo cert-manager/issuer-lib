@@ -51,6 +51,13 @@ type CombinedController struct {
 	// Clock is used to mock condition transition times in tests.
 	Clock clock.PassiveClock
 
+	// SetCAOnCertificateRequest is used to enable setting the CA status field on
+	// the CertificateRequest resource. This is disabled by default.
+	// Deprecated: this option is for backwards compatibility only. The use of
+	// ca.crt is discouraged. Instead, the CA certificate should be provided
+	// separately using a tool such as trust-manager.
+	SetCAOnCertificateRequest bool
+
 	PostSetupWithManager func(context.Context, schema.GroupVersionKind, ctrl.Manager, controller.Controller) error
 }
 
@@ -93,6 +100,8 @@ func (r *CombinedController) SetupWithManager(ctx context.Context, mgr ctrl.Mana
 		Sign:          r.Sign,
 		EventRecorder: r.EventRecorder,
 		Clock:         r.Clock,
+
+		SetCAOnCertificateRequest: r.SetCAOnCertificateRequest,
 
 		PostSetupWithManager: r.PostSetupWithManager,
 	}).SetupWithManager(ctx, mgr); err != nil {
