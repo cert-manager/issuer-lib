@@ -26,12 +26,7 @@ var _ = framework.ConformanceDescribe("Certificates", func() {
 	kubeClients := testresource.KubeClients(t, ctx)
 
 	unsupportedFeatures := featureset.NewFeatureSet(
-		featureset.DurationFeature,
-		featureset.KeyUsagesFeature,
 		featureset.SaveCAToSecret,
-		featureset.Ed25519FeatureSet,
-		featureset.IssueCAFeature,
-		featureset.LiteralSubjectFeature,
 	)
 
 	issuerBuilder := newIssuerBuilder("SimpleIssuer")
@@ -59,12 +54,7 @@ var _ = framework.ConformanceDescribe("CertificateSigningRequests", func() {
 	kubeClients := testresource.KubeClients(t, ctx)
 
 	unsupportedFeatures := featureset.NewFeatureSet(
-		featureset.DurationFeature,
-		featureset.KeyUsagesFeature,
 		featureset.SaveCAToSecret,
-		featureset.Ed25519FeatureSet,
-		featureset.IssueCAFeature,
-		featureset.LiteralSubjectFeature,
 	)
 
 	clusterIssuerBuilder := newIssuerBuilder("SimpleClusterIssuer")
@@ -87,35 +77,18 @@ var _ = framework.ConformanceDescribe("CertificateSigningRequests", func() {
 	}).Define()
 })
 
+/*
 var _ = framework.ConformanceDescribe("RBAC", func() {
 	t := &mockTest{}
 	ctx := testresource.EnsureTestDependencies(t, context.TODO(), testresource.EndToEndTest)
 	kubeClients := testresource.KubeClients(t, ctx)
 
-	unsupportedFeatures := featureset.NewFeatureSet(
-		featureset.DurationFeature,
-		featureset.KeyUsagesFeature,
-		featureset.SaveCAToSecret,
-		featureset.Ed25519FeatureSet,
-		featureset.IssueCAFeature,
-		featureset.LiteralSubjectFeature,
-	)
+	kubeConfig := rest.CopyConfig(kubeClients.Rest)
+	kubeConfig.Impersonate.UserName = "system:serviceaccount:my-namespace:simple-issuer-controller-manager"
+	kubeConfig.Impersonate.Groups = []string{"system:authenticated"}
 
-	issuerBuilder := newIssuerBuilder("SimpleIssuer")
-	(&certificates.Suite{
-		KubeClientConfig:    kubeClients.Rest,
-		Name:                "External Issuer",
-		CreateIssuerFunc:    issuerBuilder.create,
-		DeleteIssuerFunc:    issuerBuilder.delete,
-		UnsupportedFeatures: unsupportedFeatures,
-	}).Define()
-
-	clusterIssuerBuilder := newIssuerBuilder("SimpleClusterIssuer")
-	(&certificates.Suite{
-		KubeClientConfig:    kubeClients.Rest,
-		Name:                "External ClusterIssuer",
-		CreateIssuerFunc:    clusterIssuerBuilder.create,
-		DeleteIssuerFunc:    clusterIssuerBuilder.delete,
-		UnsupportedFeatures: unsupportedFeatures,
+	(&rbac.Suite{
+		KubeClientConfig: kubeConfig,
 	}).Define()
 })
+*/

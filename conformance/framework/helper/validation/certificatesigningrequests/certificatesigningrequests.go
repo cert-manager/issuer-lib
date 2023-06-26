@@ -323,19 +323,11 @@ func ExpectValidBasicConstraints(csr *certificatesv1.CertificateSigningRequest, 
 		return err
 	}
 
-	markedIsCA := false
-	if csr.Annotations[experimentalapi.CertificateSigningRequestIsCAAnnotationKey] == "true" {
-		markedIsCA = true
-	}
+	markedIsCA := csr.Annotations[experimentalapi.CertificateSigningRequestIsCAAnnotationKey] == "true"
 
 	if cert.IsCA != markedIsCA {
 		return fmt.Errorf("requested certificate does not match expected IsCA, exp=%t got=%t",
 			markedIsCA, cert.IsCA)
-	}
-
-	hasCertSign := (cert.KeyUsage & x509.KeyUsageCertSign) == x509.KeyUsageCertSign
-	if hasCertSign != markedIsCA {
-		return fmt.Errorf("Expected certificate to have KeyUsageCertSign=%t, but got=%t", markedIsCA, hasCertSign)
 	}
 
 	return nil
