@@ -26,48 +26,46 @@ CTR=docker
 
 TOOLS :=
 # https://github.com/helm/helm/releases
-TOOLS += helm=v3.10.0
+TOOLS += helm=v3.12.0
 # https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl
-TOOLS += kubectl=v1.25.2
+TOOLS += kubectl=v1.27.2
 # https://github.com/kubernetes-sigs/kind/releases
-TOOLS += kind=v0.16.0
+TOOLS += kind=v0.19.0
 # https://github.com/kyverno/kyverno/releases
-TOOLS += kyverno=v1.8.0
-# https://github.com/arttor/helmify/releases
-TOOLS += helmify=0.3.18
+TOOLS += kyverno=v1.10.0
 # https://github.com/mikefarah/yq/releases
-TOOLS += yq=v4.28.1
+TOOLS += yq=v4.34.1
 # https://github.com/ko-build/ko/releases
-TOOLS += ko=0.12.0
+TOOLS += ko=0.13.0
 
 ### go packages
 # https://pkg.go.dev/sigs.k8s.io/controller-tools/cmd/controller-gen?tab=versions
-TOOLS += controller-gen=v0.10.0
+TOOLS += controller-gen=v0.12.0
 # https://pkg.go.dev/golang.org/x/tools/cmd/goimports?tab=versions
-TOOLS += goimports=v0.1.12
+TOOLS += goimports=v0.9.1
 # https://pkg.go.dev/github.com/google/go-licenses/licenses?tab=versions
-TOOLS += go-licenses=v1.4.0
+TOOLS += go-licenses=v1.6.0
 # https://pkg.go.dev/gotest.tools/gotestsum/testjson?tab=versions
-TOOLS += gotestsum=v1.8.2
+TOOLS += gotestsum=v1.10.0
 # https://pkg.go.dev/sigs.k8s.io/kustomize/kustomize/v4?tab=versions
 TOOLS += kustomize=v4.5.7
 # https://pkg.go.dev/github.com/itchyny/gojq?tab=versions
-TOOLS += gojq=v0.12.9
+TOOLS += gojq=v0.12.12
 # https://pkg.go.dev/github.com/google/go-containerregistry/pkg/crane?tab=versions
-TOOLS += crane=v0.11.0
+TOOLS += crane=v0.15.2
 # https://pkg.go.dev/github.com/cert-manager/boilersuite?tab=versions
 TOOLS += boilersuite=v0.1.0
 
 # https://pkg.go.dev/k8s.io/code-generator/cmd?tab=versions
-K8S_CODEGEN_VERSION=v0.25.2
+K8S_CODEGEN_VERSION=v0.27.2
 
 # https://storage.googleapis.com/storage/v1/b/kubebuilder-tools/o/
-KUBEBUILDER_ASSETS_VERSION=1.25.0
+KUBEBUILDER_ASSETS_VERSION=1.27.1
 TOOLS += etcd=$(KUBEBUILDER_ASSETS_VERSION)
 TOOLS += kube-apiserver=$(KUBEBUILDER_ASSETS_VERSION)
 
 # https://go.dev/dl/
-VENDORED_GO_VERSION := 1.19.2
+VENDORED_GO_VERSION := 1.20.5
 
 # When switching branches which use different versions of the tools, we
 # need a way to re-trigger the symlinking from $(BINDIR)/downloaded to $(BINDIR)/tools.
@@ -78,8 +76,8 @@ $(BINDIR)/scratch/%_VERSION: FORCE | $(BINDIR)/scratch
 # binary may not be available in the PATH yet when the Makefiles are
 # evaluated. HOST_OS and HOST_ARCH only support Linux, *BSD and macOS (M1
 # and Intel).
-HOST_OS := $(shell uname -s | tr A-Z a-z)
-HOST_ARCH = $(shell uname -m)
+HOST_OS ?= $(shell uname -s | tr A-Z a-z)
+HOST_ARCH ?= $(shell uname -m)
 ifeq (x86_64, $(HOST_ARCH))
 	HOST_ARCH = amd64
 endif
@@ -243,9 +241,9 @@ $(foreach GO_DEPENDENCY,$(GO_DEPENDENCIES),$(eval $(call go_dependency,$(word 1,
 # Helm #
 ########
 
-HELM_linux_amd64_SHA256SUM=bf56beb418bb529b5e0d6d43d56654c5a03f89c98400b409d1013a33d9586474
-HELM_darwin_amd64_SHA256SUM=1e7fd528482ac2ef2d79fe300724b3e07ff6f846a2a9b0b0fe6f5fa05691786b
-HELM_darwin_arm64_SHA256SUM=f7f6558ebc8211824032a7fdcf0d55ad064cb33ec1eeec3d18057b9fe2e04dbe
+HELM_linux_amd64_SHA256SUM=da36e117d6dbc57c8ec5bab2283222fbd108db86c83389eebe045ad1ef3e2c3b
+HELM_darwin_amd64_SHA256SUM=8223beb796ff19b59e615387d29be8c2025c5d3aea08485a262583de7ba7d708
+HELM_darwin_arm64_SHA256SUM=879f61d2ad245cb3f5018ab8b66a87619f195904a4df3b077c98ec0780e36c37
 
 $(BINDIR)/downloaded/tools/helm@$(HELM_VERSION)_%: | $(BINDIR)/downloaded/tools
 	$(CURL) https://get.helm.sh/helm-$(HELM_VERSION)-$(subst _,-,$*).tar.gz -o $@.tar.gz
@@ -259,9 +257,9 @@ $(BINDIR)/downloaded/tools/helm@$(HELM_VERSION)_%: | $(BINDIR)/downloaded/tools
 # kubectl #
 ###########
 
-KUBECTL_linux_amd64_SHA256SUM=8639f2b9c33d38910d706171ce3d25be9b19fc139d0e3d4627f38ce84f9040eb
-KUBECTL_darwin_amd64_SHA256SUM=b859766d7b47267af5cc1ee01a2d0c3c137dbfc53cd5be066181beed11ec7d34
-KUBECTL_darwin_arm64_SHA256SUM=1c37f9b7c0c92532f52c572476fd26a9349574abae8faf265fd4f8bca25b3d77
+KUBECTL_linux_amd64_SHA256SUM=4f38ee903f35b300d3b005a9c6bfb9a46a57f92e89ae602ef9c129b91dc6c5a5
+KUBECTL_darwin_amd64_SHA256SUM=ec954c580e4f50b5a8aa9e29132374ce54390578d6e95f7ad0b5d528cb025f85
+KUBECTL_darwin_arm64_SHA256SUM=d2b045b1a0804d4c46f646aeb6dcd278202b9da12c773d5e462b1b857d1f37d7
 
 $(BINDIR)/downloaded/tools/kubectl@$(KUBECTL_VERSION)_%: | $(BINDIR)/downloaded/tools
 	$(CURL) https://dl.k8s.io/release/$(KUBECTL_VERSION)/bin/$(subst _,/,$*)/kubectl -o $@
@@ -272,9 +270,9 @@ $(BINDIR)/downloaded/tools/kubectl@$(KUBECTL_VERSION)_%: | $(BINDIR)/downloaded/
 # kind #
 ########
 
-KIND_linux_amd64_SHA256SUM=a9438c56776bde1637ec763f3e450078258b791aaa631b8211b7ed3e4f50d089
-KIND_darwin_amd64_SHA256SUM=9936eafdcc4e34dfa3c9ad0e57162e19575c6581ab28f6780dc434bcb9245ecd
-KIND_darwin_arm64_SHA256SUM=3e8ac912f24066f8de8fbaed471b76307484afa8165193ee797b622beba54d0a
+KIND_linux_amd64_SHA256SUM=b543dca8440de4273be19ad818dcdfcf12ad1f767c962242fcccdb383dff893b
+KIND_darwin_amd64_SHA256SUM=32bd46859a98bffdfc2e594850c4147d297b3f93007f8376b6d4a28e82dee29a
+KIND_darwin_arm64_SHA256SUM=2628c53ddf4a2de19950df0452176e400e33b8c83834afab93651c2b6f9546bd
 
 $(BINDIR)/downloaded/tools/kind@$(KIND_VERSION)_%: | $(BINDIR)/downloaded/tools $(BINDIR)/tools
 	$(CURL) -sSfL https://github.com/kubernetes-sigs/kind/releases/download/$(KIND_VERSION)/kind-$(subst _,-,$*) -o $@
@@ -304,9 +302,9 @@ $(K8S_CODEGEN_TOOLS_DOWNLOADS): $(BINDIR)/downloaded/tools/%-gen@$(K8S_CODEGEN_V
 # kube-apiserver / etcd    #
 ############################
 
-KUBEBUILDER_TOOLS_linux_amd64_SHA256SUM=c9796a0a13ccb79b77e3d64b8d3bb85a14fc850800724c63b85bf5bacbe0b4ba
-KUBEBUILDER_TOOLS_darwin_amd64_SHA256SUM=a232faf4551ffb1185660c5a2eb9eaaf7eb02136fa71e7ead84ee940a205d9bf
-KUBEBUILDER_TOOLS_darwin_arm64_SHA256SUM=9a8c8526965f46256ff947303342e73499217df5c53680a03ac950d331191ffc
+KUBEBUILDER_TOOLS_linux_amd64_SHA256SUM=a12ae2dd2a4968530ae4887cd943b86a5ff131723d991303806fcd45defc5220
+KUBEBUILDER_TOOLS_darwin_amd64_SHA256SUM=e1913674bacaa70c067e15649237e1f67d891ba53f367c0a50786b4a274ee047
+KUBEBUILDER_TOOLS_darwin_arm64_SHA256SUM=0422632a2bbb0d4d14d7d8b0f05497a4d041c11d770a07b7a55c44bcc5e8ce66
 
 $(BINDIR)/downloaded/tools/etcd@$(KUBEBUILDER_ASSETS_VERSION)_%: $(BINDIR)/downloaded/tools/kubebuilder_tools_$(KUBEBUILDER_ASSETS_VERSION)_%.tar.gz | $(BINDIR)/downloaded/tools
 	./make/util/checkhash.sh $< $(KUBEBUILDER_TOOLS_$*_SHA256SUM)
@@ -325,9 +323,9 @@ $(BINDIR)/downloaded/tools/kubebuilder_tools_$(KUBEBUILDER_ASSETS_VERSION)_$(HOS
 # kyverno #
 ###########
 
-KYVERNO_linux_amd64_SHA256SUM=beacaca76a93914128ed74b2a81a6e5dfe78def4b21fb6e507017fbfca78188d
-KYVERNO_darwin_amd64_SHA256SUM=8d1889159fdc9d1c490d8f824c820d1965817b408fdb936defe78d20e28dd748
-KYVERNO_darwin_arm64_SHA256SUM=1b442c31e1b52d3373f06c8d5a960a6a85ea4b2f7c841b3fa70cfb633f832882
+KYVERNO_linux_amd64_SHA256SUM=ee0a08fa4a9f43a6e16e60496cf7b31a11460ce3f107599c45b9f616e48ed93f
+KYVERNO_darwin_amd64_SHA256SUM=35154ba9f508f74c9facf4b59898a99d5596056c541a44df8187da4bb34cfa4c
+KYVERNO_darwin_arm64_SHA256SUM=ad3261f225e888d8174b65a96bfd4527e1202c2167de54d1435b2d16058fcf83
 
 $(BINDIR)/downloaded/tools/kyverno@$(KYVERNO_VERSION)_%: | $(BINDIR)/downloaded/tools
 	$(CURL) https://github.com/kyverno/kyverno/releases/download/$(KYVERNO_VERSION)/kyverno-cli_$(KYVERNO_VERSION)_$(subst amd64,x86_64,$*).tar.gz	-fsSL -o $@.tar.gz
@@ -337,29 +335,13 @@ $(BINDIR)/downloaded/tools/kyverno@$(KYVERNO_VERSION)_%: | $(BINDIR)/downloaded/
 	chmod +x $@
 	rm -f $@.tar.gz
 
-###########
-# helmify #
-###########
-
-HELMIFY_linux_amd64_SHA256SUM=3fd583039a5ab701801ee0397cb6f572c8d6507b04bd80bf8e7bece0b0d9f19a
-HELMIFY_darwin_amd64_SHA256SUM=8c04d128029c4746c8f0b78e180cec051b6887949091a1a0a609efa54284c829
-HELMIFY_darwin_arm64_SHA256SUM=c939709010d79139d9e2659c13b303529d3fa42fea6e9b8bd66e6e90bab4c65d
-
-$(BINDIR)/downloaded/tools/helmify@$(HELMIFY_VERSION)_%: | $(BINDIR)/downloaded/tools
-	$(CURL) https://github.com/arttor/helmify/releases/download/v$(HELMIFY_VERSION)/helmify_$(HELMIFY_VERSION)_$(subst linux,Linux,$(subst darwin,macOS,$(subst amd64,64-bit,$*))).tar.gz -fsSL -o $@.tar.gz
-	./make/util/checkhash.sh $@.tar.gz $(HELMIFY_$*_SHA256SUM)
-	@# O writes the specified file to stdout
-	tar xfO $@.tar.gz helmify > $@
-	chmod +x $@
-	rm -f $@.tar.gz
-
 ######
 # yq #
 ######
 
-YQ_linux_amd64_SHA256SUM=818cb646d68c016b840d8db2f614553e488121d6a41aa0619fd16f17ed3a83d8
-YQ_darwin_amd64_SHA256SUM=7ae46a8cb794760e1c67d77cb4cf06fd0409b201e49a5779b8dbc221f535d725
-YQ_darwin_arm64_SHA256SUM=cf349d11cc0bd355e016bf077ce3d214e1066c650eecf7c7d5e8bc79bf82222e
+YQ_linux_amd64_SHA256SUM=c5a92a572b3bd0024c7b1fe8072be3251156874c05f017c23f9db7b3254ae71a
+YQ_darwin_amd64_SHA256SUM=25ccdecfd02aa37e07c985ac9612f17e5fd2c9eb40b051d43936bf3b99c9c2f5
+YQ_darwin_arm64_SHA256SUM=30e8c7c52647f26312d8709193a269ec0ba4f384712775f87241b2abdc46de85
 
 $(BINDIR)/downloaded/tools/yq@$(YQ_VERSION)_%: | $(BINDIR)/downloaded/tools
 	$(CURL) https://github.com/mikefarah/yq/releases/download/$(YQ_VERSION)/yq_$* -o $@
@@ -370,9 +352,9 @@ $(BINDIR)/downloaded/tools/yq@$(YQ_VERSION)_%: | $(BINDIR)/downloaded/tools
 # ko #
 ######
 
-KO_linux_amd64_SHA256SUM=05aa77182fa7c55386bd2a210fd41298542726f33bbfc9c549add3a66f7b90ad
-KO_darwin_amd64_SHA256SUM=8679d0d74fc75f24e044649c6a961dad0a3ef03bedbdece35e2f3f29eb7876af
-KO_darwin_arm64_SHA256SUM=cfef98db8ad0e1edaa483fa5c6af89eb573a8434abd372b510b89005575de702
+KO_linux_amd64_SHA256SUM=80f3e3148fabd5b839cc367ac56bb4794f90e7262b01911316c670b210b574cc
+KO_darwin_amd64_SHA256SUM=8d9daea9bcf25c790f705ea115d1c0a0193cb3d9759e937ab2959c71f88ce29c
+KO_darwin_arm64_SHA256SUM=8b6ad2ca95de9e9a5f697f6a653301ef5405a643b09bdd10628bac0f77eaadff
 
 $(BINDIR)/downloaded/tools/ko@$(KO_VERSION)_%: | $(BINDIR)/downloaded/tools
 	$(CURL) https://github.com/ko-build/ko/releases/download/v$(KO_VERSION)/ko_$(KO_VERSION)_$(subst linux,Linux,$(subst darwin,Darwin,$(subst amd64,x86_64,$*))).tar.gz -o $@.tar.gz
@@ -406,3 +388,19 @@ MISSING=$(shell (command -v curl >/dev/null || echo curl) \
 ifneq ($(MISSING),)
 $(error Missing required tools: $(MISSING))
 endif
+
+# re-download all tools and replace the sha values if changed
+# useful for determining the sha values after upgrading
+learn-sha-tools:
+	rm -rf ./_bin/
+	mkdir ./_bin/
+	$(eval export LEARN_FILE=$(PWD)/_bin/learn_file)
+	echo -n "" > "$(LEARN_FILE)"
+
+	HOST_OS=linux HOST_ARCH=amd64 $(MAKE) tools
+	HOST_OS=darwin HOST_ARCH=amd64 $(MAKE) tools
+	HOST_OS=darwin HOST_ARCH=arm64 $(MAKE) tools
+
+	while read p; do \
+		sed -i "$$p" ./make/tools.mk; \
+	done <"$(LEARN_FILE)"

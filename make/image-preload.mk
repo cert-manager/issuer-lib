@@ -14,17 +14,17 @@
 
 CRI_ARCH := $(HOST_ARCH)
 
-IMAGES_amd64 += docker.io/kindest/node:v1.25.0@sha256:db0089929bbf03b5c6f2a4e2a7000e0b362900dbb5395d2c5f62a5a1daf8d54b
-IMAGES_amd64 += quay.io/jetstack/cert-manager-controller:v1.9.1@sha256:81a5e25e2ecf63b96d6a0be28348d08a3055ea75793373109036977c24e34cf0
-IMAGES_amd64 += quay.io/jetstack/cert-manager-cainjector:v1.9.1@sha256:4fdea639cac8a091ff9e85a403c3375c10848a23be64a2a4616e98acf81e40c3
-IMAGES_amd64 += quay.io/jetstack/cert-manager-webhook:v1.9.1@sha256:b4e3d87f12f0197ebe0307803d6024f2b9e985bc02bbf450876e29ee6e6db4f1
-IMAGES_amd64 += quay.io/jetstack/cert-manager-ctl:v1.9.1@sha256:917670524468c95b7e462ad9455b70c3ddadb4830057b77ba3474075c004272a
+IMAGES_amd64 += docker.io/kindest/node:v1.27.2@sha256:ff631c3718962dc5a5e8adf1f48803c2675feebcd4eef674dd5a943576cf1d33
+IMAGES_amd64 += quay.io/jetstack/cert-manager-controller:v1.12.1@sha256:2642e7f415456d27d7d98c955a47f493417dc5ed34f246a2ac3829f2a9f79ecd
+IMAGES_amd64 += quay.io/jetstack/cert-manager-cainjector:v1.12.1@sha256:da7e239ee26491e47f7382ff731d4e53b003a2b75d776ceb9887d083ccae1831
+IMAGES_amd64 += quay.io/jetstack/cert-manager-webhook:v1.12.1@sha256:a3205d0262460f72a5ceb78c8fa5f9571cb6f171281ba05f08d6c87625951760
+IMAGES_amd64 += quay.io/jetstack/cert-manager-ctl:v1.12.1@sha256:174a8b7c246fcdfda1af64d9bf48acfbd1dfac99638059d819839ef9f05bde5e
 
-IMAGES_arm64 += docker.io/kindest/node:v1.25.0@sha256:330d2e41561eb88cad65b4816cb05becb7bcfc17f2331901272c639f1e45655b
-IMAGES_arm64 += quay.io/jetstack/cert-manager-controller:v1.9.1@sha256:63feade2625bd65ce615f6459b5cddecd0d251c826746bf0ed1a63d0e869eec3
-IMAGES_arm64 += quay.io/jetstack/cert-manager-cainjector:v1.9.1@sha256:a4438a013dbce6599b32389ac8634caf9b2f8214772773e86f820e8a11c0e226
-IMAGES_arm64 += quay.io/jetstack/cert-manager-webhook:v1.9.1@sha256:d212c54682c77db8c8cccfc36a4747ce8f4ff6fc01ea3d2e2e4009e00f78421d
-IMAGES_arm64 += quay.io/jetstack/cert-manager-ctl:v1.9.1@sha256:b83a73019c927046782ad1347bd9b0f3233f8c067b40fb07701bd25b7cdb7ac4
+IMAGES_arm64 += docker.io/kindest/node:v1.27.2@sha256:d48ca709adfa1b5d0109def39b5203ff5f8b4c1333082ca26772c24079f029d1
+IMAGES_arm64 += quay.io/jetstack/cert-manager-controller:v1.12.1@sha256:d194c296ce771e023b65c12527c723ac5094483a9c2b0f6dfc0d605f331ee1cc
+IMAGES_arm64 += quay.io/jetstack/cert-manager-cainjector:v1.12.1@sha256:917e390d61b92ea59e9620831d8ce43588a6ebd53d9131eb961c53c617022a59
+IMAGES_arm64 += quay.io/jetstack/cert-manager-webhook:v1.12.1@sha256:f68de85e2ce6af244dd44818fc37b52a00d5f5807cd662518e702aa9c15d61ca
+IMAGES_arm64 += quay.io/jetstack/cert-manager-ctl:v1.12.1@sha256:6557cab2e2dbb266259ec3cd00ebbcba03c440c7eee1b338b7d8177c4c74bd72
 
 IMAGES := $(IMAGES_$(CRI_ARCH))
 IMAGES_FILES := $(foreach IMAGE,$(IMAGES),$(subst :,+,$(IMAGE)))
