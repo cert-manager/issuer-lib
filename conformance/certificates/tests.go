@@ -34,11 +34,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 
-	"github.com/cert-manager/issuer-lib/conformance/framework"
-	"github.com/cert-manager/issuer-lib/conformance/framework/helper/featureset"
-	"github.com/cert-manager/issuer-lib/conformance/framework/helper/validation"
-	"github.com/cert-manager/issuer-lib/conformance/framework/helper/validation/certificates"
-	e2eutil "github.com/cert-manager/issuer-lib/conformance/util"
+	"conformance/framework"
+	"conformance/framework/helper/featureset"
+	"conformance/framework/helper/validation"
+	"conformance/framework/helper/validation/certificates"
+	e2eutil "conformance/util"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -49,7 +49,6 @@ import (
 // automatically called.
 func (s *Suite) Define() {
 	Describe("with issuer type "+s.Name, func() {
-		ctx := context.Background()
 		f := framework.NewFramework("certificates", s.KubeClientConfig)
 
 		sharedIPAddress := "127.0.0.1"
@@ -371,7 +370,7 @@ func (s *Suite) Define() {
 		}
 
 		defineTest := func(test testCase) {
-			s.it(f, test.name, func(issuerRef cmmeta.ObjectReference) {
+			s.it(f, test.name, func(ctx context.Context, issuerRef cmmeta.ObjectReference) {
 				certificate := &cmapi.Certificate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "testcert",
@@ -393,7 +392,7 @@ func (s *Suite) Define() {
 				Expect(err).NotTo(HaveOccurred())
 
 				By("Waiting for the Certificate to be issued...")
-				certificate, err = f.Helper().WaitForCertificateReadyAndDoneIssuing(ctx, certificate, time.Minute*8)
+				certificate, err = f.Helper().WaitForCertificateReadyAndDoneIssuing(ctx, certificate.Name, certificate.Namespace, certificate.Generation, time.Minute*8)
 				Expect(err).NotTo(HaveOccurred())
 
 				By("Validating the issued Certificate...")
@@ -407,7 +406,7 @@ func (s *Suite) Define() {
 			defineTest(tc)
 		}
 
-		s.it(f, "should issue another certificate with the same private key if the existing certificate and CertificateRequest are deleted", func(issuerRef cmmeta.ObjectReference) {
+		s.it(f, "should issue another certificate with the same private key if the existing certificate and CertificateRequest are deleted", func(ctx context.Context, issuerRef cmmeta.ObjectReference) {
 			testCertificate := &cmapi.Certificate{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "testcert",
@@ -424,7 +423,7 @@ func (s *Suite) Define() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Waiting for the Certificate to be issued...")
-			testCertificate, err = f.Helper().WaitForCertificateReadyAndDoneIssuing(ctx, testCertificate, time.Minute*8)
+			testCertificate, err = f.Helper().WaitForCertificateReadyAndDoneIssuing(ctx, testCertificate.Name, testCertificate.Namespace, testCertificate.Generation, time.Minute*8)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Validating the issued Certificate...")
@@ -447,7 +446,7 @@ func (s *Suite) Define() {
 			Expect(err).NotTo(HaveOccurred(), "failed to update secret by deleting the signed certificate data")
 
 			By("Waiting for the Certificate to re-issue a certificate")
-			sec, err = f.Helper().WaitForSecretCertificateData(ctx, f.Namespace.Name, sec.Name, time.Minute*8)
+			sec, err = f.Helper().WaitForSecretCertificateData(ctx, sec.Name, f.Namespace.Name, time.Minute*8)
 			Expect(err).NotTo(HaveOccurred(), "failed to wait for secret to have a valid 2nd certificate")
 
 			crtPEM2 := sec.Data[corev1.TLSCertKey]
@@ -463,7 +462,7 @@ func (s *Suite) Define() {
 			}
 		}, featureset.ReusePrivateKeyFeature, featureset.OnlySAN)
 
-		s.it(f, "should allow updating an existing certificate with a new DNS Name", func(issuerRef cmmeta.ObjectReference) {
+		s.it(f, "should allow updating an existing certificate with a new DNS Name", func(ctx context.Context, issuerRef cmmeta.ObjectReference) {
 			testCertificate := &cmapi.Certificate{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "testcert",
@@ -482,7 +481,7 @@ func (s *Suite) Define() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Waiting for the Certificate to be ready")
-			testCertificate, err = f.Helper().WaitForCertificateReadyAndDoneIssuing(ctx, testCertificate, time.Minute*8)
+			testCertificate, err = f.Helper().WaitForCertificateReadyAndDoneIssuing(ctx, testCertificate.Name, testCertificate.Namespace, testCertificate.Generation, time.Minute*8)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Sanity-check the issued Certificate")
@@ -507,7 +506,7 @@ func (s *Suite) Define() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Waiting for the Certificate Ready condition to be updated")
-			testCertificate, err = f.Helper().WaitForCertificateReadyAndDoneIssuing(ctx, testCertificate, time.Minute*8)
+			testCertificate, err = f.Helper().WaitForCertificateReadyAndDoneIssuing(ctx, testCertificate.Name, testCertificate.Namespace, testCertificate.Generation, time.Minute*8)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Sanity-check the issued Certificate")

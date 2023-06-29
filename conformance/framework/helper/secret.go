@@ -25,34 +25,33 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	"github.com/cert-manager/issuer-lib/conformance/framework/log"
+	"conformance/framework/log"
 )
 
 // WaitForSecretCertificateData waits for the certificate data to be ready
 // inside a Secret created by cert-manager.
-func (h *Helper) WaitForSecretCertificateData(pollCtx context.Context, ns, name string, timeout time.Duration) (*corev1.Secret, error) {
+func (h *Helper) WaitForSecretCertificateData(pollCtx context.Context, name string, namespace string, timeout time.Duration) (*corev1.Secret, error) {
 	var secret *corev1.Secret
 	logf, done := log.LogBackoff()
 	defer done()
-	err := wait.PollUntilContextTimeout(pollCtx, time.Second, timeout, true, func(ctx context.Context) (bool, error) {
+
+	err := wait.PollUntilContextTimeout(pollCtx, 500*time.Millisecond, timeout, true, func(ctx context.Context) (bool, error) {
 		var err error
-		logf("Waiting for Secret %s:%s to contain a certificate", ns, name)
-		secret, err = h.KubeClient.CoreV1().Secrets(ns).Get(ctx, name, metav1.GetOptions{})
+		secret, err = h.KubeClient.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
-			return false, fmt.Errorf("error getting secret %s: %s", name, err)
+			return false, fmt.Errorf("error getting Secret %s: %w", name, err)
 		}
 
-		if len(secret.Data[corev1.TLSCertKey]) > 0 {
-			return true, nil
+		if len(secret.Data[corev1.TLSCertKey]) == 0 {
+			logf("Secret still does not contain certificate data %s/%s", secret.Namespace, secret.Name)
+			return false, nil
 		}
 
-		logf("Secret still does not contain certificate data %s/%s",
-			secret.Namespace, secret.Name)
-		return false, nil
+		return true, nil
 	})
 
 	if err != nil {
-		return nil, err
+		return secret, err
 	}
 
 	return secret, nil

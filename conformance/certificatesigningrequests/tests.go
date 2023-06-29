@@ -30,11 +30,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
-	"github.com/cert-manager/issuer-lib/conformance/framework"
-	"github.com/cert-manager/issuer-lib/conformance/framework/helper/featureset"
-	"github.com/cert-manager/issuer-lib/conformance/framework/helper/validation"
-	"github.com/cert-manager/issuer-lib/conformance/framework/helper/validation/certificatesigningrequests"
-	e2eutil "github.com/cert-manager/issuer-lib/conformance/util"
+	"conformance/framework"
+	"conformance/framework/helper/featureset"
+	"conformance/framework/helper/validation"
+	"conformance/framework/helper/validation/certificatesigningrequests"
+	e2eutil "conformance/util"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -455,26 +455,12 @@ func (s *Suite) Define() {
 					},
 				}
 
-				// Provision any resources needed for the request, or modify the
-				// request based on Issuer requirements
-				if s.ProvisionFunc != nil {
-					s.ProvisionFunc(f, ctx, kubeCSR, key)
-				}
-				// Ensure related resources are cleaned up at the end of the test
-				if s.DeProvisionFunc != nil {
-					defer s.DeProvisionFunc(f, ctx, kubeCSR)
-				}
-
 				// Create the request, and delete at the end of the test
 				By("Creating a CertificateSigningRequest")
 				Expect(f.CRClient.Create(ctx, kubeCSR)).NotTo(HaveOccurred())
-				defer func() {
-					// Create a new context with a timeout to prevent the deletion of the
-					// CertificateSigningRequest from blocking test completion.
-					deleteCtx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-					defer cancel()
-					Expect(f.CRClient.Delete(deleteCtx, kubeCSR)).NotTo(HaveOccurred())
-				}()
+				DeferCleanup(func(ctx context.Context) {
+					Expect(f.CRClient.Delete(ctx, kubeCSR)).NotTo(HaveOccurred())
+				})
 
 				// Approve the request for testing, so that cert-manager may sign the
 				// request.

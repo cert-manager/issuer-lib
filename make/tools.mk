@@ -37,7 +37,7 @@ TOOLS += kyverno=v1.10.0
 TOOLS += yq=v4.34.1
 # https://github.com/ko-build/ko/releases
 TOOLS += ko=0.13.0
-TOOLS += ginkgo=$(shell awk '/ginkgo\/v2/ {print $$2}' go.mod)
+TOOLS += ginkgo=$(shell awk '/ginkgo\/v2/ {print $$2}' ./conformance/go.mod)
 
 ### go packages
 # https://pkg.go.dev/sigs.k8s.io/controller-tools/cmd/controller-gen?tab=versions

@@ -17,9 +17,9 @@ limitations under the License.
 package validation
 
 import (
-	"github.com/cert-manager/issuer-lib/conformance/framework/helper/featureset"
-	"github.com/cert-manager/issuer-lib/conformance/framework/helper/validation/certificates"
-	"github.com/cert-manager/issuer-lib/conformance/framework/helper/validation/certificatesigningrequests"
+	"conformance/framework/helper/featureset"
+	"conformance/framework/helper/validation/certificates"
+	"conformance/framework/helper/validation/certificatesigningrequests"
 )
 
 func CertificateSetForUnsupportedFeatureSet(fs featureset.FeatureSet) []certificates.ValidationFunc {

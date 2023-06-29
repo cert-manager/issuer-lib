@@ -24,8 +24,8 @@ import (
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/cert-manager/issuer-lib/conformance/framework/helper/validation/certificates"
-	"github.com/cert-manager/issuer-lib/conformance/framework/helper/validation/certificatesigningrequests"
+	"conformance/framework/helper/validation/certificates"
+	"conformance/framework/helper/validation/certificatesigningrequests"
 )
 
 // ValidateCertificate retrieves the issued certificate and runs all validation functions

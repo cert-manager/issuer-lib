@@ -16,7 +16,10 @@ limitations under the License.
 
 package featureset
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 // NewFeatureSet constructs a new feature set with the given features.
 func NewFeatureSet(feats ...Feature) FeatureSet {
@@ -77,6 +80,31 @@ func (fs FeatureSet) String() string {
 		featsSlice = append(featsSlice, string(f))
 	}
 	return strings.Join(featsSlice, ", ")
+}
+
+func ConvertToFeature(value string) (Feature, error) {
+	switch Feature(value) {
+	case
+		IPAddressFeature,
+		DurationFeature,
+		WildcardsFeature,
+		ECDSAFeature,
+		ReusePrivateKeyFeature,
+		URISANsFeature,
+		EmailSANsFeature,
+		CommonNameFeature,
+		KeyUsagesFeature,
+		OnlySAN,
+		SaveCAToSecret,
+		SaveRootCAToSecret,
+		Ed25519FeatureSet,
+		IssueCAFeature,
+		LongDomainFeatureSet,
+		LiteralSubjectFeature:
+		return Feature(value), nil
+	default:
+		return "", fmt.Errorf("unknown feature %q", value)
+	}
 }
 
 type Feature string

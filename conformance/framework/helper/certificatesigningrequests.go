@@ -26,7 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	"github.com/cert-manager/issuer-lib/conformance/framework/log"
+	"conformance/framework/log"
 )
 
 // WaitForCertificateSigningRequestSigned waits for the
@@ -35,12 +35,12 @@ func (h *Helper) WaitForCertificateSigningRequestSigned(pollCtx context.Context,
 	var csr *certificatesv1.CertificateSigningRequest
 	logf, done := log.LogBackoff()
 	defer done()
-	err := wait.PollUntilContextTimeout(pollCtx, time.Second, timeout, true, func(ctx context.Context) (bool, error) {
+
+	err := wait.PollUntilContextTimeout(pollCtx, 500*time.Millisecond, timeout, true, func(ctx context.Context) (bool, error) {
 		var err error
-		logf("Waiting for CertificateSigningRequest %s to be ready", name)
 		csr, err = h.KubeClient.CertificatesV1().CertificateSigningRequests().Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
-			return false, fmt.Errorf("error getting CertificateSigningRequest %s: %v", name, err)
+			return false, fmt.Errorf("error getting CertificateSigningRequest %s: %w", name, err)
 		}
 
 		if util.CertificateSigningRequestIsFailed(csr) {
@@ -48,13 +48,15 @@ func (h *Helper) WaitForCertificateSigningRequestSigned(pollCtx context.Context,
 		}
 
 		if len(csr.Status.Certificate) == 0 {
+			logf("CertificateSigningRequest is not yet signed %s", csr.Name)
 			return false, nil
 		}
+
 		return true, nil
 	})
 
 	if err != nil {
-		return nil, err
+		return csr, err
 	}
 
 	return csr, nil

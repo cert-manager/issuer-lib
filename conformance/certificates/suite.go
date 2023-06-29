@@ -22,8 +22,8 @@ import (
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 
-	"github.com/cert-manager/issuer-lib/conformance/framework"
-	"github.com/cert-manager/issuer-lib/conformance/framework/helper/featureset"
+	"conformance/framework"
+	"conformance/framework/helper/featureset"
 
 	. "github.com/onsi/ginkgo/v2"
 )
@@ -39,18 +39,10 @@ type Suite struct {
 	// This field must be provided.
 	Name string
 
-	// CreateIssuerFunc is a function that provisions a new issuer resource and
-	// returns an ObjectReference to that Issuer that will be used as the
-	// IssuerRef on Certificate resources that this suite creates.
-	// This field must be provided.
-	CreateIssuerFunc func(*framework.Framework, context.Context) cmmeta.ObjectReference
-
-	// DeleteIssuerFunc is a function that is run after the test has completed
-	// in order to clean up resources created for a test (e.g. the resources
-	// created in CreateIssuerFunc).
-	// This function will be run regardless whether the test passes or fails.
-	// If not specified, this function will be skipped.
-	DeleteIssuerFunc func(*framework.Framework, context.Context, cmmeta.ObjectReference)
+	// IssuerRef is reference to the issuer resource that this test suite will
+	// test against. All Certificate resources created by this suite will be
+	// created with this issuer reference.
+	IssuerRef cmmeta.ObjectReference
 
 	// DomainSuffix is a suffix used on all domain requests.
 	// This is useful when the issuer being tested requires special
@@ -76,8 +68,8 @@ func (s *Suite) complete(f *framework.Framework) {
 		Fail("Name must be set")
 	}
 
-	if s.CreateIssuerFunc == nil {
-		Fail("CreateIssuerFunc must be set")
+	if s.IssuerRef != (cmmeta.ObjectReference{}) && s.IssuerRef.Name == "" {
+		Fail("IssuerRef must be set")
 	}
 
 	if s.DomainSuffix == "" {
@@ -92,20 +84,12 @@ func (s *Suite) complete(f *framework.Framework) {
 }
 
 // it is called by the tests to in Define() to setup and run the test
-func (s *Suite) it(f *framework.Framework, name string, fn func(cmmeta.ObjectReference), requiredFeatures ...featureset.Feature) {
+func (s *Suite) it(f *framework.Framework, name string, fn func(context.Context, cmmeta.ObjectReference), requiredFeatures ...featureset.Feature) {
 	if !s.checkFeatures(requiredFeatures...) {
 		return
 	}
 	It(name, func(ctx context.Context) {
-		By("Creating an issuer resource")
-		issuerRef := s.CreateIssuerFunc(f, ctx)
-		defer func() {
-			if s.DeleteIssuerFunc != nil {
-				By("Cleaning up the issuer resource")
-				s.DeleteIssuerFunc(f, ctx, issuerRef)
-			}
-		}()
-		fn(issuerRef)
+		fn(ctx, s.IssuerRef)
 	})
 }
 

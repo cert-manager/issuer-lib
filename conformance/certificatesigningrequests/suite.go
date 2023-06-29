@@ -18,13 +18,11 @@ package certificatesigningrequests
 
 import (
 	"context"
-	"crypto"
 
-	certificatesv1 "k8s.io/api/certificates/v1"
 	"k8s.io/client-go/rest"
 
-	"github.com/cert-manager/issuer-lib/conformance/framework"
-	"github.com/cert-manager/issuer-lib/conformance/framework/helper/featureset"
+	"conformance/framework"
+	"conformance/framework/helper/featureset"
 
 	. "github.com/onsi/ginkgo/v2"
 )
@@ -40,32 +38,10 @@ type Suite struct {
 	// This field must be provided.
 	Name string
 
-	// CreateIssuerFunc is a function that provisions a new issuer resource and
-	// returns an SignerName to that Issuer that will be used as the SignerName
-	// on CertificateSigningRequest resources that this suite creates.
-	// This field must be provided.
-	CreateIssuerFunc func(*framework.Framework, context.Context) string
-
-	// DeleteIssuerFunc is a function that is run after the test has completed
-	// in order to clean up resources created for a test (e.g. the resources
-	// created in CreateIssuerFunc).
-	// This function will be run regardless whether the test passes or fails.
-	// If not specified, this function will be skipped.
-	DeleteIssuerFunc func(*framework.Framework, context.Context, string)
-
-	// ProvisionFunc is a function that is run every test just before the
-	// CertificateSigningRequest is created within a test. This is used to
-	// provision or create any resources that are required by the Issuer to sign
-	// the CertificateSigningRequest. This could be for example to annotate the
-	// CertificateSigningRequest, or create a resource like a Secret needed for
-	// signing.
-	// If not specified, this function will be skipped.
-	ProvisionFunc func(*framework.Framework, context.Context, *certificatesv1.CertificateSigningRequest, crypto.Signer)
-
-	// DeProvisionFunc is run after every test. This is to be used to remove and
-	// clean-up any resources which may have been created by ProvisionFunc.
-	// If not specified, this function will be skipped.
-	DeProvisionFunc func(*framework.Framework, context.Context, *certificatesv1.CertificateSigningRequest)
+	// SignerName is the name of the signer that the conformance suite will test
+	// against. All CertificateSigningRequest resources created by this suite
+	// will be created with this signer name.
+	SignerName string
 
 	// DomainSuffix is a suffix used on all domain requests.
 	// This is useful when the issuer being tested requires special
@@ -91,8 +67,8 @@ func (s *Suite) complete(f *framework.Framework) {
 		Fail("Name must be set")
 	}
 
-	if s.CreateIssuerFunc == nil {
-		Fail("CreateIssuerFunc must be set")
+	if s.SignerName == "" {
+		Fail("SignerName must be set")
 	}
 
 	if s.DomainSuffix == "" {
@@ -112,15 +88,7 @@ func (s *Suite) it(f *framework.Framework, name string, fn func(context.Context,
 		return
 	}
 	It(name, func(ctx context.Context) {
-		By("Creating an issuer resource")
-		signerName := s.CreateIssuerFunc(f, ctx)
-		defer func() {
-			if s.DeleteIssuerFunc != nil {
-				By("Cleaning up the issuer resource")
-				s.DeleteIssuerFunc(f, ctx, signerName)
-			}
-		}()
-		fn(ctx, signerName)
+		fn(ctx, s.SignerName)
 	})
 }
 
