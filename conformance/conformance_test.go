@@ -2,6 +2,7 @@ package conformance
 
 import (
 	"flag"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -18,7 +19,7 @@ import (
 type arrayFlags []string
 
 func (i *arrayFlags) String() string {
-	return "my string representation"
+	return fmt.Sprintf("%v", *i)
 }
 
 func (i *arrayFlags) Set(value string) error {
