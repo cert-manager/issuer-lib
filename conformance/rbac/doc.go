@@ -44,7 +44,7 @@ func RbacClusterRoleHasAccessToResource(f *framework.Framework, clusterRole stri
 			GenerateName: "rbac-test-",
 		},
 	}
-	serviceAccountClient := f.KubeClientSet.CoreV1().ServiceAccounts(f.Namespace.Name)
+	serviceAccountClient := f.KubeClientSet.CoreV1().ServiceAccounts(f.Namespace)
 	serviceAccount, err := serviceAccountClient.Create(context.TODO(), viewServiceAccount, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 	viewServiceAccountName := serviceAccount.Name
@@ -55,7 +55,7 @@ func RbacClusterRoleHasAccessToResource(f *framework.Framework, clusterRole stri
 			GenerateName: viewServiceAccountName + "-rb-",
 		},
 		Subjects: []rbacv1.Subject{
-			{Kind: "ServiceAccount", Name: viewServiceAccountName, Namespace: f.Namespace.Name},
+			{Kind: "ServiceAccount", Name: viewServiceAccountName, Namespace: f.Namespace},
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
@@ -73,7 +73,7 @@ func RbacClusterRoleHasAccessToResource(f *framework.Framework, clusterRole stri
 
 	By("Impersonating the Service Account")
 	impersonateConfig := f.KubeClientConfig
-	impersonateConfig.Impersonate.UserName = "system:serviceaccount:" + f.Namespace.Name + ":" + viewServiceAccountName
+	impersonateConfig.Impersonate.UserName = "system:serviceaccount:" + f.Namespace + ":" + viewServiceAccountName
 	impersonateClient, err := kubernetes.NewForConfig(impersonateConfig)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -82,7 +82,7 @@ func RbacClusterRoleHasAccessToResource(f *framework.Framework, clusterRole stri
 	sar := &authorizationv1.SelfSubjectAccessReview{
 		Spec: authorizationv1.SelfSubjectAccessReviewSpec{
 			ResourceAttributes: &authorizationv1.ResourceAttributes{
-				Namespace: f.Namespace.Name,
+				Namespace: f.Namespace,
 				Verb:      verb,
 				Group:     "cert-manager.io",
 				Resource:  resource,

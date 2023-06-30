@@ -44,6 +44,10 @@ type Suite struct {
 	// created with this issuer reference.
 	IssuerRef cmmeta.ObjectReference
 
+	// Namespace is the namespace in which the Certificate resources will be
+	// created.
+	Namespace string
+
 	// DomainSuffix is a suffix used on all domain requests.
 	// This is useful when the issuer being tested requires special
 	// configuration for a set of domains in order for certificates to be
@@ -70,6 +74,10 @@ func (s *Suite) complete(f *framework.Framework) {
 
 	if s.IssuerRef != (cmmeta.ObjectReference{}) && s.IssuerRef.Name == "" {
 		Fail("IssuerRef must be set")
+	}
+
+	if s.Namespace == "" {
+		Fail("Namespace must be set")
 	}
 
 	if s.DomainSuffix == "" {

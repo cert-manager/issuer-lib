@@ -35,7 +35,7 @@ type Issuer interface {
 	// issuer type for a Kubernetes CertificateSigningRequest resource based
 	// on the issuerName field. The value should be formatted as follows:
 	// "<issuer resource (plural)>.<issuer group>". For example, the value
-	// "simpleclusterissuers.issuer.cert-manager.io" will match all CSRs
-	// with an issuerName set to eg. "simpleclusterissuers.issuer.cert-manager.io/issuer1".
+	// "simpleclusterissuers.testing.cert-manager.io" will match all CSRs
+	// with an issuerName set to eg. "simpleclusterissuers.testing.cert-manager.io/issuer1".
 	GetIssuerTypeIdentifier() string
 }

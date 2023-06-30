@@ -102,7 +102,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 
 	cr1 := cmgen.CertificateSigningRequest(
 		"cr1",
-		cmgen.SetCertificateSigningRequestSignerName("simpleissuers.issuer.cert-manager.io/unknown-namespace.unknown-name"),
+		cmgen.SetCertificateSigningRequestSignerName("simpleissuers.testing.cert-manager.io/unknown-namespace.unknown-name"),
 		func(cr *certificatesv1.CertificateSigningRequest) {
 			conditions.SetCertificateSigningRequestStatusCondition(
 				fakeClock1,
@@ -877,17 +877,17 @@ func TestCertificateSigningRequestMatchIssuerType(t *testing.T) {
 			name:               "match issuer",
 			issuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
 			clusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
-			csr:                createCsr("simpleissuers.issuer.cert-manager.io/namespace.name"),
+			csr:                createCsr("simpleissuers.testing.cert-manager.io/namespace.name"),
 
 			expectedIssuerType: nil,
 			expectedIssuerName: types.NamespacedName{},
-			expectedError:      errormatch.ErrorContains("invalid SignerName, \"simpleissuers.issuer.cert-manager.io\" is a namespaced issuer type, namespaced issuers are not supported for Kubernetes CSRs"),
+			expectedError:      errormatch.ErrorContains("invalid SignerName, \"simpleissuers.testing.cert-manager.io\" is a namespaced issuer type, namespaced issuers are not supported for Kubernetes CSRs"),
 		},
 		{
 			name:               "match cluster issuer",
 			issuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
 			clusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
-			csr:                createCsr("simpleclusterissuers.issuer.cert-manager.io/name"),
+			csr:                createCsr("simpleclusterissuers.testing.cert-manager.io/name"),
 
 			expectedIssuerType: &api.SimpleClusterIssuer{},
 			expectedIssuerName: types.NamespacedName{Name: "name"},
@@ -896,7 +896,7 @@ func TestCertificateSigningRequestMatchIssuerType(t *testing.T) {
 			name:               "cluster issuer with dot in name",
 			issuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
 			clusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
-			csr:                createCsr("simpleclusterissuers.issuer.cert-manager.io/name.test"),
+			csr:                createCsr("simpleclusterissuers.testing.cert-manager.io/name.test"),
 
 			expectedIssuerType: &api.SimpleClusterIssuer{},
 			expectedIssuerName: types.NamespacedName{Name: "name.test"},
@@ -905,7 +905,7 @@ func TestCertificateSigningRequestMatchIssuerType(t *testing.T) {
 			name:               "cluster issuer with empty name",
 			issuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
 			clusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
-			csr:                createCsr("simpleclusterissuers.issuer.cert-manager.io/"),
+			csr:                createCsr("simpleclusterissuers.testing.cert-manager.io/"),
 
 			expectedIssuerType: &api.SimpleClusterIssuer{},
 			expectedIssuerName: types.NamespacedName{Name: ""},

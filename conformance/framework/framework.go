@@ -21,22 +21,27 @@ import (
 
 	clientset "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned"
 	certmgrscheme "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned/scheme"
-	api "k8s.io/api/core/v1"
 	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	apireg "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
-	gwapi "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"conformance/framework/helper"
+	e2eutil "conformance/util"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
+
+func init() {
+	log.SetLogger(GinkgoLogr)
+}
 
 // Framework supports common operations used by e2e tests; it will keep a client & a namespace for you.
 type Framework struct {
@@ -47,15 +52,23 @@ type Framework struct {
 
 	// Kubernetes API clientsets
 	KubeClientSet          kubernetes.Interface
-	GWClientSet            gwapi.Interface
 	CertManagerClientSet   clientset.Interface
 	APIExtensionsClientSet apiextcs.Interface
 
 	// controller-runtime client for newer controllers
 	CRClient crclient.Client
 
-	// Namespace in which all test resources should reside
-	Namespace *api.Namespace
+	// Namespace in which all resources are created for this test suite.
+	Namespace string
+
+	// CleanupLabel is a label that should be applied to all resources created
+	// by this test suite. It is used to clean up all resources at the end of
+	// the test suite.
+	CleanupLabel string
+
+	// cleanupResourceTypes is a list of all resource types that should be cleaned
+	// up after each test.
+	cleanupResourceTypes []crclient.Object
 
 	helper *helper.Helper
 }
@@ -63,31 +76,36 @@ type Framework struct {
 // NewFramework makes a new framework and sets up a BeforeEach/AfterEach for
 // you (you can write additional before/after each functions).
 // It uses the config provided to it for the duration of the tests.
-func NewFramework(baseName string, kubeClientConfig *rest.Config) *Framework {
+func NewFramework(
+	baseName string,
+	kubeClientConfig *rest.Config,
+	namespace string,
+	cleanupResourceTypes []crclient.Object,
+) *Framework {
 	f := &Framework{
-		KubeClientConfig: kubeClientConfig,
-		BaseName:         baseName,
+		BaseName:             baseName,
+		KubeClientConfig:     kubeClientConfig,
+		Namespace:            namespace,
+		cleanupResourceTypes: cleanupResourceTypes,
 	}
 
-	f.helper = helper.NewHelper(kubeClientConfig)
+	f.helper = helper.NewHelper()
 	BeforeEach(f.BeforeEach)
 	AfterEach(f.AfterEach)
 
 	return f
 }
 
-// BeforeEach gets a client and makes a namespace.
+// BeforeEach initializes all clients.
 func (f *Framework) BeforeEach(ctx context.Context) {
+	f.CleanupLabel = "cm-conformance-cleanup-" + e2eutil.RandStringRunes(10)
+
 	var err error
 	kubeConfig := rest.CopyConfig(f.KubeClientConfig)
 
 	f.KubeClientConfig = kubeConfig
 
 	f.KubeClientSet, err = kubernetes.NewForConfig(kubeConfig)
-	Expect(err).NotTo(HaveOccurred())
-
-	By("Creating an API extensions client")
-	f.APIExtensionsClientSet, err = apiextcs.NewForConfig(kubeConfig)
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Creating a cert manager client")
@@ -100,32 +118,31 @@ func (f *Framework) BeforeEach(ctx context.Context) {
 	Expect(certmgrscheme.AddToScheme(scheme)).NotTo(HaveOccurred())
 	Expect(apiext.AddToScheme(scheme)).NotTo(HaveOccurred())
 	Expect(apireg.AddToScheme(scheme)).NotTo(HaveOccurred())
+
 	f.CRClient, err = crclient.New(kubeConfig, crclient.Options{Scheme: scheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("Creating a gateway-api client")
-	f.GWClientSet, err = gwapi.NewForConfig(kubeConfig)
-	Expect(err).NotTo(HaveOccurred())
-
-	By("Building a namespace api object")
-	f.Namespace, err = f.CreateKubeNamespace(ctx, f.BaseName)
-	Expect(err).NotTo(HaveOccurred())
-
-	By("Using the namespace " + f.Namespace.Name)
-
-	By("Building a ResourceQuota api object")
-	_, err = f.CreateKubeResourceQuota(ctx)
-	Expect(err).NotTo(HaveOccurred())
+	if f.Namespace != "" {
+		By("Check that the namespace " + f.Namespace + " exists")
+		_, err = f.KubeClientSet.CoreV1().Namespaces().Get(ctx, f.Namespace, metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+	}
 
 	f.helper.CMClient = f.CertManagerClientSet
 	f.helper.KubeClient = f.KubeClientSet
 }
 
-// AfterEach deletes the namespace, after reading its events.
 func (f *Framework) AfterEach(ctx context.Context) {
-	By("Deleting test namespace")
-	err := f.DeleteKubeNamespace(ctx, f.Namespace.Name)
-	Expect(err).NotTo(HaveOccurred())
+	for _, obj := range f.cleanupResourceTypes {
+		By("Deleting " + obj.GetObjectKind().GroupVersionKind().String() + " resources")
+		err := f.CRClient.DeleteAllOf(
+			ctx,
+			obj,
+			crclient.InNamespace(f.Namespace),
+			crclient.MatchingLabels{f.CleanupLabel: "true"},
+		)
+		Expect(err).NotTo(HaveOccurred())
+	}
 }
 
 func (f *Framework) Helper() *helper.Helper {

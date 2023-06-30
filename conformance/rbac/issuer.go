@@ -25,7 +25,12 @@ import (
 
 func (s *Suite) defineIssuers() {
 	RBACDescribe("Issuers", func() {
-		f := framework.NewFramework("rbac-issuers", s.KubeClientConfig)
+		f := framework.NewFramework(
+			"rbac-issuers",
+			s.KubeClientConfig,
+			"",
+			nil,
+		)
 		resource := "issuers" // this file is related to issuers
 
 		Context("with namespace view access", func() {

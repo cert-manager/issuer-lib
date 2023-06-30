@@ -19,19 +19,14 @@ package helper
 import (
 	cmclient "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 // Helper provides methods for common operations needed during tests.
 type Helper struct {
-	KubeClientConfig *rest.Config
-
 	KubeClient kubernetes.Interface
 	CMClient   cmclient.Interface
 }
 
-func NewHelper(kubeClientConfig *rest.Config) *Helper {
-	return &Helper{
-		KubeClientConfig: kubeClientConfig,
-	}
+func NewHelper() *Helper {
+	return &Helper{}
 }

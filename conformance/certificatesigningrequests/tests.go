@@ -29,6 +29,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"conformance/framework"
 	"conformance/framework/helper/featureset"
@@ -49,7 +50,14 @@ import (
 // they are not active, these tests will fail.
 func (s *Suite) Define() {
 	Describe("CertificateSigningRequest with issuer type "+s.Name, func() {
-		f := framework.NewFramework("certificatesigningrequests", s.KubeClientConfig)
+		f := framework.NewFramework(
+			"certificatesigningrequests",
+			s.KubeClientConfig,
+			"",
+			[]client.Object{
+				&certificatesv1.CertificateSigningRequest{},
+			},
+		)
 
 		sharedIPAddress := "127.0.0.1"
 		sharedURI, err := url.Parse("spiffe://cluster.local/ns/sandbox/sa/foo")
@@ -435,6 +443,14 @@ func (s *Suite) Define() {
 			},
 		}
 
+		addAnnotation := func(annotations map[string]string, key, value string) map[string]string {
+			if annotations == nil {
+				annotations = map[string]string{}
+			}
+			annotations[key] = value
+			return annotations
+		}
+
 		defineTest := func(test testCase) {
 			s.it(f, test.name, func(ctx context.Context, signerName string) {
 				// Generate request CSR
@@ -442,10 +458,18 @@ func (s *Suite) Define() {
 				Expect(err).NotTo(HaveOccurred())
 
 				// Create CertificateSigningRequest
+				randomTestID := e2eutil.RandStringRunes(10)
 				kubeCSR := &certificatesv1.CertificateSigningRequest{
 					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "e2e-conformance-",
-						Annotations:  test.kubeCSRAnnotations,
+						Name: "e2e-conformance-" + randomTestID,
+						Labels: map[string]string{
+							f.CleanupLabel: "true",
+						},
+						Annotations: addAnnotation(
+							test.kubeCSRAnnotations,
+							"conformance.cert-manager.io/test-name",
+							s.Name+" "+test.name,
+						),
 					},
 					Spec: certificatesv1.CertificateSigningRequestSpec{
 						Request:           csr,
@@ -458,9 +482,6 @@ func (s *Suite) Define() {
 				// Create the request, and delete at the end of the test
 				By("Creating a CertificateSigningRequest")
 				Expect(f.CRClient.Create(ctx, kubeCSR)).NotTo(HaveOccurred())
-				DeferCleanup(func(ctx context.Context) {
-					Expect(f.CRClient.Delete(ctx, kubeCSR)).NotTo(HaveOccurred())
-				})
 
 				// Approve the request for testing, so that cert-manager may sign the
 				// request.

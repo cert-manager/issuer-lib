@@ -26,12 +26,13 @@ func (i *arrayFlags) Set(value string) error {
 	return nil
 }
 
+var namespace string
 var unsupportedFeatures arrayFlags
-
 var cmIssuerReferences arrayFlags
 var k8sIssuerReferences arrayFlags
 
 func init() {
+	flag.StringVar(&namespace, "namespace", "", "list of issuer references to use for conformance tests")
 	flag.Var(&unsupportedFeatures, "unsupported-features", "list of features that are not supported by this invocation of the test suite")
 	flag.Var(&cmIssuerReferences, "cm-issuers", "list of issuer references to use for conformance tests")
 	flag.Var(&k8sIssuerReferences, "k8s-issuers", "list of issuer references to use for conformance tests")
@@ -71,6 +72,7 @@ func TestConformance(t *testing.T) {
 		(&certificates.Suite{
 			KubeClientConfig:    restConfig,
 			Name:                ref,
+			Namespace:           namespace,
 			IssuerRef:           parseCMReference(g, ref),
 			UnsupportedFeatures: unsupportedFeatureSet,
 		}).Define()

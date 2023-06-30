@@ -25,7 +25,12 @@ import (
 
 func (s *Suite) defineCertificateRequests() {
 	RBACDescribe("CertificateRequests", func() {
-		f := framework.NewFramework("rbac-certificaterequests", s.KubeClientConfig)
+		f := framework.NewFramework(
+			"rbac-certificaterequests",
+			s.KubeClientConfig,
+			"",
+			nil,
+		)
 		resource := "certificaterequests" // this file is related to certificaterequests
 
 		Context("with namespace view access", func() {

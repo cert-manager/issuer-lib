@@ -33,6 +33,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"conformance/framework"
 	"conformance/framework/helper/featureset"
@@ -49,7 +50,16 @@ import (
 // automatically called.
 func (s *Suite) Define() {
 	Describe("with issuer type "+s.Name, func() {
-		f := framework.NewFramework("certificates", s.KubeClientConfig)
+		f := framework.NewFramework(
+			"certificates",
+			s.KubeClientConfig,
+			s.Namespace,
+			[]client.Object{
+				&cmapi.Certificate{},
+				&cmapi.CertificateRequest{},
+				&corev1.Secret{},
+			},
+		)
 
 		sharedIPAddress := "127.0.0.1"
 
@@ -371,14 +381,26 @@ func (s *Suite) Define() {
 
 		defineTest := func(test testCase) {
 			s.it(f, test.name, func(ctx context.Context, issuerRef cmmeta.ObjectReference) {
+				randomTestID := e2eutil.RandStringRunes(10)
 				certificate := &cmapi.Certificate{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "testcert",
-						Namespace: f.Namespace.Name,
+						Name:      "e2e-conformance-" + randomTestID,
+						Namespace: f.Namespace,
+						Labels: map[string]string{
+							f.CleanupLabel: "true",
+						},
+						Annotations: map[string]string{
+							"conformance.cert-manager.io/test-name": s.Name + " " + test.name,
+						},
 					},
 					Spec: cmapi.CertificateSpec{
-						SecretName: "testcert-tls",
+						SecretName: "e2e-conformance-tls-" + randomTestID,
 						IssuerRef:  issuerRef,
+						SecretTemplate: &cmapi.CertificateSecretTemplate{
+							Labels: map[string]string{
+								f.CleanupLabel: "true",
+							},
+						},
 					},
 				}
 
@@ -407,15 +429,27 @@ func (s *Suite) Define() {
 		}
 
 		s.it(f, "should issue another certificate with the same private key if the existing certificate and CertificateRequest are deleted", func(ctx context.Context, issuerRef cmmeta.ObjectReference) {
+			randomTestID := e2eutil.RandStringRunes(10)
 			testCertificate := &cmapi.Certificate{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "testcert",
-					Namespace: f.Namespace.Name,
+					Name:      "e2e-conformance-" + randomTestID,
+					Namespace: f.Namespace,
+					Labels: map[string]string{
+						f.CleanupLabel: "true",
+					},
+					Annotations: map[string]string{
+						"conformance.cert-manager.io/test-name": s.Name + " should issue another certificate with the same private key if the existing certificate and CertificateRequest are deleted",
+					},
 				},
 				Spec: cmapi.CertificateSpec{
-					SecretName: "testcert-tls",
+					SecretName: "e2e-conformance-tls-" + randomTestID,
 					DNSNames:   []string{e2eutil.RandomSubdomain(s.DomainSuffix)},
 					IssuerRef:  issuerRef,
+					SecretTemplate: &cmapi.CertificateSecretTemplate{
+						Labels: map[string]string{
+							f.CleanupLabel: "true",
+						},
+					},
 				},
 			}
 			By("Creating a Certificate")
@@ -431,7 +465,7 @@ func (s *Suite) Define() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Deleting existing certificate data in Secret")
-			sec, err := f.KubeClientSet.CoreV1().Secrets(f.Namespace.Name).
+			sec, err := f.KubeClientSet.CoreV1().Secrets(f.Namespace).
 				Get(ctx, testCertificate.Spec.SecretName, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred(), "failed to get secret containing signed certificate key pair data")
 
@@ -442,11 +476,11 @@ func (s *Suite) Define() {
 
 			sec.Data[corev1.TLSCertKey] = []byte{}
 
-			_, err = f.KubeClientSet.CoreV1().Secrets(f.Namespace.Name).Update(ctx, sec, metav1.UpdateOptions{})
+			_, err = f.KubeClientSet.CoreV1().Secrets(f.Namespace).Update(ctx, sec, metav1.UpdateOptions{})
 			Expect(err).NotTo(HaveOccurred(), "failed to update secret by deleting the signed certificate data")
 
 			By("Waiting for the Certificate to re-issue a certificate")
-			sec, err = f.Helper().WaitForSecretCertificateData(ctx, sec.Name, f.Namespace.Name, time.Minute*8)
+			sec, err = f.Helper().WaitForSecretCertificateData(ctx, sec.Name, f.Namespace, time.Minute*8)
 			Expect(err).NotTo(HaveOccurred(), "failed to wait for secret to have a valid 2nd certificate")
 
 			crtPEM2 := sec.Data[corev1.TLSCertKey]
@@ -463,15 +497,27 @@ func (s *Suite) Define() {
 		}, featureset.ReusePrivateKeyFeature, featureset.OnlySAN)
 
 		s.it(f, "should allow updating an existing certificate with a new DNS Name", func(ctx context.Context, issuerRef cmmeta.ObjectReference) {
+			randomTestID := e2eutil.RandStringRunes(10)
 			testCertificate := &cmapi.Certificate{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "testcert",
-					Namespace: f.Namespace.Name,
+					Name:      "e2e-conformance-" + randomTestID,
+					Namespace: f.Namespace,
+					Labels: map[string]string{
+						f.CleanupLabel: "true",
+					},
+					Annotations: map[string]string{
+						"conformance.cert-manager.io/test-name": s.Name + " should allow updating an existing certificate with a new DNS Name",
+					},
 				},
 				Spec: cmapi.CertificateSpec{
-					SecretName: "testcert-tls",
+					SecretName: "e2e-conformance-tls-" + randomTestID,
 					DNSNames:   []string{e2eutil.RandomSubdomain(s.DomainSuffix)},
 					IssuerRef:  issuerRef,
+					SecretTemplate: &cmapi.CertificateSecretTemplate{
+						Labels: map[string]string{
+							f.CleanupLabel: "true",
+						},
+					},
 				},
 			}
 			validations := validation.CertificateSetForUnsupportedFeatureSet(s.UnsupportedFeatures)
