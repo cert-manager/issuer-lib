@@ -25,6 +25,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
 	v1alpha1 "github.com/cert-manager/issuer-lib/api/v1alpha1"
@@ -51,6 +52,7 @@ type CombinedController struct {
 	// Clock is used to mock condition transition times in tests.
 	Clock clock.PassiveClock
 
+	PreSetupWithManager  func(context.Context, schema.GroupVersionKind, ctrl.Manager, *builder.Builder) error
 	PostSetupWithManager func(context.Context, schema.GroupVersionKind, ctrl.Manager, controller.Controller) error
 }
 
@@ -75,6 +77,7 @@ func (r *CombinedController) SetupWithManager(ctx context.Context, mgr ctrl.Mana
 			EventRecorder: r.EventRecorder,
 			Clock:         r.Clock,
 
+			PreSetupWithManager:  r.PreSetupWithManager,
 			PostSetupWithManager: r.PostSetupWithManager,
 		}).SetupWithManager(ctx, mgr); err != nil {
 			return fmt.Errorf("%T: %w", issuerType, err)
@@ -94,6 +97,7 @@ func (r *CombinedController) SetupWithManager(ctx context.Context, mgr ctrl.Mana
 		EventRecorder: r.EventRecorder,
 		Clock:         r.Clock,
 
+		PreSetupWithManager:  r.PreSetupWithManager,
 		PostSetupWithManager: r.PostSetupWithManager,
 	}).SetupWithManager(ctx, mgr); err != nil {
 		return fmt.Errorf("CertificateRequestReconciler: %w", err)
