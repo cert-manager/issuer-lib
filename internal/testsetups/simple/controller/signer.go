@@ -40,7 +40,7 @@ import (
 
 // +kubebuilder:rbac:groups=certificates.k8s.io,resources=certificatesigningrequests,verbs=get;list;watch
 // +kubebuilder:rbac:groups=certificates.k8s.io,resources=certificatesigningrequests/status,verbs=patch
-// +kubebuilder:rbac:groups=certificates.k8s.io,resources=signers,verbs=sign,resourceNames=simpleissuers.issuer.cert-manager.io/*;simpleclusterissuers.issuer.cert-manager.io/*
+// +kubebuilder:rbac:groups=certificates.k8s.io,resources=signers,verbs=sign,resourceNames=simpleissuers.testing.cert-manager.io/*;simpleclusterissuers.testing.cert-manager.io/*
 
 // +kubebuilder:rbac:groups=testing.cert-manager.io,resources=simpleissuers;simpleclusterissuers,verbs=get;list;watch
 // +kubebuilder:rbac:groups=testing.cert-manager.io,resources=simpleissuers/status;simpleclusterissuers/status,verbs=patch
@@ -82,8 +82,7 @@ func (Signer) Sign(ctx context.Context, cr signer.CertificateRequestObject, issu
 		NotBefore: time.Now(),
 		NotAfter:  time.Now().Add(time.Hour * 24 * 180),
 
-		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 		BasicConstraintsValid: true,
 	}
 

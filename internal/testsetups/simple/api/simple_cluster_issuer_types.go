@@ -47,7 +47,7 @@ func (vi *SimpleClusterIssuer) GetStatus() *v1alpha1.IssuerStatus {
 }
 
 func (vi *SimpleClusterIssuer) GetIssuerTypeIdentifier() string {
-	return "simpleclusterissuers.issuer.cert-manager.io"
+	return "simpleclusterissuers.testing.cert-manager.io"
 }
 
 var _ v1alpha1.Issuer = &SimpleClusterIssuer{}

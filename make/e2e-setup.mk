@@ -78,7 +78,8 @@ e2e-setup-cert-manager: | kind-cluster images $(NEEDS_HELM) $(NEEDS_KUBECTL)
 		--namespace cert-manager \
 		--repo https://charts.jetstack.io \
 		--set installCRDs=true \
-		--set featureGates=ServerSideApply=true \
+		--set featureGates="ServerSideApply=true\,LiteralCertificateSubject=true" \
+		--set webhook.featureGates="ServerSideApply=true\,LiteralCertificateSubject=true" \
 		--set image.repository=$(quay.io/jetstack/cert-manager-controller.REPO) \
 		--set image.tag=$(quay.io/jetstack/cert-manager-controller.TAG) \
 		--set image.pullPolicy=Never \

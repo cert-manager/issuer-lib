@@ -46,7 +46,7 @@ func (vi *SimpleIssuer) GetStatus() *v1alpha1.IssuerStatus {
 }
 
 func (vi *SimpleIssuer) GetIssuerTypeIdentifier() string {
-	return "simpleissuers.issuer.cert-manager.io"
+	return "simpleissuers.testing.cert-manager.io"
 }
 
 var _ v1alpha1.Issuer = &SimpleIssuer{}

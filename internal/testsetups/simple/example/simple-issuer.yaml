@@ -1,0 +1,5 @@
+apiVersion: testing.cert-manager.io/api
+kind: SimpleIssuer
+metadata:
+  name: simple-issuer
+spec: {}

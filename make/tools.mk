@@ -37,6 +37,7 @@ TOOLS += kyverno=v1.10.0
 TOOLS += yq=v4.34.1
 # https://github.com/ko-build/ko/releases
 TOOLS += ko=0.13.0
+TOOLS += ginkgo=$(shell awk '/ginkgo\/v2/ {print $$2}' ./conformance/go.mod)
 
 ### go packages
 # https://pkg.go.dev/sigs.k8s.io/controller-tools/cmd/controller-gen?tab=versions
@@ -220,6 +221,7 @@ $(BINDIR)/downloaded/tools/go-$(VENDORED_GO_VERSION)-%.tar.gz: | $(BINDIR)/downl
 ###################
 
 GO_DEPENDENCIES :=
+GO_DEPENDENCIES += ginkgo=github.com/onsi/ginkgo/v2/ginkgo
 GO_DEPENDENCIES += controller-gen=sigs.k8s.io/controller-tools/cmd/controller-gen
 GO_DEPENDENCIES += goimports=golang.org/x/tools/cmd/goimports
 GO_DEPENDENCIES += go-licenses=github.com/google/go-licenses

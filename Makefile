@@ -157,13 +157,28 @@ test-e2e-deps: TEST_MODE := E2E
 test-e2e-deps: DOCKER_REGISTRY := kind.local
 test-e2e-deps: e2e-setup docker-build test-e2e-envs install
 
+$(BINDIR)/conformance.test: | $(NEEDS_GINKGO)
+	$(GINKGO) build ./conformance/ --trimpath --cover --require-suite
+	mv ./conformance/conformance.test $@
+
 .PHONY: test
 test: test-unit-deps | $(NEEDS_GO) $(NEEDS_GOTESTSUM) ## Run unit tests.
 	$(GOTESTSUM) ./... -coverprofile cover.out
 
 .PHONY: test-e2e
-test-e2e: test-e2e-deps | $(NEEDS_GOTESTSUM) ## Run e2e tests. This creates a Kind cluster, installs dependencies, deploys the issuer-lib and runs the E2E tests.
-	$(GOTESTSUM) ./internal/testsetups/simple/e2e/... -coverprofile cover.out -timeout 1m
+test-e2e: test-e2e-deps | $(NEEDS_GOTESTSUM) $(NEEDS_GINKGO) $(BINDIR)/conformance.test ## Run e2e tests. This creates a Kind cluster, installs dependencies, deploys the issuer-lib and runs the E2E tests.
+	$(GOTESTSUM) ./internal/testsetups/simple/e2e/... -coverprofile cover.out -timeout 5m
+
+	kubectl create ns cm-conformance-test || true
+	kubectl -n cm-conformance-test apply -f internal/testsetups/simple/example/simple-issuer.yaml
+	kubectl -n cm-conformance-test apply -f internal/testsetups/simple/example/simple-cluster-issuer.yaml
+
+	$(GINKGO) -procs=10 run $(BINDIR)/conformance.test -- \
+		--namespace=cm-conformance-test \
+		--cm-issuers=testing.cert-manager.io/SimpleIssuer/simple-issuer \
+		--cm-issuers=testing.cert-manager.io/SimpleClusterIssuer/simple-cluster-issuer \
+		--k8s-issuers=simpleclusterissuers.testing.cert-manager.io/simple-cluster-issuer \
+		--unsupported-features=SaveCAToSecret
 
 ##@ Build
 
