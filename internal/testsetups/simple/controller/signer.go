@@ -67,11 +67,11 @@ func (Signer) Check(ctx context.Context, issuerObject v1alpha1.Issuer) error {
 	return nil
 }
 
-func (Signer) Sign(ctx context.Context, cr signer.CertificateRequestObject, issuerObject v1alpha1.Issuer) ([]byte, error) {
+func (Signer) Sign(ctx context.Context, cr signer.CertificateRequestObject, issuerObject v1alpha1.Issuer) (signer.PEMBundle, error) {
 	// generate random ca private key
 	caPrivateKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	if err != nil {
-		return nil, err
+		return signer.PEMBundle{}, err
 	}
 
 	caCRT := &x509.Certificate{
@@ -90,7 +90,7 @@ func (Signer) Sign(ctx context.Context, cr signer.CertificateRequestObject, issu
 	// load client certificate request
 	clientCRTTemplate, _, _, err := cr.GetRequest()
 	if err != nil {
-		return nil, err
+		return signer.PEMBundle{}, err
 	}
 
 	// create client certificate from template and CA public key
@@ -100,5 +100,7 @@ func (Signer) Sign(ctx context.Context, cr signer.CertificateRequestObject, issu
 	}
 
 	clientCrt := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: clientCRTRaw})
-	return clientCrt, nil
+	return signer.PEMBundle{
+		ChainPEM: clientCrt,
+	}, nil
 }

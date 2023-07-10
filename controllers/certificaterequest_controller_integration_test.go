@@ -90,9 +90,11 @@ func TestCertificateRequestControllerIntegrationIssuerInitiallyNotFoundAndNotRea
 				MaxRetryDuration:   time.Minute,
 				EventSource:        kubeutil.NewEventStore(),
 				Client:             mgr.GetClient(),
-				Sign: func(_ context.Context, cr signer.CertificateRequestObject, _ v1alpha1.Issuer) ([]byte, error) {
+				Sign: func(_ context.Context, cr signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, error) {
 					atomic.AddUint64(&counters[extractIdFromNamespace(t, cr.GetNamespace())], 1)
-					return []byte("ok"), nil
+					return signer.PEMBundle{
+						ChainPEM: []byte("cert"),
+					}, nil
 				},
 				EventRecorder: record.NewFakeRecorder(100),
 				Clock:         clock.RealClock{},
@@ -227,13 +229,13 @@ func TestCertificateRequestControllerIntegrationSetCondition(t *testing.T) {
 				MaxRetryDuration:   time.Minute,
 				EventSource:        kubeutil.NewEventStore(),
 				Client:             mgr.GetClient(),
-				Sign: func(ctx context.Context, cr signer.CertificateRequestObject, _ v1alpha1.Issuer) ([]byte, error) {
+				Sign: func(ctx context.Context, cr signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, error) {
 					atomic.AddUint64(&counter, 1)
 					select {
 					case err := <-signResult:
-						return nil, err
+						return signer.PEMBundle{}, err
 					case <-ctx.Done():
-						return nil, ctx.Err()
+						return signer.PEMBundle{}, ctx.Err()
 					}
 				},
 				EventRecorder: record.NewFakeRecorder(100),

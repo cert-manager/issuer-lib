@@ -75,12 +75,12 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 						return ctx.Err()
 					}
 				},
-				Sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) ([]byte, error) {
+				Sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, error) {
 					select {
 					case err := <-signResult:
-						return nil, err
+						return signer.PEMBundle{}, err
 					case <-ctx.Done():
-						return nil, ctx.Err()
+						return signer.PEMBundle{}, ctx.Err()
 					}
 				},
 				EventRecorder: record.NewFakeRecorder(100),
