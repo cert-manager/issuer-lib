@@ -163,7 +163,7 @@ func (r *CertificateRequestReconciler) reconcileStatusPatch(
 	}
 
 	if r.IgnoreCertificateRequest != nil {
-		ignore, err := r.IgnoreCertificateRequest(ctx, signer.CertificateRequestObjectFromCertificateRequest(&cr))
+		ignore, err := r.IgnoreCertificateRequest(ctx, signer.CertificateRequestObjectFromCertificateRequest(&cr), issuerGvk, issuerName)
 		if err != nil {
 			return result, nil, fmt.Errorf("failed to check if CertificateRequest should be ignored: %v", err) // retry
 		}

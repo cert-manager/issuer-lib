@@ -23,6 +23,8 @@ import (
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/cert-manager/issuer-lib/api/v1alpha1"
 )
@@ -50,12 +52,20 @@ type CertificateRequestObject interface {
 	GetConditions() []cmapi.CertificateRequestCondition
 }
 
-// IgnoreCertificateRequest is an optional function that can prevent the CertificateRequest
-// and Kubernetes CSR controllers from reconciling a CertificateRequest resource. By default,
-// the controllers will reconcile all CertificateRequest resources that match the issuerRef type.
-type IgnoreCertificateRequest func(ctx context.Context, cr CertificateRequestObject) (bool, error)
-
 // IgnoreIssuer is an optional function that can prevent the issuer controllers from
 // reconciling an issuer resource. By default, the controllers will reconcile all
 // issuer resources that match the owned types.
-type IgnoreIssuer func(ctx context.Context, issuerObject v1alpha1.Issuer) (bool, error)
+type IgnoreIssuer func(
+	ctx context.Context,
+	issuerObject v1alpha1.Issuer,
+) (bool, error)
+
+// IgnoreCertificateRequest is an optional function that can prevent the CertificateRequest
+// and Kubernetes CSR controllers from reconciling a CertificateRequest resource. By default,
+// the controllers will reconcile all CertificateRequest resources that match the issuerRef type.
+type IgnoreCertificateRequest func(
+	ctx context.Context,
+	cr CertificateRequestObject,
+	issuerGvk schema.GroupVersionKind,
+	issuerName types.NamespacedName,
+) (bool, error)
