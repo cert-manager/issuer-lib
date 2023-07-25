@@ -255,7 +255,7 @@ func (r *CertificateSigningRequestReconciler) reconcileStatusPatch(
 		}
 	}
 
-	csrStatusPatch.Certificate = signedCertificate
+	csrStatusPatch.Certificate = signedCertificate.ChainPEM
 
 	logger.V(1).Info("Successfully finished the reconciliation.")
 	r.EventRecorder.Eventf(&csr, corev1.EventTypeNormal, "Issued", "Succeeded signing the CertificateRequest")

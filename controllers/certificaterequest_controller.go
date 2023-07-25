@@ -69,6 +69,13 @@ type CertificateRequestReconciler struct {
 	// Clock is used to mock condition transition times in tests.
 	Clock clock.PassiveClock
 
+	// SetCAOnCertificateRequest is used to enable setting the CA status field on
+	// the CertificateRequest resource. This is disabled by default.
+	// Deprecated: this option is for backwards compatibility only. The use of
+	// ca.crt is discouraged. Instead, the CA certificate should be provided
+	// separately using a tool such as trust-manager.
+	SetCAOnCertificateRequest bool
+
 	PostSetupWithManager func(context.Context, schema.GroupVersionKind, ctrl.Manager, controller.Controller) error
 }
 
@@ -343,7 +350,10 @@ func (r *CertificateRequestReconciler) reconcileStatusPatch(
 		}
 	}
 
-	crStatusPatch.Certificate = signedCertificate
+	crStatusPatch.Certificate = signedCertificate.ChainPEM
+	if r.SetCAOnCertificateRequest {
+		crStatusPatch.CA = signedCertificate.CAPEM
+	}
 	conditions.SetCertificateRequestStatusCondition(
 		r.Clock,
 		cr.Status.Conditions,

@@ -22,12 +22,23 @@ import (
 	"time"
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	"github.com/cert-manager/cert-manager/pkg/util/pki"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/cert-manager/issuer-lib/api/v1alpha1"
 )
 
-type Sign func(ctx context.Context, cr CertificateRequestObject, issuerObject v1alpha1.Issuer) ([]byte, error)
+// PEMBundle includes the PEM encoded X.509 certificate chain and CA.
+// The first certificate in the ChainPEM chain is the leaf certificate, and the
+// last certificate in the chain is the highest level non-self-signed certificate.
+// The CAPEM certificate is our best guess at the CA that issued the leaf.
+// IMORTANT: the CAPEM certificate is only used when the SetCAOnCertificateRequest
+// option is enabled in the controller. This option is for backwards compatibility
+// only. The use of the CA field and the ca.crt field in the resulting Secret is
+// discouraged, instead the CA should be provisioned separately (e.g. using trust-manager).
+type PEMBundle pki.PEMBundle
+
+type Sign func(ctx context.Context, cr CertificateRequestObject, issuerObject v1alpha1.Issuer) (PEMBundle, error)
 type Check func(ctx context.Context, issuerObject v1alpha1.Issuer) error
 
 // CertificateRequestObject is an interface that represents either a
