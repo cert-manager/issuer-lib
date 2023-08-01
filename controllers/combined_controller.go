@@ -45,6 +45,13 @@ type CombinedController struct {
 	// Sign connects to a CA and returns a signed certificate for the supplied CertificateRequest.
 	signer.Sign
 
+	// IgnoreCertificateRequest is an optional function that can prevent the CertificateRequest
+	// and Kubernetes CSR controllers from reconciling a CertificateRequest resource.
+	signer.IgnoreCertificateRequest
+	// IgnoreIssuer is an optional function that can prevent the issuer controllers from
+	// reconciling an issuer resource.
+	signer.IgnoreIssuer
+
 	// EventRecorder is used for creating Kubernetes events on resources.
 	EventRecorder record.EventRecorder
 
@@ -79,6 +86,7 @@ func (r *CombinedController) SetupWithManager(ctx context.Context, mgr ctrl.Mana
 
 			Client:        cl,
 			Check:         r.Check,
+			IgnoreIssuer:  r.IgnoreIssuer,
 			EventRecorder: r.EventRecorder,
 			Clock:         r.Clock,
 
@@ -96,10 +104,11 @@ func (r *CombinedController) SetupWithManager(ctx context.Context, mgr ctrl.Mana
 		MaxRetryDuration: r.MaxRetryDuration,
 		EventSource:      eventSource,
 
-		Client:        cl,
-		Sign:          r.Sign,
-		EventRecorder: r.EventRecorder,
-		Clock:         r.Clock,
+		Client:                   cl,
+		Sign:                     r.Sign,
+		IgnoreCertificateRequest: r.IgnoreCertificateRequest,
+		EventRecorder:            r.EventRecorder,
+		Clock:                    r.Clock,
 
 		SetCAOnCertificateRequest: r.SetCAOnCertificateRequest,
 
@@ -116,10 +125,11 @@ func (r *CombinedController) SetupWithManager(ctx context.Context, mgr ctrl.Mana
 		MaxRetryDuration: r.MaxRetryDuration,
 		EventSource:      eventSource,
 
-		Client:        cl,
-		Sign:          r.Sign,
-		EventRecorder: r.EventRecorder,
-		Clock:         r.Clock,
+		Client:                   cl,
+		Sign:                     r.Sign,
+		IgnoreCertificateRequest: r.IgnoreCertificateRequest,
+		EventRecorder:            r.EventRecorder,
+		Clock:                    r.Clock,
 
 		PostSetupWithManager: r.PostSetupWithManager,
 	}).SetupWithManager(ctx, mgr); err != nil {

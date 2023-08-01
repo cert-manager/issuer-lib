@@ -56,6 +56,9 @@ type IssuerReconciler struct {
 	client.Client
 	// Check connects to a CA and checks if it is available
 	signer.Check
+	// IgnoreIssuer is an optional function that can prevent the issuer controllers from
+	// reconciling an issuer resource.
+	signer.IgnoreIssuer
 
 	// EventRecorder is used for creating Kubernetes events on resources.
 	EventRecorder record.EventRecorder
@@ -123,6 +126,17 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 	if isFailed {
 		logger.V(1).Info("Issuer is Failed. Ignoring.")
 		return result, nil, nil // done
+	}
+
+	if r.IgnoreIssuer != nil {
+		ignore, err := r.IgnoreIssuer(ctx, issuer)
+		if err != nil {
+			return result, nil, fmt.Errorf("failed to check if issuer should be ignored: %v", err) // retry
+		}
+		if ignore {
+			logger.V(1).Info("Ignoring issuer")
+			return result, nil, nil // done
+		}
 	}
 
 	// We now have a Issuer that belongs to us so we are responsible

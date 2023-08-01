@@ -64,6 +64,9 @@ type CertificateSigningRequestReconciler struct {
 	client.Client
 	// Sign connects to a CA and returns a signed certificate for the supplied CertificateRequest.
 	signer.Sign
+	// IgnoreCertificateRequest is an optional function that can prevent the CertificateRequest
+	// and Kubernetes CSR controllers from reconciling a CertificateRequest resource.
+	signer.IgnoreCertificateRequest
 
 	// EventRecorder is used for creating Kubernetes events on resources.
 	EventRecorder record.EventRecorder
@@ -148,6 +151,17 @@ func (r *CertificateSigningRequestReconciler) reconcileStatusPatch(
 	if util.CertificateSigningRequestIsDenied(&csr) {
 		logger.V(1).Info("CertificateSigningRequest is Denied. Ignoring.")
 		return result, nil, nil // done
+	}
+
+	if r.IgnoreCertificateRequest != nil {
+		ignore, err := r.IgnoreCertificateRequest(ctx, signer.CertificateRequestObjectFromCertificateSigningRequest(&csr), issuerGvk, issuerName)
+		if err != nil {
+			return result, nil, fmt.Errorf("failed to check if CertificateSigningRequest should be ignored: %v", err) // retry
+		}
+		if ignore {
+			logger.V(1).Info("Ignoring CertificateSigningRequest")
+			return result, nil, nil // done
+		}
 	}
 
 	// We now have a CertificateSigningRequestStatus that belongs to us so we are responsible
