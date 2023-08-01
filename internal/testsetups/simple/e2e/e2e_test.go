@@ -110,7 +110,7 @@ func TestSimpleCertificateSigningRequest(t *testing.T) {
 		cmgen.SetCertificateSigningRequestDuration("1h"),
 		cmgen.SetCertificateSigningRequestRequest(csrBlob),
 		cmgen.SetCertificateSigningRequestUsages([]certificatesv1.KeyUsage{certificatesv1.UsageDigitalSignature}),
-		cmgen.SetCertificateSigningRequestSignerName(fmt.Sprintf("simpleclusterissuers.issuer.cert-manager.io/%s", clusterIssuer.Name)),
+		cmgen.SetCertificateSigningRequestSignerName(fmt.Sprintf("simpleclusterissuers.testing.cert-manager.io/%s", clusterIssuer.Name)),
 	)
 
 	err = kubeClients.Client.Create(ctx, clusterIssuer)

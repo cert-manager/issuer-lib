@@ -1,0 +1,5 @@
+apiVersion: testing.cert-manager.io/api
+kind: SimpleClusterIssuer
+metadata:
+  name: simple-cluster-issuer
+spec: {}
