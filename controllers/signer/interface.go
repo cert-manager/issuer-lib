@@ -55,6 +55,9 @@ type CertificateRequestObject interface {
 // IgnoreIssuer is an optional function that can prevent the issuer controllers from
 // reconciling an issuer resource. By default, the controllers will reconcile all
 // issuer resources that match the owned types.
+// This function will be called by the issuer reconcile loops for each type that matches
+// the owned types. If the function returns true, the controller will not reconcile the
+// issuer resource.
 type IgnoreIssuer func(
 	ctx context.Context,
 	issuerObject v1alpha1.Issuer,
@@ -63,6 +66,9 @@ type IgnoreIssuer func(
 // IgnoreCertificateRequest is an optional function that can prevent the CertificateRequest
 // and Kubernetes CSR controllers from reconciling a CertificateRequest resource. By default,
 // the controllers will reconcile all CertificateRequest resources that match the issuerRef type.
+// This function will be called by the CertificateRequest reconcile loop and the Kubernetes CSR
+// reconcile loop for each type that matches the issuerRef type. If the function returns true,
+// the controller will not reconcile the CertificateRequest resource.
 type IgnoreCertificateRequest func(
 	ctx context.Context,
 	cr CertificateRequestObject,
