@@ -36,7 +36,7 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -93,7 +93,7 @@ func (r *CertificateSigningRequestReconciler) Reconcile(ctx context.Context, req
 		if err := r.Client.Status().Patch(ctx, &cr, patch, &client.SubResourcePatchOptions{
 			PatchOptions: client.PatchOptions{
 				FieldManager: r.FieldOwner,
-				Force:        pointer.Bool(true),
+				Force:        ptr.To(true),
 			},
 		}); err != nil {
 			if err := client.IgnoreNotFound(err); err != nil {

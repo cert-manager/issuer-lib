@@ -34,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	clocktesting "k8s.io/utils/clock/testing"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -43,7 +44,6 @@ import (
 	"github.com/cert-manager/issuer-lib/controllers/signer"
 	"github.com/cert-manager/issuer-lib/internal/kubeutil"
 	"github.com/cert-manager/issuer-lib/internal/tests/errormatch"
-	"github.com/cert-manager/issuer-lib/internal/tests/ptr"
 	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/api"
 	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/testutil"
 )
@@ -976,7 +976,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 
 			assert.Equal(t, tc.expectedResult, res)
 			assert.Equal(t, tc.expectedStatusPatch, crsPatch)
-			ptr.Default(tc.validateError, *errormatch.NoError())(t, err)
+			ptr.Deref(tc.validateError, *errormatch.NoError())(t, err)
 
 			allEvents := chanToSlice(fakeRecorder.Events)
 			if len(tc.expectedEvents) == 0 {
