@@ -65,6 +65,22 @@ type CombinedController struct {
 	// separately using a tool such as trust-manager.
 	SetCAOnCertificateRequest bool
 
+	// DisableCertificateRequestController is used to disable the CertificateRequest
+	// controller. This controller is enabled by default.
+	// You should only disable this controller if you eg. don't want to rely on the cert-manager
+	// CRDs to be installed.
+	// Note: in the future, we might remove this option and always enable the CertificateRequest
+	// controller.
+	DisableCertificateRequestController bool
+
+	// DisableKubernetesCSRController is used to disable the Kubernetes CSR controller.
+	// This controller is enabled by default.
+	// You should only disable this controller if you really don't want to support signing
+	// Kubernetes CSRs.
+	// Note: in the future, we might remove this option and always enable the Kubernetes CSR
+	// controller.
+	DisableKubernetesCSRController bool
+
 	PostSetupWithManager func(context.Context, schema.GroupVersionKind, ctrl.Manager, controller.Controller) error
 }
 
@@ -96,44 +112,52 @@ func (r *CombinedController) SetupWithManager(ctx context.Context, mgr ctrl.Mana
 		}
 	}
 
-	if err = (&CertificateRequestReconciler{
-		IssuerTypes:        r.IssuerTypes,
-		ClusterIssuerTypes: r.ClusterIssuerTypes,
-
-		FieldOwner:       r.FieldOwner,
-		MaxRetryDuration: r.MaxRetryDuration,
-		EventSource:      eventSource,
-
-		Client:                   cl,
-		Sign:                     r.Sign,
-		IgnoreCertificateRequest: r.IgnoreCertificateRequest,
-		EventRecorder:            r.EventRecorder,
-		Clock:                    r.Clock,
-
-		SetCAOnCertificateRequest: r.SetCAOnCertificateRequest,
-
-		PostSetupWithManager: r.PostSetupWithManager,
-	}).SetupWithManager(ctx, mgr); err != nil {
-		return fmt.Errorf("CertificateRequestReconciler: %w", err)
+	if r.DisableCertificateRequestController && r.DisableKubernetesCSRController {
+		return fmt.Errorf("both CertificateRequest and Kubernetes CSR controllers are disabled, must enable at least one")
 	}
 
-	if err = (&CertificateSigningRequestReconciler{
-		IssuerTypes:        r.IssuerTypes,
-		ClusterIssuerTypes: r.ClusterIssuerTypes,
+	if !r.DisableCertificateRequestController {
+		if err = (&CertificateRequestReconciler{
+			IssuerTypes:        r.IssuerTypes,
+			ClusterIssuerTypes: r.ClusterIssuerTypes,
 
-		FieldOwner:       r.FieldOwner,
-		MaxRetryDuration: r.MaxRetryDuration,
-		EventSource:      eventSource,
+			FieldOwner:       r.FieldOwner,
+			MaxRetryDuration: r.MaxRetryDuration,
+			EventSource:      eventSource,
 
-		Client:                   cl,
-		Sign:                     r.Sign,
-		IgnoreCertificateRequest: r.IgnoreCertificateRequest,
-		EventRecorder:            r.EventRecorder,
-		Clock:                    r.Clock,
+			Client:                   cl,
+			Sign:                     r.Sign,
+			IgnoreCertificateRequest: r.IgnoreCertificateRequest,
+			EventRecorder:            r.EventRecorder,
+			Clock:                    r.Clock,
 
-		PostSetupWithManager: r.PostSetupWithManager,
-	}).SetupWithManager(ctx, mgr); err != nil {
-		return fmt.Errorf("CertificateRequestReconciler: %w", err)
+			SetCAOnCertificateRequest: r.SetCAOnCertificateRequest,
+
+			PostSetupWithManager: r.PostSetupWithManager,
+		}).SetupWithManager(ctx, mgr); err != nil {
+			return fmt.Errorf("CertificateRequestReconciler: %w", err)
+		}
+	}
+
+	if !r.DisableKubernetesCSRController {
+		if err = (&CertificateSigningRequestReconciler{
+			IssuerTypes:        r.IssuerTypes,
+			ClusterIssuerTypes: r.ClusterIssuerTypes,
+
+			FieldOwner:       r.FieldOwner,
+			MaxRetryDuration: r.MaxRetryDuration,
+			EventSource:      eventSource,
+
+			Client:                   cl,
+			Sign:                     r.Sign,
+			IgnoreCertificateRequest: r.IgnoreCertificateRequest,
+			EventRecorder:            r.EventRecorder,
+			Clock:                    r.Clock,
+
+			PostSetupWithManager: r.PostSetupWithManager,
+		}).SetupWithManager(ctx, mgr); err != nil {
+			return fmt.Errorf("CertificateRequestReconciler: %w", err)
+		}
 	}
 
 	return nil
