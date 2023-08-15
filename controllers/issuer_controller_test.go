@@ -119,7 +119,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionTrue,
 						v1alpha1.IssuerConditionReasonChecked,
-						"checked",
+						"Succeeded checking the issuer",
 					),
 				),
 			},
@@ -129,7 +129,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.IssuerConditionReady,
 						Status:             cmmeta.ConditionTrue,
 						Reason:             v1alpha1.IssuerConditionReasonChecked,
-						Message:            "checked",
+						Message:            "Succeeded checking the issuer",
 						ObservedGeneration: 80,
 						LastTransitionTime: &fakeTimeObj1, // since the status is not updated, the LastTransitionTime is not updated either
 					},
@@ -191,7 +191,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionTrue,
 						v1alpha1.IssuerConditionReasonChecked,
-						"checked",
+						"Succeeded checking the issuer",
 					),
 				),
 			},
@@ -208,14 +208,9 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 					},
 				},
 			},
-			// instead of an error, a new reconcile request is triggered by the
-			// requeue=true return value
-			validateError: errormatch.NoError(),
-			expectedResult: reconcile.Result{
-				Requeue: true,
-			},
+			validateError: errormatch.ErrorContains("[specific error]"),
 			expectedEvents: []string{
-				"Warning RetryableError Failed to check issuer, will retry: [specific error]",
+				"Warning RetryableError Issuer is not ready yet: [specific error]",
 			},
 		},
 
@@ -231,7 +226,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionTrue,
 						v1alpha1.IssuerConditionReasonChecked,
-						"checked",
+						"Succeeded checking the issuer",
 					),
 					testutil.SetSimpleIssuerGeneration(81),
 				),
@@ -242,7 +237,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.IssuerConditionReady,
 						Status:             cmmeta.ConditionTrue,
 						Reason:             v1alpha1.IssuerConditionReasonChecked,
-						Message:            "checked",
+						Message:            "Succeeded checking the issuer",
 						LastTransitionTime: &fakeTimeObj1, // since the status is not updated, the LastTransitionTime is not updated either
 						ObservedGeneration: 81,
 					},
@@ -259,7 +254,6 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 			objects: []client.Object{
 				issuer1,
 			},
-			expectedResult: reconcile.Result{},
 			expectedStatusPatch: &v1alpha1.IssuerStatus{
 				Conditions: []cmapi.IssuerCondition{
 					{
@@ -288,12 +282,6 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 					),
 				),
 			},
-			// instead of an error, a new reconcile request is triggered by the
-			// requeue=true return value
-			validateError: errormatch.NoError(),
-			expectedResult: reconcile.Result{
-				Requeue: true,
-			},
 			expectedStatusPatch: &v1alpha1.IssuerStatus{
 				Conditions: []cmapi.IssuerCondition{
 					{
@@ -305,8 +293,9 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 					},
 				},
 			},
+			validateError: errormatch.ErrorContains("a specific error"),
 			expectedEvents: []string{
-				"Warning RetryableError Failed to check issuer, will retry: a specific error",
+				"Warning RetryableError Issuer is not ready yet: a specific error",
 			},
 		},
 
@@ -334,7 +323,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.IssuerConditionReady,
 						Status:             cmmeta.ConditionTrue,
 						Reason:             v1alpha1.IssuerConditionReasonChecked,
-						Message:            "checked",
+						Message:            "Succeeded checking the issuer",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
@@ -367,7 +356,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.IssuerConditionReady,
 						Status:             cmmeta.ConditionTrue,
 						Reason:             v1alpha1.IssuerConditionReasonChecked,
-						Message:            "checked",
+						Message:            "Succeeded checking the issuer",
 						LastTransitionTime: &fakeTimeObj2,
 						ObservedGeneration: 81,
 					},
@@ -417,11 +406,11 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 				Clock:         fakeClock2,
 			}
 
-			res, crsPatch, err := controller.reconcileStatusPatch(logger, context.TODO(), req)
+			res, issuerStatusPatch, reconcileErr := controller.reconcileStatusPatch(logger, context.TODO(), req)
 
 			assert.Equal(t, tc.expectedResult, res)
-			assert.Equal(t, tc.expectedStatusPatch, crsPatch)
-			ptr.Deref(tc.validateError, *errormatch.NoError())(t, err)
+			assert.Equal(t, tc.expectedStatusPatch, issuerStatusPatch)
+			ptr.Deref(tc.validateError, *errormatch.NoError())(t, reconcileErr)
 
 			allEvents := chanToSlice(fakeRecorder.Events)
 			if len(tc.expectedEvents) == 0 {
