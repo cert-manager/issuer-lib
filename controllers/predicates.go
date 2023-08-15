@@ -121,6 +121,7 @@ func (CertificateSigningRequestPredicate) Update(e event.UpdateEvent) bool {
 // In these cases we want to trigger:
 // - the Ready condition was added/ removed
 // - the Ready condition's Status property changed
+// - the Ready condition's observed generation changed
 type LinkedIssuerPredicate struct {
 	predicate.Funcs
 }
@@ -156,7 +157,7 @@ func (LinkedIssuerPredicate) Update(e event.UpdateEvent) bool {
 		return readyOld != nil || readyNew != nil
 	}
 
-	return readyNew.Status != readyOld.Status
+	return readyNew.Status != readyOld.Status || readyNew.ObservedGeneration != readyOld.ObservedGeneration
 }
 
 // Predicate for Issuer events that should trigger the Issuer reconciler
