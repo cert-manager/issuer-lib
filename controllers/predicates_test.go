@@ -507,6 +507,31 @@ func TestLinkedIssuerPredicate(t *testing.T) {
 			},
 		},
 		{
+			name:            "ready-condition-identical-new-observed-generation",
+			shouldReconcile: true,
+			event: event.UpdateEvent{
+				ObjectOld: testutil.SimpleIssuerFrom(issuer1,
+					testutil.SetSimpleIssuerStatusCondition(
+						fakeClock,
+						cmapi.IssuerConditionReady,
+						cmmeta.ConditionFalse,
+						"reason1",
+						"message1",
+					),
+				),
+				ObjectNew: testutil.SimpleIssuerFrom(issuer1,
+					testutil.SetSimpleIssuerGeneration(2),
+					testutil.SetSimpleIssuerStatusCondition(
+						fakeClock,
+						cmapi.IssuerConditionReady,
+						cmmeta.ConditionFalse,
+						"reason2",
+						"message2",
+					),
+				),
+			},
+		},
+		{
 			name:            "ready-condition-changed",
 			shouldReconcile: true,
 			event: event.UpdateEvent{
