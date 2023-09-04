@@ -76,42 +76,41 @@ type IssuerReconciler struct {
 	PostSetupWithManager func(context.Context, schema.GroupVersionKind, ctrl.Manager, controller.Controller) error
 }
 
-func (r *IssuerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *IssuerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, returnedError error) {
 	logger := log.FromContext(ctx).WithName("Reconcile")
 
 	logger.V(2).Info("Starting reconcile loop", "name", req.Name, "namespace", req.Namespace)
 
-	result, issuerStatusPatch, reconcileError := r.reconcileStatusPatch(logger, ctx, req)
+	result, issuerStatusPatch, returnedError := r.reconcileStatusPatch(logger, ctx, req)
 
-	if issuerStatusPatch == nil {
-		logger.V(2).Info("Got nil StatusPatch result", "result", result, "error", reconcileError)
-		return ctrl.Result{}, reconcileError
-	}
-
-	obj, patch, err := ssaclient.GenerateIssuerStatusPatch(r.ForObject, req.Name, req.Namespace, issuerStatusPatch)
-	if err != nil {
-		return ctrl.Result{}, utilerrors.NewAggregate([]error{err, reconcileError}) // requeue with backoff
-	}
-
-	logger.V(2).Info("Got StatusPatch result", "result", result, "error", reconcileError, "patch", patch)
-
-	if err := r.Client.Status().Patch(ctx, obj, patch, &client.SubResourcePatchOptions{
-		PatchOptions: client.PatchOptions{
-			FieldManager: r.FieldOwner,
-			Force:        ptr.To(true),
-		},
-	}); err != nil {
-		if err := client.IgnoreNotFound(err); err != nil {
-			return ctrl.Result{}, utilerrors.NewAggregate([]error{err, reconcileError}) // requeue with backoff
+	logger.V(2).Info("Got StatusPatch result", "result", result, "patch", issuerStatusPatch, "error", returnedError)
+	if issuerStatusPatch != nil {
+		cr, patch, err := ssaclient.GenerateIssuerStatusPatch(r.ForObject, req.Name, req.Namespace, issuerStatusPatch)
+		if err != nil {
+			return ctrl.Result{}, utilerrors.NewAggregate([]error{err, returnedError})
 		}
 
-		logger.V(1).Info("Issuer not found. Ignoring.")
-		return ctrl.Result{}, nil // done
+		if err := r.Client.Status().Patch(ctx, cr, patch, &client.SubResourcePatchOptions{
+			PatchOptions: client.PatchOptions{
+				FieldManager: r.FieldOwner,
+				Force:        ptr.To(true),
+			},
+		}); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return ctrl.Result{}, utilerrors.NewAggregate([]error{err, returnedError})
+			}
+
+			logger.V(1).Info("Not found. Ignoring.")
+		}
 	}
 
-	return result, reconcileError
+	return result, returnedError
 }
 
+// reconcileStatusPatch is responsible for reconciling the issuer. It will return the
+// result and reconcileError to be returned by the Reconcile function. It also returns
+// an issuerStatusPatch that the Reconcile function will apply to the issuer's status.
+// This function is split out from the Reconcile function to allow for easier testing.
 func (r *IssuerReconciler) reconcileStatusPatch(
 	logger logr.Logger,
 	ctx context.Context,
