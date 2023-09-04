@@ -270,7 +270,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 		// Retry if the check function returns an error
 		{
 			name:  "retry-on-error",
-			check: staticChecker(fmt.Errorf("a specific error")),
+			check: staticChecker(fmt.Errorf("[specific error]")),
 			objects: []client.Object{
 				testutil.SimpleIssuerFrom(issuer1,
 					testutil.SetSimpleIssuerStatusCondition(
@@ -288,14 +288,46 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.IssuerConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             v1alpha1.IssuerConditionReasonPending,
-						Message:            "Issuer is not ready yet: a specific error",
+						Message:            "Issuer is not ready yet: [specific error]",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
-			validateError: errormatch.ErrorContains("a specific error"),
+			validateError: errormatch.ErrorContains("[specific error]"),
 			expectedEvents: []string{
-				"Warning RetryableError Issuer is not ready yet: a specific error",
+				"Warning RetryableError Issuer is not ready yet: [specific error]",
+			},
+		},
+
+		// Don't retry if the check function returns a permanent error
+		{
+			name:  "dont-retry-on-permanent-error",
+			check: staticChecker(signer.PermanentError{Err: fmt.Errorf("[specific error]")}),
+			objects: []client.Object{
+				testutil.SimpleIssuerFrom(issuer1,
+					testutil.SetSimpleIssuerStatusCondition(
+						fakeClock1,
+						cmapi.IssuerConditionReady,
+						cmmeta.ConditionUnknown,
+						v1alpha1.IssuerConditionReasonInitializing,
+						fieldOwner+" has started reconciling this Issuer",
+					),
+				),
+			},
+			expectedStatusPatch: &v1alpha1.IssuerStatus{
+				Conditions: []cmapi.IssuerCondition{
+					{
+						Type:               cmapi.IssuerConditionReady,
+						Status:             cmmeta.ConditionFalse,
+						Reason:             v1alpha1.IssuerConditionReasonFailed,
+						Message:            "Issuer has failed permanently: [specific error]",
+						LastTransitionTime: &fakeTimeObj2,
+					},
+				},
+			},
+			validateError: errormatch.ErrorContains("terminal error: [specific error]"),
+			expectedEvents: []string{
+				"Warning PermanentError Issuer has failed permanently: [specific error]",
 			},
 		},
 
