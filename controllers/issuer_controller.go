@@ -81,6 +81,8 @@ func (r *IssuerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res
 
 	logger.V(2).Info("Starting reconcile loop", "name", req.Name, "namespace", req.Namespace)
 
+	// The error returned by `reconcileStatusPatch` is meant for controller-runtime,
+	// not for us. That's why we aren't checking `returnedError != nil` .
 	result, issuerStatusPatch, returnedError := r.reconcileStatusPatch(logger, ctx, req)
 
 	logger.V(2).Info("Got StatusPatch result", "result", result, "patch", issuerStatusPatch, "error", returnedError)
@@ -111,6 +113,10 @@ func (r *IssuerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res
 // result and reconcileError to be returned by the Reconcile function. It also returns
 // an issuerStatusPatch that the Reconcile function will apply to the issuer's status.
 // This function is split out from the Reconcile function to allow for easier testing.
+//
+// The error returned by `reconcileStatusPatch` is meant for controller-runtime,
+// not for the caller. The caller must not check the error (i.e., they must not
+// do `if err != nil...`).
 func (r *IssuerReconciler) reconcileStatusPatch(
 	logger logr.Logger,
 	ctx context.Context,
