@@ -150,7 +150,7 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 					cmapi.IssuerConditionReady,
 					cmmeta.ConditionTrue,
 					v1alpha1.IssuerConditionReasonChecked,
-					"checked",
+					"Succeeded checking the issuer",
 				),
 			)
 
@@ -177,7 +177,7 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 					(readyCondition.ObservedGeneration != issuer.Generation) ||
 					(readyCondition.Status != cmmeta.ConditionTrue) ||
 					(readyCondition.Reason != v1alpha1.IssuerConditionReasonChecked) ||
-					(readyCondition.Message != "checked") {
+					(readyCondition.Message != "Succeeded checking the issuer") {
 					return fmt.Errorf("incorrect ready condition: %v", readyCondition)
 				}
 
@@ -250,7 +250,7 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 						(readyCondition.ObservedGeneration != issuer.Generation) ||
 						(readyCondition.Status != cmmeta.ConditionTrue) ||
 						(readyCondition.Reason != v1alpha1.IssuerConditionReasonChecked) ||
-						(readyCondition.Message != "checked") {
+						(readyCondition.Message != "Succeeded checking the issuer") {
 						return fmt.Errorf("incorrect ready condition: %v", readyCondition)
 					}
 

@@ -84,7 +84,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			cmapi.IssuerConditionReady,
 			cmmeta.ConditionTrue,
 			v1alpha1.IssuerConditionReasonChecked,
-			"checked",
+			"Succeeded checking the issuer",
 		),
 	)
 
@@ -96,7 +96,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			cmapi.IssuerConditionReady,
 			cmmeta.ConditionTrue,
 			v1alpha1.IssuerConditionReasonChecked,
-			"checked",
+			"Succeeded checking the issuer",
 		),
 	)
 

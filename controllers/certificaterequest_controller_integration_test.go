@@ -421,7 +421,7 @@ func markIssuerReady(t *testing.T, ctx context.Context, kc client.Client, clock 
 		cmapi.IssuerConditionReady,
 		cmmeta.ConditionTrue,
 		v1alpha1.IssuerConditionReasonChecked,
-		"checked",
+		"Succeeded checking the issuer",
 	)
 
 	err := kubeutil.SetGroupVersionKind(kc.Scheme(), issuer)
