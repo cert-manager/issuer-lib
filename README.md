@@ -54,6 +54,18 @@ It takes care of:
 
 An example issuer implementation can be found in the [`./internal/testsetups/simple`](./internal/testsetups/simple) subdirectory.
 
+## Log levels
+
+The library relies on the log levels defined in `logr`, i.e., numbers from 0 to
+9\. You can use any logging library you like in your controller as long as the
+levels "match". The two only logr levels used in issuer-lib are 0 ("info") and 1
+("debug").
+
+For example, the message "Succeeded signing the CertificateRequest" is logged at
+the level 0 ("info"). To integrate well with issuer-lib, your controller should
+also use the level 0 when logging messages that inform the user about changes to
+the CertificateRequest.
+
 ## How it works
 
 This repository provides a go libary that you can use for creating cert-manager controllers for your own Issuers.
