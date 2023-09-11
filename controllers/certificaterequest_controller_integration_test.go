@@ -172,7 +172,7 @@ func TestCertificateRequestControllerIntegrationIssuerInitiallyNotFoundAndNotRea
 				if (readyCondition == nil) ||
 					(readyCondition.Status != cmmeta.ConditionFalse) ||
 					(readyCondition.Reason != cmapi.CertificateRequestReasonPending) ||
-					(readyCondition.Message != "Issuer is not Ready yet. No ready condition found. Waiting for it to become ready.") {
+					(readyCondition.Message != "Waiting for issuer to become ready. Current issuer ready condition: <none>.") {
 					return fmt.Errorf("incorrect ready condition: %v", readyCondition)
 				}
 
@@ -190,7 +190,7 @@ func TestCertificateRequestControllerIntegrationIssuerInitiallyNotFoundAndNotRea
 				if (readyCondition == nil) ||
 					(readyCondition.Status != cmmeta.ConditionTrue) ||
 					(readyCondition.Reason != cmapi.CertificateRequestReasonIssued) ||
-					(readyCondition.Message != "issued") {
+					(readyCondition.Message != "Succeeded signing the CertificateRequest") {
 					return fmt.Errorf("incorrect ready condition: %v", readyCondition)
 				}
 
@@ -294,7 +294,7 @@ func TestCertificateRequestControllerIntegrationSetCondition(t *testing.T) {
 		if (readyCondition == nil) ||
 			(readyCondition.Status != cmmeta.ConditionFalse) ||
 			(readyCondition.Reason != cmapi.CertificateRequestReasonPending) ||
-			(readyCondition.Message != "Issuer is not Ready yet. No ready condition found. Waiting for it to become ready.") {
+			(readyCondition.Message != "Waiting for issuer to become ready. Current issuer ready condition: <none>.") {
 			return fmt.Errorf("incorrect ready condition: %v", readyCondition)
 		}
 
@@ -357,7 +357,7 @@ func TestCertificateRequestControllerIntegrationSetCondition(t *testing.T) {
 		if (readyCondition == nil) ||
 			(readyCondition.Status != cmmeta.ConditionTrue) ||
 			(readyCondition.Reason != cmapi.CertificateRequestReasonIssued) ||
-			(readyCondition.Message != "issued") {
+			(readyCondition.Message != "Succeeded signing the CertificateRequest") {
 			return fmt.Errorf("incorrect ready condition: %v", readyCondition)
 		}
 

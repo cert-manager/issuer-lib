@@ -82,14 +82,14 @@ func (r *IssuerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res
 	logger.V(2).Info("Starting reconcile loop", "name", req.Name, "namespace", req.Namespace)
 
 	// The error returned by `reconcileStatusPatch` is meant for controller-runtime,
-	// not for us. That's why we aren't checking `returnedError != nil` .
-	result, issuerStatusPatch, returnedError := r.reconcileStatusPatch(logger, ctx, req)
+	// not for us. That's why we aren't checking `reconcileError != nil` .
+	result, issuerStatusPatch, reconcileError := r.reconcileStatusPatch(logger, ctx, req)
 
-	logger.V(2).Info("Got StatusPatch result", "result", result, "patch", issuerStatusPatch, "error", returnedError)
+	logger.V(2).Info("Got StatusPatch result", "result", result, "patch", issuerStatusPatch, "error", reconcileError)
 	if issuerStatusPatch != nil {
 		cr, patch, err := ssaclient.GenerateIssuerStatusPatch(r.ForObject, req.Name, req.Namespace, issuerStatusPatch)
 		if err != nil {
-			return ctrl.Result{}, utilerrors.NewAggregate([]error{err, returnedError})
+			return ctrl.Result{}, utilerrors.NewAggregate([]error{err, reconcileError})
 		}
 
 		if err := r.Client.Status().Patch(ctx, cr, patch, &client.SubResourcePatchOptions{
@@ -99,14 +99,14 @@ func (r *IssuerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res
 			},
 		}); err != nil {
 			if !apierrors.IsNotFound(err) {
-				return ctrl.Result{}, utilerrors.NewAggregate([]error{err, returnedError})
+				return ctrl.Result{}, utilerrors.NewAggregate([]error{err, reconcileError})
 			}
 
 			logger.V(1).Info("Not found. Ignoring.")
 		}
 	}
 
-	return result, returnedError
+	return result, reconcileError
 }
 
 // reconcileStatusPatch is responsible for reconciling the issuer. It will return the
@@ -223,7 +223,7 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 			cmapi.IssuerConditionReady,
 			cmmeta.ConditionFalse,
 			v1alpha1.IssuerConditionReasonFailed,
-			fmt.Sprintf("Issuer has failed permanently: %s", err),
+			fmt.Sprintf("Failed permanently: %s", err),
 		)
 		r.EventRecorder.Event(issuer, corev1.EventTypeWarning, eventIssuerPermanentError, message)
 		return result, issuerStatusPatch, reconcile.TerminalError(err) // apply patch, done
@@ -234,7 +234,7 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 			cmapi.IssuerConditionReady,
 			cmmeta.ConditionFalse,
 			v1alpha1.IssuerConditionReasonPending,
-			fmt.Sprintf("Issuer is not ready yet: %s", err),
+			fmt.Sprintf("Not ready yet: %s", err),
 		)
 		r.EventRecorder.Event(issuer, corev1.EventTypeWarning, eventIssuerRetryableError, message)
 		return result, issuerStatusPatch, err // apply patch, requeue with backoff
