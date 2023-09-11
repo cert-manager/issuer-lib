@@ -41,6 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1alpha1 "github.com/cert-manager/issuer-lib/api/v1alpha1"
 	"github.com/cert-manager/issuer-lib/conditions"
@@ -82,17 +83,21 @@ type CertificateRequestReconciler struct {
 	PostSetupWithManager func(context.Context, schema.GroupVersionKind, ctrl.Manager, controller.Controller) error
 }
 
-func (r *CertificateRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, returnedError error) {
+func (r *CertificateRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithName("Reconcile")
 
 	logger.V(2).Info("Starting reconcile loop", "name", req.Name, "namespace", req.Namespace)
 
-	result, crStatusPatch, returnedError := r.reconcileStatusPatch(logger, ctx, req)
-	logger.V(2).Info("Got StatusPatch result", "result", result, "patch", crStatusPatch, "error", returnedError)
+	// The error returned by `reconcileStatusPatch` is meant for controller-runtime,
+	// not for us. That's why we aren't checking `reconcileError != nil` .
+	result, crStatusPatch, reconcileError := r.reconcileStatusPatch(logger, ctx, req)
+
+	logger.V(2).Info("Got StatusPatch result", "result", result, "patch", crStatusPatch, "error", reconcileError)
+
 	if crStatusPatch != nil {
 		cr, patch, err := ssaclient.GenerateCertificateRequestStatusPatch(req.Name, req.Namespace, crStatusPatch)
 		if err != nil {
-			return ctrl.Result{}, utilerrors.NewAggregate([]error{err, returnedError})
+			return ctrl.Result{}, utilerrors.NewAggregate([]error{err, reconcileError})
 		}
 
 		if err := r.Client.Status().Patch(ctx, &cr, patch, &client.SubResourcePatchOptions{
@@ -101,16 +106,26 @@ func (r *CertificateRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
 				Force:        ptr.To(true),
 			},
 		}); err != nil {
-			if err := client.IgnoreNotFound(err); err != nil {
-				return ctrl.Result{}, utilerrors.NewAggregate([]error{err, returnedError})
+			if !apierrors.IsNotFound(err) {
+				return ctrl.Result{}, utilerrors.NewAggregate([]error{err, reconcileError}) // requeue with backoff
 			}
+
 			logger.V(1).Info("Not found. Ignoring.")
 		}
 	}
 
-	return result, returnedError
+	return result, reconcileError
 }
 
+// reconcileStatusPatch is responsible for reconciling the cert-manager
+// CertificateRequest resource. It will return the result and reconcileError
+// to be returned by the Reconcile function. It also returns a statusPatch that
+// the Reconcile function will apply to the request resource's status. This function
+// is split out from the Reconcile function to allow for easier testing.
+//
+// The error returned by `reconcileStatusPatch` is meant for controller-runtime,
+// not for the caller. The caller must not check the error (i.e., they must not
+// do `if err != nil...`).
 func (r *CertificateRequestReconciler) reconcileStatusPatch(
 	logger logr.Logger,
 	ctx context.Context,
@@ -132,10 +147,10 @@ func (r *CertificateRequestReconciler) reconcileStatusPatch(
 	}
 
 	// Select first matching issuer type and construct an issuerObject and issuerName
-	issuerObject, issuerName := r.matchIssuerType(&cr)
+	issuerObject, issuerName, err := r.matchIssuerType(&cr)
 	// Ignore CertificateRequest if issuerRef doesn't match one of our issuer Types
-	if issuerObject == nil {
-		logger.V(1).Info("Foreign issuer. Ignoring.", "group", cr.Spec.IssuerRef.Group, "kind", cr.Spec.IssuerRef.Kind)
+	if err != nil {
+		logger.V(1).Info("Foreign issuer. Ignoring.", "error", err)
 		return result, nil, nil // done
 	}
 	issuerGvk := issuerObject.GetObjectKind().GroupVersionKind()
@@ -212,10 +227,10 @@ func (r *CertificateRequestReconciler) reconcileStatusPatch(
 			cmapi.CertificateRequestConditionReady,
 			cmmeta.ConditionFalse,
 			cmapi.CertificateRequestReasonDenied,
-			"The CertificateRequest was denied by an approval controller",
+			"Detected that the CertificateRequest is denied, so it will never be Ready.",
 		)
 		crStatusPatch.FailureTime = failedAt.DeepCopy()
-		r.EventRecorder.Eventf(&cr, corev1.EventTypeNormal, "DetectedDenied", "Detected that the CR is denied, will update Ready condition")
+		r.EventRecorder.Eventf(&cr, corev1.EventTypeWarning, "PermanentError", "Detected that the CertificateRequest is denied, so it will never be Ready.")
 		return result, crStatusPatch, nil // done, apply patch
 	}
 
@@ -230,7 +245,7 @@ func (r *CertificateRequestReconciler) reconcileStatusPatch(
 			cmapi.CertificateRequestReasonPending,
 			fmt.Sprintf("%s. Waiting for it to be created.", err),
 		)
-		r.EventRecorder.Eventf(&cr, corev1.EventTypeNormal, "WaitingForIssuerExist", "Waiting for the issuer to exist")
+		r.EventRecorder.Eventf(&cr, corev1.EventTypeNormal, "WaitingForIssuerExist", fmt.Sprintf("%s. Waiting for it to be created.", err))
 		return result, crStatusPatch, nil // done, apply patch
 	} else if err != nil {
 		r.EventRecorder.Eventf(&cr, corev1.EventTypeWarning, "UnexpectedError", "Got an unexpected error while processing the CR")
@@ -247,11 +262,11 @@ func (r *CertificateRequestReconciler) reconcileStatusPatch(
 
 		message := ""
 		if readyCondition == nil {
-			message = "Issuer is not Ready yet. No ready condition found. Waiting for it to become ready."
+			message = "Waiting for issuer to become ready. Current issuer ready condition: <none>."
 		} else if readyCondition.Status != cmmeta.ConditionTrue {
-			message = fmt.Sprintf("Issuer is not Ready yet. Current ready condition is \"%s\": %s. Waiting for it to become ready.", readyCondition.Reason, readyCondition.Message)
+			message = fmt.Sprintf("Waiting for issuer to become ready. Current issuer ready condition is \"%s\": %s.", readyCondition.Reason, readyCondition.Message)
 		} else {
-			message = "Issuer is not Ready yet. Current ready condition is outdated. Waiting for it to become ready."
+			message = "Waiting for issuer to become ready. Current issuer ready condition is outdated."
 		}
 
 		logger.V(1).Info("Issuer is not Ready yet. Waiting for it to become ready.", "issuer ready condition", readyCondition)
@@ -264,7 +279,7 @@ func (r *CertificateRequestReconciler) reconcileStatusPatch(
 			cmapi.CertificateRequestReasonPending,
 			message,
 		)
-		r.EventRecorder.Eventf(&cr, corev1.EventTypeNormal, "WaitingForIssuerReady", "Waiting for the issuer to become ready")
+		r.EventRecorder.Eventf(&cr, corev1.EventTypeNormal, "WaitingForIssuerReady", message)
 		return result, crStatusPatch, nil // done, apply patch
 	}
 
@@ -288,10 +303,10 @@ func (r *CertificateRequestReconciler) reconcileStatusPatch(
 				cmapi.CertificateRequestConditionReady,
 				cmmeta.ConditionFalse,
 				cmapi.CertificateRequestReasonPending,
-				"Issuer is not Ready yet. Current ready condition is outdated. Waiting for it to become ready.",
+				"Waiting for issuer to become ready. Current issuer ready condition is outdated.",
 			)
-			r.EventRecorder.Eventf(&cr, corev1.EventTypeWarning, "WaitingForIssuerReady", "Waiting for the issuer to become ready")
-			return result, crStatusPatch, nil // done, apply patch
+			r.EventRecorder.Eventf(&cr, corev1.EventTypeWarning, "WaitingForIssuerReady", "Waiting for issuer to become ready. Current issuer ready condition is outdated.")
+			return result, crStatusPatch, reconcile.TerminalError(err) // done, apply patch
 		}
 
 		didCustomConditionTransition := false
@@ -327,11 +342,11 @@ func (r *CertificateRequestReconciler) reconcileStatusPatch(
 				cmapi.CertificateRequestConditionReady,
 				cmmeta.ConditionFalse,
 				cmapi.CertificateRequestReasonFailed,
-				fmt.Sprintf("CertificateRequest has failed permanently: %s", err),
+				fmt.Sprintf("Failed permanently to sign CertificateRequest: %s", err),
 			)
 			crStatusPatch.FailureTime = failedAt.DeepCopy()
 			r.EventRecorder.Eventf(&cr, corev1.EventTypeWarning, "PermanentError", "Failed permanently to sign CertificateRequest: %s", err)
-			return result, crStatusPatch, nil // done, apply patch
+			return result, crStatusPatch, reconcile.TerminalError(err) // done, apply patch
 		} else {
 			// retry
 			logger.V(1).Error(err, "Retryable CertificateRequest error.")
@@ -342,24 +357,15 @@ func (r *CertificateRequestReconciler) reconcileStatusPatch(
 				cmapi.CertificateRequestConditionReady,
 				cmmeta.ConditionFalse,
 				cmapi.CertificateRequestReasonPending,
-				fmt.Sprintf("CertificateRequest is not ready yet: %s", err),
+				fmt.Sprintf("Failed to sign CertificateRequest, will retry: %s", err),
 			)
 
 			r.EventRecorder.Eventf(&cr, corev1.EventTypeWarning, "RetryableError", "Failed to sign CertificateRequest, will retry: %s", err)
 			if didCustomConditionTransition {
 				// the reconciliation loop will be retriggered because of the added/ changed custom condition
-				return result, crStatusPatch, nil // done, apply patch
+				return result, crStatusPatch, reconcile.TerminalError(err) // apply patch, done
 			} else {
-				// We trigger a reconciliation here. Controller-runtime will use exponential backoff to requeue
-				// the request. We don't return an error here because we don't want controller-runtime to log an
-				// additional error message and we want the metrics to show a requeue instead of an error to be
-				// consistent with the other cases (see didCustomConditionTransition and Permanent error above).
-				//
-				// Important: This means that the ReconcileErrors metric will only be incremented in case of a
-				// apiserver failure (see "unexpected get error" above). The ReconcileTotal labelRequeue metric
-				// can be used instead to get some estimate of the number of requeues.
-				result.Requeue = true
-				return result, crStatusPatch, nil // requeue with backoff, apply patch
+				return result, crStatusPatch, err // requeue with backoff, apply patch
 			}
 		}
 	}
@@ -375,7 +381,7 @@ func (r *CertificateRequestReconciler) reconcileStatusPatch(
 		cmapi.CertificateRequestConditionReady,
 		cmmeta.ConditionTrue,
 		cmapi.CertificateRequestReasonIssued,
-		"issued",
+		"Succeeded signing the CertificateRequest",
 	)
 
 	logger.V(1).Info("Successfully finished the reconciliation.")
@@ -392,12 +398,15 @@ func (r *CertificateRequestReconciler) setIssuersGroupVersionKind(scheme *runtim
 	return nil
 }
 
-func (r *CertificateRequestReconciler) matchIssuerType(cr *cmapi.CertificateRequest) (v1alpha1.Issuer, types.NamespacedName) {
+func (r *CertificateRequestReconciler) matchIssuerType(cr *cmapi.CertificateRequest) (v1alpha1.Issuer, types.NamespacedName, error) {
+	if cr == nil {
+		return nil, types.NamespacedName{}, fmt.Errorf("invalid reference, CertificateRequest is nil")
+	}
+
 	// Search for matching issuer
 	for i, issuerType := range r.allIssuerTypes() {
 		// The namespaced issuers are located in the first part of the array.
 		isNamespaced := i < len(r.IssuerTypes)
-
 		gvk := issuerType.GetObjectKind().GroupVersionKind()
 
 		if (cr.Spec.IssuerRef.Group != gvk.Group) ||
@@ -415,10 +424,10 @@ func (r *CertificateRequestReconciler) matchIssuerType(cr *cmapi.CertificateRequ
 			Name:      cr.Spec.IssuerRef.Name,
 			Namespace: namespace,
 		}
-		return issuerObject, issuerName
+		return issuerObject, issuerName, nil
 	}
 
-	return nil, types.NamespacedName{}
+	return nil, types.NamespacedName{}, fmt.Errorf("no issuer found for reference: [Group=%q, Kind=%q, Name=%q]", cr.Spec.IssuerRef.Group, cr.Spec.IssuerRef.Kind, cr.Spec.IssuerRef.Name)
 }
 
 func (r *CertificateRequestReconciler) allIssuerTypes() []v1alpha1.Issuer {
@@ -498,8 +507,8 @@ func (r *CertificateRequestReconciler) SetupWithManager(ctx context.Context, mgr
 			func(rawObj client.Object) []string {
 				cr := rawObj.(*cmapi.CertificateRequest)
 
-				issuerObject, issuerName := r.matchIssuerType(cr)
-				if issuerObject == nil || issuerObject.GetObjectKind().GroupVersionKind() != gvk {
+				issuerObject, issuerName, err := r.matchIssuerType(cr)
+				if err != nil || issuerObject.GetObjectKind().GroupVersionKind() != gvk {
 					return nil
 				}
 

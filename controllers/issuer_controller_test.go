@@ -202,7 +202,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.IssuerConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             v1alpha1.IssuerConditionReasonPending,
-						Message:            "Issuer is not ready yet: [specific error]",
+						Message:            "Not ready yet: [specific error]",
 						ObservedGeneration: 80,
 						LastTransitionTime: &fakeTimeObj2,
 					},
@@ -210,7 +210,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 			},
 			validateError: errormatch.ErrorContains("[specific error]"),
 			expectedEvents: []string{
-				"Warning RetryableError Issuer is not ready yet: [specific error]",
+				"Warning RetryableError Not ready yet: [specific error]",
 			},
 		},
 
@@ -288,14 +288,14 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.IssuerConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             v1alpha1.IssuerConditionReasonPending,
-						Message:            "Issuer is not ready yet: [specific error]",
+						Message:            "Not ready yet: [specific error]",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
 			validateError: errormatch.ErrorContains("[specific error]"),
 			expectedEvents: []string{
-				"Warning RetryableError Issuer is not ready yet: [specific error]",
+				"Warning RetryableError Not ready yet: [specific error]",
 			},
 		},
 
@@ -320,14 +320,14 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.IssuerConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             v1alpha1.IssuerConditionReasonFailed,
-						Message:            "Issuer has failed permanently: [specific error]",
+						Message:            "Failed permanently: [specific error]",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
 			validateError: errormatch.ErrorContains("terminal error: [specific error]"),
 			expectedEvents: []string{
-				"Warning PermanentError Issuer has failed permanently: [specific error]",
+				"Warning PermanentError Failed permanently: [specific error]",
 			},
 		},
 

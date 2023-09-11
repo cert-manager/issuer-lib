@@ -224,7 +224,6 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 					removeCertificateRequestCondition(cr, cmapi.CertificateRequestConditionReady)
 				}),
 			},
-			expectedResult: reconcile.Result{},
 			expectedStatusPatch: &cmapi.CertificateRequestStatus{
 				Conditions: []cmapi.CertificateRequestCondition{
 					{
@@ -254,14 +253,14 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonDenied,
-						Message:            "The CertificateRequest was denied by an approval controller",
+						Message:            "Detected that the CertificateRequest is denied, so it will never be Ready.",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 				FailureTime: &fakeTimeObj2,
 			},
 			expectedEvents: []string{
-				"Normal DetectedDenied Detected that the CR is denied, will update Ready condition",
+				"Warning PermanentError Detected that the CertificateRequest is denied, so it will never be Ready.",
 			},
 		},
 
@@ -286,7 +285,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				},
 			},
 			expectedEvents: []string{
-				"Normal WaitingForIssuerExist Waiting for the issuer to exist",
+				"Normal WaitingForIssuerExist simpleissuers.testing.cert-manager.io \"issuer-1\" not found. Waiting for it to be created.",
 			},
 		},
 
@@ -313,13 +312,13 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonPending,
-						Message:            "Issuer is not Ready yet. No ready condition found. Waiting for it to become ready.",
+						Message:            "Waiting for issuer to become ready. Current issuer ready condition: <none>.",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
 			expectedEvents: []string{
-				"Normal WaitingForIssuerReady Waiting for the issuer to become ready",
+				"Normal WaitingForIssuerReady Waiting for issuer to become ready. Current issuer ready condition: <none>.",
 			},
 		},
 
@@ -349,13 +348,13 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonPending,
-						Message:            "Issuer is not Ready yet. Current ready condition is \"[REASON]\": [MESSAGE]. Waiting for it to become ready.",
+						Message:            "Waiting for issuer to become ready. Current issuer ready condition is \"[REASON]\": [MESSAGE].",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
 			expectedEvents: []string{
-				"Normal WaitingForIssuerReady Waiting for the issuer to become ready",
+				"Normal WaitingForIssuerReady Waiting for issuer to become ready. Current issuer ready condition is \"[REASON]\": [MESSAGE].",
 			},
 		},
 
@@ -380,13 +379,13 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonPending,
-						Message:            "Issuer is not Ready yet. Current ready condition is outdated. Waiting for it to become ready.",
+						Message:            "Waiting for issuer to become ready. Current issuer ready condition is outdated.",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
 			expectedEvents: []string{
-				"Normal WaitingForIssuerReady Waiting for the issuer to become ready",
+				"Normal WaitingForIssuerReady Waiting for issuer to become ready. Current issuer ready condition is outdated.",
 			},
 		},
 
@@ -415,12 +414,13 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonFailed,
-						Message:            "CertificateRequest has failed permanently: a specific error",
+						Message:            "Failed permanently to sign CertificateRequest: a specific error",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 				FailureTime: &fakeTimeObj2,
 			},
+			validateError: errormatch.ErrorContains("terminal error: a specific error"),
 			expectedEvents: []string{
 				"Warning PermanentError Failed permanently to sign CertificateRequest: a specific error",
 			},
@@ -445,22 +445,18 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				),
 				testutil.SimpleIssuerFrom(issuer1),
 			},
-			// instead of returning an error, we trigger a new reconciliation by setting requeue=true
-			validateError: errormatch.NoError(),
-			expectedResult: reconcile.Result{
-				Requeue: true,
-			},
 			expectedStatusPatch: &cmapi.CertificateRequestStatus{
 				Conditions: []cmapi.CertificateRequestCondition{
 					{
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonPending,
-						Message:            "CertificateRequest is not ready yet: pending error",
+						Message:            "Failed to sign CertificateRequest, will retry: pending error",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
+			validateError: errormatch.ErrorContains("pending error"),
 			expectedEvents: []string{
 				"Warning RetryableError Failed to sign CertificateRequest, will retry: pending error",
 			},
@@ -494,9 +490,6 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				),
 				testutil.SimpleIssuerFrom(issuer1),
 			},
-			// no error should be returned because the reconciliation should be triggered
-			// when the custom condition is added
-			validateError: errormatch.NoError(),
 			expectedStatusPatch: &cmapi.CertificateRequestStatus{
 				Conditions: []cmapi.CertificateRequestCondition{
 					{
@@ -510,11 +503,12 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonPending,
-						Message:            "CertificateRequest is not ready yet: test error",
+						Message:            "Failed to sign CertificateRequest, will retry: test error",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
+			validateError: errormatch.ErrorContains("terminal error: test error"),
 			expectedEvents: []string{
 				"Warning RetryableError Failed to sign CertificateRequest, will retry: test error",
 			},
@@ -555,11 +549,6 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				),
 				testutil.SimpleIssuerFrom(issuer1),
 			},
-			// instead of returning an error, we trigger a new reconciliation by setting requeue=true
-			validateError: errormatch.NoError(),
-			expectedResult: reconcile.Result{
-				Requeue: true,
-			},
 			expectedStatusPatch: &cmapi.CertificateRequestStatus{
 				Conditions: []cmapi.CertificateRequestCondition{
 					{
@@ -573,11 +562,12 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonPending,
-						Message:            "CertificateRequest is not ready yet: test error2",
+						Message:            "Failed to sign CertificateRequest, will retry: test error2",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
+			validateError: errormatch.ErrorContains("test error2"),
 			expectedEvents: []string{
 				"Warning RetryableError Failed to sign CertificateRequest, will retry: test error2",
 			},
@@ -611,9 +601,6 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				),
 				testutil.SimpleIssuerFrom(issuer1),
 			},
-			// no error should be returned because the reconciliation should be triggered when the
-			// custom condition is added
-			validateError: errormatch.NoError(),
 			expectedStatusPatch: &cmapi.CertificateRequestStatus{
 				Conditions: []cmapi.CertificateRequestCondition{
 					{
@@ -627,12 +614,13 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonFailed,
-						Message:            "CertificateRequest has failed permanently: test error",
+						Message:            "Failed permanently to sign CertificateRequest: test error",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 				FailureTime: &fakeTimeObj2,
 			},
+			validateError: errormatch.ErrorContains("terminal error: test error"),
 			expectedEvents: []string{
 				"Warning PermanentError Failed permanently to sign CertificateRequest: test error",
 			},
@@ -673,8 +661,6 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				),
 				testutil.SimpleIssuerFrom(issuer1),
 			},
-			// since we got into a permanent failure state, we should not return an error
-			validateError: errormatch.NoError(),
 			expectedStatusPatch: &cmapi.CertificateRequestStatus{
 				Conditions: []cmapi.CertificateRequestCondition{
 					{
@@ -688,12 +674,13 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonFailed,
-						Message:            "CertificateRequest has failed permanently: test error2",
+						Message:            "Failed permanently to sign CertificateRequest: test error2",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 				FailureTime: &fakeTimeObj2,
 			},
+			validateError: errormatch.ErrorContains("terminal error: test error2"),
 			expectedEvents: []string{
 				"Warning PermanentError Failed permanently to sign CertificateRequest: test error2",
 			},
@@ -726,9 +713,6 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				),
 				testutil.SimpleIssuerFrom(issuer1),
 			},
-			// no error should be returned because the reconciliation should be triggered
-			// when the custom condition is added
-			validateError: errormatch.NoError(),
 			expectedStatusPatch: &cmapi.CertificateRequestStatus{
 				Conditions: []cmapi.CertificateRequestCondition{
 					{
@@ -742,11 +726,12 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonPending,
-						Message:            "CertificateRequest is not ready yet: test error",
+						Message:            "Failed to sign CertificateRequest, will retry: test error",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
+			validateError: errormatch.ErrorContains("terminal error: test error"),
 			expectedEvents: []string{
 				"Warning RetryableError Failed to sign CertificateRequest, will retry: test error",
 			},
@@ -776,9 +761,6 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				),
 				testutil.SimpleIssuerFrom(issuer1),
 			},
-			// no error should be returned because we are in a permanent failure state no further
-			// retries should be made
-			validateError: errormatch.NoError(),
 			expectedStatusPatch: &cmapi.CertificateRequestStatus{
 				Conditions: []cmapi.CertificateRequestCondition{
 					{
@@ -792,12 +774,13 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonFailed,
-						Message:            "CertificateRequest has failed permanently: test error",
+						Message:            "Failed permanently to sign CertificateRequest: test error",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 				FailureTime: &fakeTimeObj2,
 			},
+			validateError: errormatch.ErrorContains("terminal error: test error"),
 			expectedEvents: []string{
 				"Warning PermanentError Failed permanently to sign CertificateRequest: test error",
 			},
@@ -824,12 +807,13 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonFailed,
-						Message:            "CertificateRequest has failed permanently: a specific error",
+						Message:            "Failed permanently to sign CertificateRequest: a specific error",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 				FailureTime: &fakeTimeObj2,
 			},
+			validateError: errormatch.ErrorContains("terminal error: a specific error"),
 			expectedEvents: []string{
 				"Warning PermanentError Failed permanently to sign CertificateRequest: a specific error",
 			},
@@ -854,22 +838,18 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				),
 				testutil.SimpleIssuerFrom(issuer1),
 			},
-			// instead of returning an error, we trigger a new reconciliation by setting requeue=true
-			validateError: errormatch.NoError(),
-			expectedResult: reconcile.Result{
-				Requeue: true,
-			},
 			expectedStatusPatch: &cmapi.CertificateRequestStatus{
 				Conditions: []cmapi.CertificateRequestCondition{
 					{
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonPending,
-						Message:            "CertificateRequest is not ready yet: waiting for approval",
+						Message:            "Failed to sign CertificateRequest, will retry: waiting for approval",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
+			validateError: errormatch.ErrorContains("waiting for approval"),
 			expectedEvents: []string{
 				"Warning RetryableError Failed to sign CertificateRequest, will retry: waiting for approval",
 			},
@@ -892,7 +872,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionTrue,
 						Reason:             cmapi.CertificateRequestReasonIssued,
-						Message:            "issued",
+						Message:            "Succeeded signing the CertificateRequest",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
@@ -919,7 +899,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionTrue,
 						Reason:             cmapi.CertificateRequestReasonIssued,
-						Message:            "issued",
+						Message:            "Succeeded signing the CertificateRequest",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
@@ -957,7 +937,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 			logger := logrtesting.NewTestLoggerWithOptions(t, logrtesting.Options{LogTimestamp: true, Verbosity: 10})
 			fakeRecorder := record.NewFakeRecorder(100)
 
-			controller := CertificateRequestReconciler{
+			controller := &CertificateRequestReconciler{
 				IssuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
 				ClusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
 				FieldOwner:         fieldOwner,
@@ -972,11 +952,11 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 			err = controller.setIssuersGroupVersionKind(scheme)
 			require.NoError(t, err)
 
-			res, crsPatch, err := controller.reconcileStatusPatch(logger, context.TODO(), req)
+			res, crStatusPatch, reconcileErr := controller.reconcileStatusPatch(logger, context.TODO(), req)
 
 			assert.Equal(t, tc.expectedResult, res)
-			assert.Equal(t, tc.expectedStatusPatch, crsPatch)
-			ptr.Deref(tc.validateError, *errormatch.NoError())(t, err)
+			assert.Equal(t, tc.expectedStatusPatch, crStatusPatch)
+			ptr.Deref(tc.validateError, *errormatch.NoError())(t, reconcileErr)
 
 			allEvents := chanToSlice(fakeRecorder.Events)
 			if len(tc.expectedEvents) == 0 {
@@ -1017,6 +997,7 @@ func TestCertificateRequestMatchIssuerType(t *testing.T) {
 
 		expectedIssuerType v1alpha1.Issuer
 		expectedIssuerName types.NamespacedName
+		expectedError      *errormatch.Matcher
 	}
 
 	createCr := func(name string, namespace string, kind string, group string) *cmapi.CertificateRequest {
@@ -1043,6 +1024,7 @@ func TestCertificateRequestMatchIssuerType(t *testing.T) {
 
 			expectedIssuerType: nil,
 			expectedIssuerName: types.NamespacedName{},
+			expectedError:      errormatch.ErrorContains("invalid reference, CertificateRequest is nil"),
 		},
 		{
 			name:               "no issuers",
@@ -1052,6 +1034,7 @@ func TestCertificateRequestMatchIssuerType(t *testing.T) {
 
 			expectedIssuerType: nil,
 			expectedIssuerName: types.NamespacedName{},
+			expectedError:      errormatch.ErrorContains("no issuer found for reference: [Group=\"test\", Kind=\"\", Name=\"name\"]"),
 		},
 		{
 			name:               "match issuer",
@@ -1115,7 +1098,7 @@ func TestCertificateRequestMatchIssuerType(t *testing.T) {
 
 			require.NoError(t, crr.setIssuersGroupVersionKind(scheme))
 
-			issuerType, issuerName := crr.matchIssuerType(tc.cr)
+			issuerType, issuerName, err := crr.matchIssuerType(tc.cr)
 
 			if tc.expectedIssuerType != nil {
 				require.NoError(t, kubeutil.SetGroupVersionKind(scheme, tc.expectedIssuerType))
@@ -1123,6 +1106,9 @@ func TestCertificateRequestMatchIssuerType(t *testing.T) {
 
 			assert.Equal(t, tc.expectedIssuerType, issuerType)
 			assert.Equal(t, tc.expectedIssuerName, issuerName)
+			if !ptr.Deref(tc.expectedError, *errormatch.NoError())(t, err) {
+				t.Fail()
+			}
 		})
 	}
 }

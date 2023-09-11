@@ -43,6 +43,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1alpha1 "github.com/cert-manager/issuer-lib/api/v1alpha1"
 	"github.com/cert-manager/issuer-lib/conditions"
@@ -51,7 +52,7 @@ import (
 	"github.com/cert-manager/issuer-lib/internal/ssaclient"
 )
 
-// CertificateSigningRequestReconciler reconciles a CertificateRequest object
+// CertificateSigningRequestReconciler reconciles a CertificateSigningRequest object
 type CertificateSigningRequestReconciler struct {
 	IssuerTypes        []v1alpha1.Issuer
 	ClusterIssuerTypes []v1alpha1.Issuer
@@ -62,10 +63,10 @@ type CertificateSigningRequestReconciler struct {
 
 	// Client is a controller-runtime client used to get and set K8S API resources
 	client.Client
-	// Sign connects to a CA and returns a signed certificate for the supplied CertificateRequest.
+	// Sign connects to a CA and returns a signed certificate for the supplied CertificateSigningRequest.
 	signer.Sign
-	// IgnoreCertificateRequest is an optional function that can prevent the CertificateRequest
-	// and Kubernetes CSR controllers from reconciling a CertificateRequest resource.
+	// IgnoreCertificateSigningRequest is an optional function that can prevent the CertificateSigningRequest
+	// and Kubernetes CSR controllers from reconciling a CertificateSigningRequest resource.
 	signer.IgnoreCertificateRequest
 
 	// EventRecorder is used for creating Kubernetes events on resources.
@@ -82,8 +83,12 @@ func (r *CertificateSigningRequestReconciler) Reconcile(ctx context.Context, req
 
 	logger.V(2).Info("Starting reconcile loop", "name", req.Name, "namespace", req.Namespace)
 
+	// The error returned by `reconcileStatusPatch` is meant for controller-runtime,
+	// not for us. That's why we aren't checking `reconcileError != nil` .
 	result, csrStatusPatch, returnedError := r.reconcileStatusPatch(logger, ctx, req)
+
 	logger.V(2).Info("Got StatusPatch result", "result", result, "patch", csrStatusPatch, "error", returnedError)
+
 	if csrStatusPatch != nil {
 		cr, patch, err := ssaclient.GenerateCertificateSigningRequestStatusPatch(req.Name, req.Namespace, csrStatusPatch)
 		if err != nil {
@@ -96,9 +101,10 @@ func (r *CertificateSigningRequestReconciler) Reconcile(ctx context.Context, req
 				Force:        ptr.To(true),
 			},
 		}); err != nil {
-			if err := client.IgnoreNotFound(err); err != nil {
+			if !apierrors.IsNotFound(err) {
 				return ctrl.Result{}, utilerrors.NewAggregate([]error{err, returnedError})
 			}
+
 			logger.V(1).Info("Not found. Ignoring.")
 		}
 	}
@@ -106,6 +112,15 @@ func (r *CertificateSigningRequestReconciler) Reconcile(ctx context.Context, req
 	return result, returnedError
 }
 
+// reconcileStatusPatch is responsible for reconciling the Kubernetes
+// CertificateSigningRequest resource. It will return the result and reconcileError
+// to be returned by the Reconcile function. It also returns a statusPatch that
+// the Reconcile function will apply to the request resource's status. This function
+// is split out from the Reconcile function to allow for easier testing.
+//
+// The error returned by `reconcileStatusPatch` is meant for controller-runtime,
+// not for the caller. The caller must not check the error (i.e., they must not
+// do `if err != nil...`).
 func (r *CertificateSigningRequestReconciler) reconcileStatusPatch(
 	logger logr.Logger,
 	ctx context.Context,
@@ -119,7 +134,7 @@ func (r *CertificateSigningRequestReconciler) reconcileStatusPatch(
 		return result, nil, fmt.Errorf("unexpected get error: %v", err) // retry
 	}
 
-	// Ignore CertificateRequest if it has not yet been assigned an approval
+	// Ignore CertificateSigningRequest if it has not yet been assigned an approval
 	// status condition by an approval controller.
 	if !util.CertificateSigningRequestIsApproved(&csr) && !util.CertificateSigningRequestIsDenied(&csr) {
 		logger.V(1).Info("CertificateSigningRequest has not been approved or denied. Ignoring.")
@@ -128,26 +143,26 @@ func (r *CertificateSigningRequestReconciler) reconcileStatusPatch(
 
 	// Select first matching issuer type and construct an issuerObject and issuerName
 	issuerObject, issuerName, err := r.matchIssuerType(&csr)
-	// Ignore CertificateRequest if issuerRef doesn't match one of our issuer Types
+	// Ignore CertificateSigningRequest if issuerRef doesn't match one of our issuer Types
 	if err != nil {
 		logger.V(1).Info("Foreign issuer. Ignoring.", "error", err)
 		return result, nil, nil // done
 	}
 	issuerGvk := issuerObject.GetObjectKind().GroupVersionKind()
 
-	// Ignore CertificateRequest if it is already Ready
+	// Ignore CertificateSigningRequest if it is already Ready
 	if len(csr.Status.Certificate) > 0 {
 		logger.V(1).Info("CertificateSigningRequest is Ready. Ignoring.")
 		return result, nil, nil // done
 	}
 
-	// Ignore CertificateRequest if it is already Failed
+	// Ignore CertificateSigningRequest if it is already Failed
 	if util.CertificateSigningRequestIsFailed(&csr) {
 		logger.V(1).Info("CertificateSigningRequest is Failed. Ignoring.")
 		return result, nil, nil // done
 	}
 
-	// Ignore CertificateRequest if it is Denied
+	// Ignore CertificateSigningRequest if it is Denied
 	if util.CertificateSigningRequestIsDenied(&csr) {
 		logger.V(1).Info("CertificateSigningRequest is Denied. Ignoring.")
 		return result, nil, nil // done
@@ -170,7 +185,7 @@ func (r *CertificateSigningRequestReconciler) reconcileStatusPatch(
 
 	if err := r.Client.Get(ctx, issuerName, issuerObject); err != nil && apierrors.IsNotFound(err) {
 		logger.V(1).Info("Issuer not found. Waiting for it to be created")
-		r.EventRecorder.Eventf(&csr, corev1.EventTypeNormal, "WaitingForIssuerExist", "Waiting for the issuer to exist")
+		r.EventRecorder.Eventf(&csr, corev1.EventTypeNormal, "WaitingForIssuerExist", fmt.Sprintf("%s. Waiting for it to be created.", err))
 		return result, csrStatusPatch, nil // done, apply patch
 	} else if err != nil {
 		r.EventRecorder.Eventf(&csr, corev1.EventTypeWarning, "UnexpectedError", "Got an unexpected error while processing the CR")
@@ -185,8 +200,17 @@ func (r *CertificateSigningRequestReconciler) reconcileStatusPatch(
 		(readyCondition.Status != cmmeta.ConditionTrue) ||
 		(readyCondition.ObservedGeneration < issuerObject.GetGeneration()) {
 
+		message := ""
+		if readyCondition == nil {
+			message = "Waiting for issuer to become ready. Current issuer ready condition: <none>."
+		} else if readyCondition.Status != cmmeta.ConditionTrue {
+			message = fmt.Sprintf("Waiting for issuer to become ready. Current issuer ready condition is \"%s\": %s.", readyCondition.Reason, readyCondition.Message)
+		} else {
+			message = "Waiting for issuer to become ready. Current issuer ready condition is outdated."
+		}
+
 		logger.V(1).Info("Issuer is not Ready yet. Waiting for it to become ready.", "issuer ready condition", readyCondition)
-		r.EventRecorder.Eventf(&csr, corev1.EventTypeNormal, "WaitingForIssuerReady", "Waiting for the issuer to become ready")
+		r.EventRecorder.Eventf(&csr, corev1.EventTypeNormal, "WaitingForIssuerReady", message)
 		return result, csrStatusPatch, nil // done, apply patch
 	}
 
@@ -202,16 +226,16 @@ func (r *CertificateSigningRequestReconciler) reconcileStatusPatch(
 				err = utilerrors.NewAggregate([]error{err, reportError})
 			}
 
-			logger.V(1).Error(err, "Temporary CertificateRequest error.")
+			logger.V(1).Error(err, "Temporary CertificateSigningRequest error.")
 
-			r.EventRecorder.Eventf(&csr, corev1.EventTypeWarning, "WaitingForIssuerReady", "Waiting for the issuer to become ready")
-			return result, csrStatusPatch, nil // done, apply patch
+			r.EventRecorder.Eventf(&csr, corev1.EventTypeWarning, "WaitingForIssuerReady", "Waiting for issuer to become ready. Current issuer ready condition is outdated.")
+			return result, csrStatusPatch, reconcile.TerminalError(err) // done, apply patch
 		}
 
 		didCustomConditionTransition := false
 
 		if targetCustom := new(signer.SetCertificateRequestConditionError); errors.As(err, targetCustom) {
-			logger.V(1).Info("Set CertificateRequestCondition error. Setting condition.", "error", err)
+			logger.V(1).Info("Set CertificateSigningRequestCondition error. Setting condition.", "error", err)
 			conditions.SetCertificateSigningRequestStatusCondition(
 				r.Clock,
 				csr.Status.Conditions,
@@ -233,7 +257,7 @@ func (r *CertificateSigningRequestReconciler) reconcileStatusPatch(
 		pastMaxRetryDuration := r.Clock.Now().After(csr.CreationTimestamp.Add(r.MaxRetryDuration))
 		if !isPendingError && (isPermanentError || pastMaxRetryDuration) {
 			// fail permanently
-			logger.V(1).Error(err, "Permanent CertificateRequest error. Marking as failed.")
+			logger.V(1).Error(err, "Permanent CertificateSigningRequest error. Marking as failed.")
 
 			conditions.SetCertificateSigningRequestStatusCondition(
 				r.Clock,
@@ -242,29 +266,20 @@ func (r *CertificateSigningRequestReconciler) reconcileStatusPatch(
 				certificatesv1.CertificateFailed,
 				corev1.ConditionTrue,
 				cmapi.CertificateRequestReasonFailed,
-				fmt.Sprintf("CertificateRequest has failed permanently: %s", err),
+				fmt.Sprintf("CertificateSigningRequest has failed permanently: %s", err),
 			)
-			r.EventRecorder.Eventf(&csr, corev1.EventTypeWarning, "PermanentError", "Failed permanently to sign CertificateRequest: %s", err)
-			return result, csrStatusPatch, nil // done, apply patch
+			r.EventRecorder.Eventf(&csr, corev1.EventTypeWarning, "PermanentError", "CertificateSigningRequest has failed permanently: %s", err)
+			return result, csrStatusPatch, reconcile.TerminalError(err) // done, apply patch
 		} else {
 			// retry
-			logger.V(1).Error(err, "Retryable CertificateRequest error.")
+			logger.V(1).Error(err, "Retryable CertificateSigningRequest error.")
 
-			r.EventRecorder.Eventf(&csr, corev1.EventTypeWarning, "RetryableError", "Failed to sign CertificateRequest, will retry: %s", err)
+			r.EventRecorder.Eventf(&csr, corev1.EventTypeWarning, "RetryableError", "Failed to sign CertificateSigningRequest, will retry: %s", err)
 			if didCustomConditionTransition {
 				// the reconciliation loop will be retriggered because of the added/ changed custom condition
-				return result, csrStatusPatch, nil // done, apply patch
+				return result, csrStatusPatch, reconcile.TerminalError(err) // apply patch, done
 			} else {
-				// We trigger a reconciliation here. Controller-runtime will use exponential backoff to requeue
-				// the request. We don't return an error here because we don't want controller-runtime to log an
-				// additional error message and we want the metrics to show a requeue instead of an error to be
-				// consistent with the other cases (see didCustomConditionTransition and Permanent error above).
-				//
-				// Important: This means that the ReconcileErrors metric will only be incremented in case of a
-				// apiserver failure (see "unexpected get error" above). The ReconcileTotal labelRequeue metric
-				// can be used instead to get some estimate of the number of requeues.
-				result.Requeue = true
-				return result, csrStatusPatch, nil // requeue with backoff, apply patch
+				return result, csrStatusPatch, err // requeue with backoff, apply patch
 			}
 		}
 	}
@@ -272,7 +287,7 @@ func (r *CertificateSigningRequestReconciler) reconcileStatusPatch(
 	csrStatusPatch.Certificate = signedCertificate.ChainPEM
 
 	logger.V(1).Info("Successfully finished the reconciliation.")
-	r.EventRecorder.Eventf(&csr, corev1.EventTypeNormal, "Issued", "Succeeded signing the CertificateRequest")
+	r.EventRecorder.Eventf(&csr, corev1.EventTypeNormal, "Issued", "Succeeded signing the CertificateSigningRequest")
 	return result, csrStatusPatch, nil // done, apply patch
 }
 
@@ -340,12 +355,12 @@ func (r *CertificateSigningRequestReconciler) allIssuerTypes() []v1alpha1.Issuer
 // SetupWithManager sets up the controller with the Manager.
 //
 // It ensures that the Manager scheme has all the types that are needed by this controller.
-// It sets up indexing of CertificateRequests by issuerRef to allow fast lookups
-// of all the CertificateRequest resources associated with a particular Issuer /
+// It sets up indexing of CertificateSigningRequests by issuerRef to allow fast lookups
+// of all the CertificateSigningRequest resources associated with a particular Issuer /
 // ClusterIssuer.
-// It configures the controller re-reconcile all the related CertificateRequests
+// It configures the controller re-reconcile all the related CertificateSigningRequests
 // when an Issuer / ClusterIssuer is created or when it changes. This ensures
-// that a CertificateRequest will be properly reconciled regardless of whether
+// that a CertificateSigningRequest will be properly reconciled regardless of whether
 // the Issuer it references is created before or afterwards.
 func (r *CertificateSigningRequestReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	if err := setupCertificateSigningRequestReconcilerScheme(mgr.GetScheme()); err != nil {

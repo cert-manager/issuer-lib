@@ -128,9 +128,9 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 		// NOTE: The IssuerError error cannot be tested in this unit test. It is tested in the
 		// integration test instead.
 
-		// Ignore the request if the CertificateRequest is not found.
+		// Ignore the request if the CertificateSigningRequest is not found.
 		{
-			name:    "ignore-certificaterequest-not-found",
+			name:    "ignore-certificatesigningrequest-not-found",
 			objects: []client.Object{},
 		},
 
@@ -144,7 +144,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			},
 		},
 
-		// Ignore CertificateRequest with an unknown SignerName group.
+		// Ignore CertificateSigningRequest with an unknown SignerName group.
 		{
 			name: "issuer-ref-unknown-group",
 			objects: []client.Object{
@@ -154,7 +154,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			},
 		},
 
-		// Ignore CertificateRequest with an unknown SignerName kind.
+		// Ignore CertificateSigningRequest with an unknown SignerName kind.
 		{
 			name: "issuer-ref-unknown-kind",
 			objects: []client.Object{
@@ -164,7 +164,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			},
 		},
 
-		// Ignore CertificateRequest which is already Ready.
+		// Ignore CertificateSigningRequest which is already Ready.
 		{
 			name: "already-ready",
 			objects: []client.Object{
@@ -176,7 +176,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			},
 		},
 
-		// Ignore CertificateRequest which is already Failed.
+		// Ignore CertificateSigningRequest which is already Failed.
 		{
 			name: "already-failed",
 			objects: []client.Object{
@@ -189,7 +189,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			},
 		},
 
-		// Ignore CertificateRequest which is already Denied.
+		// Ignore CertificateSigningRequest which is already Denied.
 		{
 			name: "already-denied",
 			objects: []client.Object{
@@ -214,7 +214,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 				Conditions: nil,
 			},
 			expectedEvents: []string{
-				"Normal WaitingForIssuerExist Waiting for the issuer to exist",
+				"Normal WaitingForIssuerExist simpleclusterissuers.testing.cert-manager.io \"cluster-issuer-1\" not found. Waiting for it to be created.",
 			},
 		},
 
@@ -236,7 +236,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 				Conditions: nil,
 			},
 			expectedEvents: []string{
-				"Normal WaitingForIssuerReady Waiting for the issuer to become ready",
+				"Normal WaitingForIssuerReady Waiting for issuer to become ready. Current issuer ready condition: <none>.",
 			},
 		},
 
@@ -261,7 +261,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 				Conditions: nil,
 			},
 			expectedEvents: []string{
-				"Normal WaitingForIssuerReady Waiting for the issuer to become ready",
+				"Normal WaitingForIssuerReady Waiting for issuer to become ready. Current issuer ready condition is \"[REASON]\": [MESSAGE].",
 			},
 		},
 
@@ -281,7 +281,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 				Conditions: nil,
 			},
 			expectedEvents: []string{
-				"Normal WaitingForIssuerReady Waiting for the issuer to become ready",
+				"Normal WaitingForIssuerReady Waiting for issuer to become ready. Current issuer ready condition is outdated.",
 			},
 		},
 
@@ -309,14 +309,15 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 						Type:               certificatesv1.CertificateFailed,
 						Status:             v1.ConditionTrue,
 						Reason:             cmapi.CertificateRequestReasonFailed,
-						Message:            "CertificateRequest has failed permanently: a specific error",
+						Message:            "CertificateSigningRequest has failed permanently: a specific error",
 						LastTransitionTime: fakeTimeObj2,
 						LastUpdateTime:     fakeTimeObj2,
 					},
 				},
 			},
+			validateError: errormatch.ErrorContains("terminal error: a specific error"),
 			expectedEvents: []string{
-				"Warning PermanentError Failed permanently to sign CertificateRequest: a specific error",
+				"Warning PermanentError CertificateSigningRequest has failed permanently: a specific error",
 			},
 		},
 
@@ -338,22 +339,18 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 				),
 				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
-			// instead of returning an error, we trigger a new reconciliation by setting requeue=true
-			validateError: errormatch.NoError(),
-			expectedResult: reconcile.Result{
-				Requeue: true,
-			},
 			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
 				Conditions: nil,
 			},
+			validateError: errormatch.ErrorContains("pending error"),
 			expectedEvents: []string{
-				"Warning RetryableError Failed to sign CertificateRequest, will retry: pending error",
+				"Warning RetryableError Failed to sign CertificateSigningRequest, will retry: pending error",
 			},
 		},
 
 		// If the sign function returns an SetCertificateRequestConditionError error with a condition
 		// type that is *not present* in the status, the new condition is *added* to the
-		// CertificateRequest.
+		// CertificateSigningRequest.
 		// Additionally, if the error wrapped by SetCertificateRequestConditionError is not one of the
 		// supported 'signer API' errors an we still *have time left* to retry, set the Ready
 		// condition to *Pending*.
@@ -378,9 +375,6 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 				),
 				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
-			// no error should be returned because the reconciliation should be triggered
-			// when the custom condition is added
-			validateError: errormatch.NoError(),
 			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
 				Conditions: []certificatesv1.CertificateSigningRequestCondition{
 					{
@@ -393,8 +387,9 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 					},
 				},
 			},
+			validateError: errormatch.ErrorContains("terminal error: test error"),
 			expectedEvents: []string{
-				"Warning RetryableError Failed to sign CertificateRequest, will retry: test error",
+				"Warning RetryableError Failed to sign CertificateSigningRequest, will retry: test error",
 			},
 		},
 
@@ -433,11 +428,6 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 				),
 				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
-			// instead of returning an error, we trigger a new reconciliation by setting requeue=true
-			validateError: errormatch.NoError(),
-			expectedResult: reconcile.Result{
-				Requeue: true,
-			},
 			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
 				Conditions: []certificatesv1.CertificateSigningRequestCondition{
 					{
@@ -450,14 +440,15 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 					},
 				},
 			},
+			validateError: errormatch.ErrorContains("test error2"),
 			expectedEvents: []string{
-				"Warning RetryableError Failed to sign CertificateRequest, will retry: test error2",
+				"Warning RetryableError Failed to sign CertificateSigningRequest, will retry: test error2",
 			},
 		},
 
 		// If the sign function returns an SetCertificateRequestConditionError error with a condition
 		// type that is *not present* in the status, the new condition is *added* to the
-		// CertificateRequest.
+		// CertificateSigningRequest.
 		// Additionally, if the error wrapped by SetCertificateRequestConditionError is not one of the
 		// supported 'signer API' errors an we have *no time left* to retry, set the Ready condition
 		// to *Failed*.
@@ -482,9 +473,6 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 				),
 				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
-			// no error should be returned because the reconciliation should be triggered when the
-			// custom condition is added
-			validateError: errormatch.NoError(),
 			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
 				Conditions: []certificatesv1.CertificateSigningRequestCondition{
 					{
@@ -499,14 +487,15 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 						Type:               certificatesv1.CertificateFailed,
 						Status:             v1.ConditionTrue,
 						Reason:             cmapi.CertificateRequestReasonFailed,
-						Message:            "CertificateRequest has failed permanently: test error",
+						Message:            "CertificateSigningRequest has failed permanently: test error",
 						LastTransitionTime: fakeTimeObj2,
 						LastUpdateTime:     fakeTimeObj2,
 					},
 				},
 			},
+			validateError: errormatch.ErrorContains("terminal error: test error"),
 			expectedEvents: []string{
-				"Warning PermanentError Failed permanently to sign CertificateRequest: test error",
+				"Warning PermanentError CertificateSigningRequest has failed permanently: test error",
 			},
 		},
 
@@ -545,8 +534,6 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 				),
 				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
-			// since we got into a permanent failure state, we should not return an error
-			validateError: errormatch.NoError(),
 			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
 				Conditions: []certificatesv1.CertificateSigningRequestCondition{
 					{
@@ -561,19 +548,20 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 						Type:               certificatesv1.CertificateFailed,
 						Status:             v1.ConditionTrue,
 						Reason:             cmapi.CertificateRequestReasonFailed,
-						Message:            "CertificateRequest has failed permanently: test error2",
+						Message:            "CertificateSigningRequest has failed permanently: test error2",
 						LastTransitionTime: fakeTimeObj2,
 						LastUpdateTime:     fakeTimeObj2,
 					},
 				},
 			},
+			validateError: errormatch.ErrorContains("terminal error: test error2"),
 			expectedEvents: []string{
-				"Warning PermanentError Failed permanently to sign CertificateRequest: test error2",
+				"Warning PermanentError CertificateSigningRequest has failed permanently: test error2",
 			},
 		},
 
 		// If the sign function returns an SetCertificateRequestConditionError, the specified
-		// conditions value is updated/ added to the CertificateRequest status.
+		// conditions value is updated/ added to the CertificateSigningRequest status.
 		// Additionally, if the error wrapped by SetCertificateRequestConditionError is a PendingError
 		// error, the Ready condition is set to Pending (even if the MaxRetryDuration has been
 		// exceeded).
@@ -598,9 +586,6 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 				),
 				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
-			// no error should be returned because the reconciliation should be triggered
-			// when the custom condition is added
-			validateError: errormatch.NoError(),
 			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
 				Conditions: []certificatesv1.CertificateSigningRequestCondition{
 					{
@@ -613,13 +598,14 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 					},
 				},
 			},
+			validateError: errormatch.ErrorContains("terminal error: test error"),
 			expectedEvents: []string{
-				"Warning RetryableError Failed to sign CertificateRequest, will retry: test error",
+				"Warning RetryableError Failed to sign CertificateSigningRequest, will retry: test error",
 			},
 		},
 
 		// If the sign function returns an SetCertificateRequestConditionError, the specified
-		// conditions value is updated/ added to the CertificateRequest status.
+		// conditions value is updated/ added to the CertificateSigningRequest status.
 		// Additionally, if the error wrapped by SetCertificateRequestConditionError is a PendingError
 		// error, the Ready condition is set to Failed (even if the MaxRetryDuration has NOT been
 		// exceeded).
@@ -641,9 +627,6 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 				),
 				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
-			// no error should be returned because we are in a permanent failure state no further
-			// retries should be made
-			validateError: errormatch.NoError(),
 			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
 				Conditions: []certificatesv1.CertificateSigningRequestCondition{
 					{
@@ -658,14 +641,15 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 						Type:               certificatesv1.CertificateFailed,
 						Status:             v1.ConditionTrue,
 						Reason:             cmapi.CertificateRequestReasonFailed,
-						Message:            "CertificateRequest has failed permanently: test error",
+						Message:            "CertificateSigningRequest has failed permanently: test error",
 						LastTransitionTime: fakeTimeObj2,
 						LastUpdateTime:     fakeTimeObj2,
 					},
 				},
 			},
+			validateError: errormatch.ErrorContains("terminal error: test error"),
 			expectedEvents: []string{
-				"Warning PermanentError Failed permanently to sign CertificateRequest: test error",
+				"Warning PermanentError CertificateSigningRequest has failed permanently: test error",
 			},
 		},
 
@@ -689,14 +673,15 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 						Type:               certificatesv1.CertificateFailed,
 						Status:             v1.ConditionTrue,
 						Reason:             cmapi.CertificateRequestReasonFailed,
-						Message:            "CertificateRequest has failed permanently: a specific error",
+						Message:            "CertificateSigningRequest has failed permanently: a specific error",
 						LastTransitionTime: fakeTimeObj2,
 						LastUpdateTime:     fakeTimeObj2,
 					},
 				},
 			},
+			validateError: errormatch.ErrorContains("terminal error: a specific error"),
 			expectedEvents: []string{
-				"Warning PermanentError Failed permanently to sign CertificateRequest: a specific error",
+				"Warning PermanentError CertificateSigningRequest has failed permanently: a specific error",
 			},
 		},
 
@@ -718,16 +703,12 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 				),
 				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
 			},
-			// instead of returning an error, we trigger a new reconciliation by setting requeue=true
-			validateError: errormatch.NoError(),
-			expectedResult: reconcile.Result{
-				Requeue: true,
-			},
 			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
 				Conditions: nil,
 			},
+			validateError: errormatch.ErrorContains("waiting for approval"),
 			expectedEvents: []string{
-				"Warning RetryableError Failed to sign CertificateRequest, will retry: waiting for approval",
+				"Warning RetryableError Failed to sign CertificateSigningRequest, will retry: waiting for approval",
 			},
 		},
 
@@ -758,7 +739,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 				Conditions:  nil,
 			},
 			expectedEvents: []string{
-				"Normal Issued Succeeded signing the CertificateRequest",
+				"Normal Issued Succeeded signing the CertificateSigningRequest",
 			},
 		},
 	}
@@ -790,7 +771,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			logger := logrtesting.NewTestLoggerWithOptions(t, logrtesting.Options{LogTimestamp: true, Verbosity: 10})
 			fakeRecorder := record.NewFakeRecorder(100)
 
-			controller := CertificateSigningRequestReconciler{
+			controller := &CertificateSigningRequestReconciler{
 				IssuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
 				ClusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
 				FieldOwner:         fieldOwner,
@@ -805,10 +786,10 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			err = controller.setIssuersGroupVersionKind(scheme)
 			require.NoError(t, err)
 
-			res, crsPatch, err := controller.reconcileStatusPatch(logger, context.TODO(), req)
+			res, csrStatusPatch, err := controller.reconcileStatusPatch(logger, context.TODO(), req)
 
 			assert.Equal(t, tc.expectedResult, res)
-			assert.Equal(t, tc.expectedStatusPatch, crsPatch)
+			assert.Equal(t, tc.expectedStatusPatch, csrStatusPatch)
 			ptr.Deref(tc.validateError, *errormatch.NoError())(t, err)
 
 			allEvents := chanToSlice(fakeRecorder.Events)

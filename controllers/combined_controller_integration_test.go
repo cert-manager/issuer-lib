@@ -104,13 +104,13 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 				Type:    cmapi.IssuerConditionReady,
 				Status:  cmmeta.ConditionFalse,
 				Reason:  v1alpha1.IssuerConditionReasonPending,
-				Message: "Issuer is not ready yet: [error message]",
+				Message: "Not ready yet: [error message]",
 			},
 			certificateReadyCondition: &cmapi.CertificateRequestCondition{
 				Type:    cmapi.CertificateRequestConditionReady,
 				Status:  cmmeta.ConditionFalse,
 				Reason:  cmapi.CertificateRequestReasonPending,
-				Message: "Issuer is not Ready yet. Current ready condition is \"Pending\": Issuer is not ready yet: [error message]. Waiting for it to become ready.",
+				Message: "Waiting for issuer to become ready. Current issuer ready condition is \"Pending\": Not ready yet: [error message].",
 			},
 			checkAutoRecovery: true,
 		},
@@ -121,13 +121,13 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 				Type:    cmapi.IssuerConditionReady,
 				Status:  cmmeta.ConditionFalse,
 				Reason:  v1alpha1.IssuerConditionReasonFailed,
-				Message: "Issuer has failed permanently: [error message]",
+				Message: "Failed permanently: [error message]",
 			},
 			certificateReadyCondition: &cmapi.CertificateRequestCondition{
 				Type:    cmapi.CertificateRequestConditionReady,
 				Status:  cmmeta.ConditionFalse,
 				Reason:  cmapi.CertificateRequestReasonPending,
-				Message: "Issuer is not Ready yet. Current ready condition is \"Failed\": Issuer has failed permanently: [error message]. Waiting for it to become ready.",
+				Message: "Waiting for issuer to become ready. Current issuer ready condition is \"Failed\": Failed permanently: [error message].",
 			},
 			checkAutoRecovery: false,
 		},
@@ -200,7 +200,7 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 				if (readyCondition == nil) ||
 					(readyCondition.Status != cmmeta.ConditionFalse) ||
 					(readyCondition.Reason != cmapi.CertificateRequestReasonPending) ||
-					(readyCondition.Message != "Issuer is not Ready yet. Current ready condition is outdated. Waiting for it to become ready.") {
+					(readyCondition.Message != "Waiting for issuer to become ready. Current issuer ready condition is outdated.") {
 					return fmt.Errorf("incorrect ready condition: %v", readyCondition)
 				}
 
@@ -267,7 +267,7 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 					if (readyCondition == nil) ||
 						(readyCondition.Status != cmmeta.ConditionTrue) ||
 						(readyCondition.Reason != cmapi.CertificateRequestReasonIssued) ||
-						(readyCondition.Message != "issued") {
+						(readyCondition.Message != "Succeeded signing the CertificateRequest") {
 						return fmt.Errorf("incorrect ready condition: %v", readyCondition)
 					}
 

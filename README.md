@@ -47,7 +47,7 @@ It takes care of:
 - Updating the CertificateRequest status with the signed certificate data
 - Handling errors and retries
 - Handling CertificateRequest approval and denial
-- [FUTURE] Handle issuance of Kubernetes CSR resources
+- Handling issuance of Kubernetes CSR resources
 - [FUTURE] Provide a set of conformance tests for issuers
 
 ## Usage
