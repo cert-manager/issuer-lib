@@ -15,7 +15,7 @@ jobs:
       id-token: write
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           # Full git history is needed to get a Git tags which are used to
           # calculate a valid semver for the Helm chart
