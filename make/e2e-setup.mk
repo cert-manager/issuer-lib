@@ -75,6 +75,7 @@ e2e-setup-cert-manager: | kind-cluster images $(NEEDS_HELM) $(NEEDS_KUBECTL)
 		--install \
 		--create-namespace \
 		--wait \
+		--version $(quay.io/jetstack/cert-manager-controller.TAG) \
 		--namespace cert-manager \
 		--repo https://charts.jetstack.io \
 		--set installCRDs=true \

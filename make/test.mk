@@ -17,7 +17,7 @@
 CERT_MANAGER_CRDS := $(BINDIR)/scratch/cert-manager.crds.yaml
 $(CERT_MANAGER_CRDS):
 	mkdir -p $(dir $@)
-	curl https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.crds.yaml \
+	curl https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.crds.yaml \
 		 -fsSL -o $@
 
 $(BINDIR)/envs/CERT_MANAGER_CRDS: $(CERT_MANAGER_CRDS) | $(BINDIR)/envs
