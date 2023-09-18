@@ -34,3 +34,7 @@ func (p applyPatch) Data(_ client.Object) ([]byte, error) {
 func (p applyPatch) Type() types.PatchType {
 	return types.ApplyPatchType
 }
+
+func (p applyPatch) String() string {
+	return string(p.patch)
+}

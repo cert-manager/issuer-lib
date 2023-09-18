@@ -118,22 +118,24 @@ func (r *CombinedController) SetupWithManager(ctx context.Context, mgr ctrl.Mana
 
 	if !r.DisableCertificateRequestController {
 		if err = (&CertificateRequestReconciler{
-			IssuerTypes:        r.IssuerTypes,
-			ClusterIssuerTypes: r.ClusterIssuerTypes,
+			RequestController: RequestController{
+				IssuerTypes:        r.IssuerTypes,
+				ClusterIssuerTypes: r.ClusterIssuerTypes,
 
-			FieldOwner:       r.FieldOwner,
-			MaxRetryDuration: r.MaxRetryDuration,
-			EventSource:      eventSource,
+				FieldOwner:       r.FieldOwner,
+				MaxRetryDuration: r.MaxRetryDuration,
+				EventSource:      eventSource,
 
-			Client:                   cl,
-			Sign:                     r.Sign,
-			IgnoreCertificateRequest: r.IgnoreCertificateRequest,
-			EventRecorder:            r.EventRecorder,
-			Clock:                    r.Clock,
+				Client:                   cl,
+				Sign:                     r.Sign,
+				IgnoreCertificateRequest: r.IgnoreCertificateRequest,
+				EventRecorder:            r.EventRecorder,
+				Clock:                    r.Clock,
+
+				PostSetupWithManager: r.PostSetupWithManager,
+			},
 
 			SetCAOnCertificateRequest: r.SetCAOnCertificateRequest,
-
-			PostSetupWithManager: r.PostSetupWithManager,
 		}).SetupWithManager(ctx, mgr); err != nil {
 			return fmt.Errorf("CertificateRequestReconciler: %w", err)
 		}
@@ -141,20 +143,22 @@ func (r *CombinedController) SetupWithManager(ctx context.Context, mgr ctrl.Mana
 
 	if !r.DisableKubernetesCSRController {
 		if err = (&CertificateSigningRequestReconciler{
-			IssuerTypes:        r.IssuerTypes,
-			ClusterIssuerTypes: r.ClusterIssuerTypes,
+			RequestController: RequestController{
+				IssuerTypes:        r.IssuerTypes,
+				ClusterIssuerTypes: r.ClusterIssuerTypes,
 
-			FieldOwner:       r.FieldOwner,
-			MaxRetryDuration: r.MaxRetryDuration,
-			EventSource:      eventSource,
+				FieldOwner:       r.FieldOwner,
+				MaxRetryDuration: r.MaxRetryDuration,
+				EventSource:      eventSource,
 
-			Client:                   cl,
-			Sign:                     r.Sign,
-			IgnoreCertificateRequest: r.IgnoreCertificateRequest,
-			EventRecorder:            r.EventRecorder,
-			Clock:                    r.Clock,
+				Client:                   cl,
+				Sign:                     r.Sign,
+				IgnoreCertificateRequest: r.IgnoreCertificateRequest,
+				EventRecorder:            r.EventRecorder,
+				Clock:                    r.Clock,
 
-			PostSetupWithManager: r.PostSetupWithManager,
+				PostSetupWithManager: r.PostSetupWithManager,
+			},
 		}).SetupWithManager(ctx, mgr); err != nil {
 			return fmt.Errorf("CertificateRequestReconciler: %w", err)
 		}

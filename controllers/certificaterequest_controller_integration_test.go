@@ -84,20 +84,22 @@ func TestCertificateRequestControllerIntegrationIssuerInitiallyNotFoundAndNotRea
 	ctx = setupControllersAPIServerAndClient(t, ctx, kubeClients,
 		func(mgr ctrl.Manager) controllerInterface {
 			return &CertificateRequestReconciler{
-				IssuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
-				ClusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
-				FieldOwner:         fieldOwner,
-				MaxRetryDuration:   time.Minute,
-				EventSource:        kubeutil.NewEventStore(),
-				Client:             mgr.GetClient(),
-				Sign: func(_ context.Context, cr signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, error) {
-					atomic.AddUint64(&counters[extractIdFromNamespace(t, cr.GetNamespace())], 1)
-					return signer.PEMBundle{
-						ChainPEM: []byte("cert"),
-					}, nil
+				RequestController: RequestController{
+					IssuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
+					ClusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
+					FieldOwner:         fieldOwner,
+					MaxRetryDuration:   time.Minute,
+					EventSource:        kubeutil.NewEventStore(),
+					Client:             mgr.GetClient(),
+					Sign: func(_ context.Context, cr signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, error) {
+						atomic.AddUint64(&counters[extractIdFromNamespace(t, cr.GetNamespace())], 1)
+						return signer.PEMBundle{
+							ChainPEM: []byte("cert"),
+						}, nil
+					},
+					EventRecorder: record.NewFakeRecorder(100),
+					Clock:         clock.RealClock{},
 				},
-				EventRecorder: record.NewFakeRecorder(100),
-				Clock:         clock.RealClock{},
 			}
 		},
 	)
@@ -223,23 +225,25 @@ func TestCertificateRequestControllerIntegrationSetCondition(t *testing.T) {
 	ctx = setupControllersAPIServerAndClient(t, ctx, kubeClients,
 		func(mgr ctrl.Manager) controllerInterface {
 			return &CertificateRequestReconciler{
-				IssuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
-				ClusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
-				FieldOwner:         fieldOwner,
-				MaxRetryDuration:   time.Minute,
-				EventSource:        kubeutil.NewEventStore(),
-				Client:             mgr.GetClient(),
-				Sign: func(ctx context.Context, cr signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, error) {
-					atomic.AddUint64(&counter, 1)
-					select {
-					case err := <-signResult:
-						return signer.PEMBundle{}, err
-					case <-ctx.Done():
-						return signer.PEMBundle{}, ctx.Err()
-					}
+				RequestController: RequestController{
+					IssuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
+					ClusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
+					FieldOwner:         fieldOwner,
+					MaxRetryDuration:   time.Minute,
+					EventSource:        kubeutil.NewEventStore(),
+					Client:             mgr.GetClient(),
+					Sign: func(ctx context.Context, cr signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, error) {
+						atomic.AddUint64(&counter, 1)
+						select {
+						case err := <-signResult:
+							return signer.PEMBundle{}, err
+						case <-ctx.Done():
+							return signer.PEMBundle{}, ctx.Err()
+						}
+					},
+					EventRecorder: record.NewFakeRecorder(100),
+					Clock:         clock.RealClock{},
 				},
-				EventRecorder: record.NewFakeRecorder(100),
-				Clock:         clock.RealClock{},
 			}
 		},
 	)

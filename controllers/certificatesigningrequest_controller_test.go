@@ -771,22 +771,28 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			logger := logrtesting.NewTestLoggerWithOptions(t, logrtesting.Options{LogTimestamp: true, Verbosity: 10})
 			fakeRecorder := record.NewFakeRecorder(100)
 
-			controller := &CertificateSigningRequestReconciler{
-				IssuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
-				ClusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
-				FieldOwner:         fieldOwner,
-				MaxRetryDuration:   time.Minute,
-				EventSource:        kubeutil.NewEventStore(),
-				Client:             fakeClient,
-				Sign:               tc.sign,
-				EventRecorder:      fakeRecorder,
-				Clock:              fakeClock2,
-			}
+			controller := (&CertificateSigningRequestReconciler{
+				RequestController: RequestController{
+					IssuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
+					ClusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
+					FieldOwner:         fieldOwner,
+					MaxRetryDuration:   time.Minute,
+					EventSource:        kubeutil.NewEventStore(),
+					Client:             fakeClient,
+					Sign:               tc.sign,
+					EventRecorder:      fakeRecorder,
+					Clock:              fakeClock2,
+				},
+			}).Init()
 
-			err = controller.setIssuersGroupVersionKind(scheme)
+			err = controller.setAllIssuerTypesWithGroupVersionKind(scheme)
 			require.NoError(t, err)
 
-			res, csrStatusPatch, err := controller.reconcileStatusPatch(logger, context.TODO(), req)
+			res, statusPatch, err := controller.reconcileStatusPatch(logger, context.TODO(), req)
+			var csrStatusPatch *certificatesv1.CertificateSigningRequestStatus
+			if statusPatch != nil {
+				csrStatusPatch = statusPatch.(CertificateSigningRequestPatch).CertificateSigningRequestPatch()
+			}
 
 			assert.Equal(t, tc.expectedResult, res)
 			assert.Equal(t, tc.expectedStatusPatch, csrStatusPatch)
@@ -904,11 +910,13 @@ func TestCertificateSigningRequestMatchIssuerType(t *testing.T) {
 			t.Parallel()
 
 			crr := &CertificateSigningRequestReconciler{
-				IssuerTypes:        tc.issuerTypes,
-				ClusterIssuerTypes: tc.clusterIssuerTypes,
+				RequestController: RequestController{
+					IssuerTypes:        tc.issuerTypes,
+					ClusterIssuerTypes: tc.clusterIssuerTypes,
+				},
 			}
 
-			require.NoError(t, crr.setIssuersGroupVersionKind(scheme))
+			require.NoError(t, crr.setAllIssuerTypesWithGroupVersionKind(scheme))
 
 			issuerType, issuerName, err := crr.matchIssuerType(tc.csr)
 
