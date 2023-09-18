@@ -17,13 +17,13 @@ jobs:
     runs-on: ubuntu-20.04
     if: github.event.pull_request.draft == false
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       # Set up Go so that golangci-lint has the right $GOROOT and can find
       # the right standard libraries. See:
       # https://github.com/reviewdog/action-golangci-lint/issues/73#issuecomment-813386935
       - uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
-      - uses: golangci/golangci-lint-action@v3.6.0
+      - uses: golangci/golangci-lint-action@v3.7.0
         with:
           args: --verbose --timeout=3m
