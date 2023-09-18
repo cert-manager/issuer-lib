@@ -24,7 +24,7 @@ func CertificateRequestObjectFromCertificateRequest(cr *cmapi.CertificateRequest
 func (c *certificateRequestImpl) GetRequest() (*x509.Certificate, time.Duration, []byte, error) {
 	duration := apiutil.DefaultCertDuration(c.CertificateRequest.Spec.Duration)
 
-	template, err := pki.GenerateTemplateFromCertificateRequest(c.CertificateRequest)
+	template, err := pki.CertificateTemplateFromCertificateRequest(c.CertificateRequest)
 	if err != nil {
 		return nil, 0, nil, err
 	}
@@ -52,7 +52,7 @@ func (c *certificateSigningRequestImpl) GetRequest() (*x509.Certificate, time.Du
 		return nil, 0, nil, err
 	}
 
-	template, err := pki.GenerateTemplateFromCertificateSigningRequest(c.CertificateSigningRequest)
+	template, err := pki.CertificateTemplateFromCertificateSigningRequest(c.CertificateSigningRequest)
 	if err != nil {
 		return nil, 0, nil, err
 	}

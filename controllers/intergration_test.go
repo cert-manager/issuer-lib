@@ -31,6 +31,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/cert-manager/issuer-lib/internal/tests/testresource"
 	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/api"
@@ -84,10 +85,12 @@ func setupControllersAPIServerAndClient(t *testing.T, parentCtx context.Context,
 
 	t.Log("Creating a controller manager")
 	mgr, err := ctrl.NewManager(kubeClients.Rest, ctrl.Options{
-		Scheme:             scheme,
-		Logger:             logger,
-		LeaderElection:     false,
-		MetricsBindAddress: "0",
+		Scheme:         scheme,
+		Logger:         logger,
+		LeaderElection: false,
+		Metrics: server.Options{
+			BindAddress: "0",
+		},
 	})
 	require.NoError(t, err)
 
