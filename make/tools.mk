@@ -28,7 +28,7 @@ TOOLS :=
 # https://github.com/helm/helm/releases
 TOOLS += helm=v3.12.3
 # https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl
-TOOLS += kubectl=v1.27.4
+TOOLS += kubectl=v1.28.1
 # https://github.com/kubernetes-sigs/kind/releases
 TOOLS += kind=v0.20.0
 # https://github.com/kyverno/kyverno/releases
@@ -40,9 +40,9 @@ TOOLS += ko=0.14.1
 
 ### go packages
 # https://pkg.go.dev/sigs.k8s.io/controller-tools/cmd/controller-gen?tab=versions
-TOOLS += controller-gen=v0.12.1
+TOOLS += controller-gen=v0.13.0
 # https://pkg.go.dev/golang.org/x/tools/cmd/goimports?tab=versions
-TOOLS += goimports=v0.12.0
+TOOLS += goimports=v0.13.0
 # https://pkg.go.dev/github.com/google/go-licenses/licenses?tab=versions
 TOOLS += go-licenses=v1.6.0
 # https://pkg.go.dev/gotest.tools/gotestsum/testjson?tab=versions
@@ -50,17 +50,17 @@ TOOLS += gotestsum=v1.10.1
 # https://pkg.go.dev/sigs.k8s.io/kustomize/kustomize/v4?tab=versions
 TOOLS += kustomize=v4.5.7
 # https://pkg.go.dev/github.com/itchyny/gojq?tab=versions
-TOOLS += gojq=v0.12.12
+TOOLS += gojq=v0.12.13
 # https://pkg.go.dev/github.com/google/go-containerregistry/pkg/crane?tab=versions
 TOOLS += crane=v0.16.1
 # https://pkg.go.dev/github.com/cert-manager/boilersuite?tab=versions
 TOOLS += boilersuite=v0.1.0
 
 # https://pkg.go.dev/k8s.io/code-generator/cmd?tab=versions
-K8S_CODEGEN_VERSION=v0.27.4
+K8S_CODEGEN_VERSION=v0.28.1
 
 # https://storage.googleapis.com/storage/v1/b/kubebuilder-tools/o/
-KUBEBUILDER_ASSETS_VERSION=1.27.1
+KUBEBUILDER_ASSETS_VERSION=1.28.0
 TOOLS += etcd=$(KUBEBUILDER_ASSETS_VERSION)
 TOOLS += kube-apiserver=$(KUBEBUILDER_ASSETS_VERSION)
 
@@ -257,9 +257,9 @@ $(BINDIR)/downloaded/tools/helm@$(HELM_VERSION)_%: | $(BINDIR)/downloaded/tools
 # kubectl #
 ###########
 
-KUBECTL_linux_amd64_SHA256SUM=4685bfcf732260f72fce58379e812e091557ef1dfc1bc8084226c7891dd6028f
-KUBECTL_darwin_amd64_SHA256SUM=7963839cb85028adffcca41b36a05dc273ccd5f8afe4a551106d0654f5c5168b
-KUBECTL_darwin_arm64_SHA256SUM=6abf3d4a2c43812b3ac4565713716f835e2da82b36c8dff0e05e803c68dbdf56
+KUBECTL_linux_amd64_SHA256SUM=e7a7d6f9d06fab38b4128785aa80f65c54f6675a0d2abef655259ddd852274e1
+KUBECTL_darwin_amd64_SHA256SUM=d6b8f2bac5f828478eade0acf15fb7dde02d7613fc9e644dc019a7520d822a1a
+KUBECTL_darwin_arm64_SHA256SUM=8fe9f753383574863959335d8b830908e67a40c3f51960af63892d969bfc1b10
 
 $(BINDIR)/downloaded/tools/kubectl@$(KUBECTL_VERSION)_%: | $(BINDIR)/downloaded/tools
 	$(CURL) https://dl.k8s.io/release/$(KUBECTL_VERSION)/bin/$(subst _,/,$*)/kubectl -o $@
@@ -302,9 +302,9 @@ $(K8S_CODEGEN_TOOLS_DOWNLOADS): $(BINDIR)/downloaded/tools/%-gen@$(K8S_CODEGEN_V
 # kube-apiserver / etcd    #
 ############################
 
-KUBEBUILDER_TOOLS_linux_amd64_SHA256SUM=f9699df7b021f71a1ab55329b36b48a798e6ae3a44d2132255fc7e46c6790d4d
-KUBEBUILDER_TOOLS_darwin_amd64_SHA256SUM=e1913674bacaa70c067e15649237e1f67d891ba53f367c0a50786b4a274ee047
-KUBEBUILDER_TOOLS_darwin_arm64_SHA256SUM=0422632a2bbb0d4d14d7d8b0f05497a4d041c11d770a07b7a55c44bcc5e8ce66
+KUBEBUILDER_TOOLS_linux_amd64_SHA256SUM=8c816871604cbe119ca9dd8072b576552ae369b96eebc3cdaaf50edd7e3c0c7b
+KUBEBUILDER_TOOLS_darwin_amd64_SHA256SUM=a02e33a3981712c8d2702520f95357bd6c7d03d24b83a4f8ac1c89a9ba4d78c1
+KUBEBUILDER_TOOLS_darwin_arm64_SHA256SUM=c87c6b3c0aec4233e68a12dc9690bcbe2f8d6cd72c23e670602b17b2d7118325
 
 $(BINDIR)/downloaded/tools/etcd@$(KUBEBUILDER_ASSETS_VERSION)_%: $(BINDIR)/downloaded/tools/kubebuilder_tools_$(KUBEBUILDER_ASSETS_VERSION)_%.tar.gz | $(BINDIR)/downloaded/tools
 	./make/util/checkhash.sh $< $(KUBEBUILDER_TOOLS_$*_SHA256SUM)

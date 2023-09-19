@@ -1,6 +1,6 @@
 module github.com/cert-manager/issuer-lib
 
-go 1.19
+go 1.21
 
 require (
 	github.com/cert-manager/cert-manager v1.13.0
