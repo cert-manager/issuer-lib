@@ -143,6 +143,11 @@ func (c *certificatesigningRequestPatchHelper) SetCustomCondition(
 	return didCustomConditionTransition
 }
 
+func (c *certificatesigningRequestPatchHelper) SetPending(reason string) {
+	message := fmt.Sprintf("Signing still in progress. Reason: %s", reason)
+	c.eventRecorder.Event(c.readOnlyObj, corev1.EventTypeWarning, eventRequestRetryable, message)
+}
+
 func (c *certificatesigningRequestPatchHelper) SetUnexpectedError(err error) {
 	message := "Got an unexpected error while processing the CertificateSigningRequest"
 	c.eventRecorder.Event(c.readOnlyObj, corev1.EventTypeWarning, eventRequestUnexpectedError, message)

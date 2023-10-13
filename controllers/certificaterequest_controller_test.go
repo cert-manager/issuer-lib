@@ -426,12 +426,12 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 			},
 		},
 
-		// If the sign function returns a Pending error, set the Ready condition to Pending (even if
+		// If the sign function returns a reason for being pending, set the Ready condition to Pending (even if
 		// the MaxRetryDuration has been exceeded).
 		{
 			name: "retry-on-pending-error",
 			sign: func(_ context.Context, cr signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, error) {
-				return signer.PEMBundle{}, signer.PendingError{Err: fmt.Errorf("pending error")}
+				return signer.PEMBundle{}, signer.PendingError{Err: fmt.Errorf("reason for being pending")}
 			},
 			objects: []client.Object{
 				cmgen.CertificateRequestFrom(cr1,
@@ -451,14 +451,14 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonPending,
-						Message:            "Failed to sign CertificateRequest, will retry: pending error",
+						Message:            "Signing of CertificateRequest still in progress: reason for being pending",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
-			validateError: errormatch.ErrorContains("pending error"),
+			validateError: errormatch.ErrorContains("reason for being pending"),
 			expectedEvents: []string{
-				"Warning RetryableError Failed to sign CertificateRequest, will retry: pending error",
+				"Warning Pending Signing of CertificateRequest still in progress: reason for being pending",
 			},
 		},
 
@@ -496,21 +496,21 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Type:               "[condition type]",
 						Status:             cmmeta.ConditionTrue,
 						Reason:             "[reason]",
-						Message:            "test error",
+						Message:            "condition message",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 					{
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonPending,
-						Message:            "Failed to sign CertificateRequest, will retry: test error",
+						Message:            "Signing of CertificateRequest still in progress: reason why it is still in progress",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
 			validateError: errormatch.ErrorContains("terminal error: test error"),
 			expectedEvents: []string{
-				"Warning RetryableError Failed to sign CertificateRequest, will retry: test error",
+				"Warning Pending Signing of CertificateRequest still in progress: test error",
 			},
 		},
 
@@ -562,14 +562,14 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonPending,
-						Message:            "Failed to sign CertificateRequest, will retry: test error2",
+						Message:            "Signing of CertificateRequest still in progress: reason for being pending",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
-			validateError: errormatch.ErrorContains("test error2"),
+			validateError: errormatch.ErrorContains("reason for being pending"),
 			expectedEvents: []string{
-				"Warning RetryableError Failed to sign CertificateRequest, will retry: test error2",
+				"Warning Pending Signing of CertificateRequest still in progress: reason for being pending",
 			},
 		},
 
@@ -719,21 +719,21 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Type:               "[condition type]",
 						Status:             cmmeta.ConditionTrue,
 						Reason:             "[reason]",
-						Message:            "test error",
+						Message:            "reason for being still pending",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 					{
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonPending,
-						Message:            "Failed to sign CertificateRequest, will retry: test error",
+						Message:            "Signing of CertificateRequest still in progress: reason for being still pending",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
-			validateError: errormatch.ErrorContains("terminal error: test error"),
+			validateError: errormatch.ErrorContains("terminal error: reason for being still pending"),
 			expectedEvents: []string{
-				"Warning RetryableError Failed to sign CertificateRequest, will retry: test error",
+				"Warning Pending Signing of CertificateRequest still in progress: reason for being still pending",
 			},
 		},
 
@@ -844,14 +844,14 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonPending,
-						Message:            "Failed to sign CertificateRequest, will retry: waiting for approval",
+						Message:            "Signing of CertificateRequest still in progress: waiting for approval",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
 			validateError: errormatch.ErrorContains("waiting for approval"),
 			expectedEvents: []string{
-				"Warning RetryableError Failed to sign CertificateRequest, will retry: waiting for approval",
+				"Warning Pending Signing of CertificateRequest still in progress: waiting for approval",
 			},
 		},
 

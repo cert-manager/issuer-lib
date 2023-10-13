@@ -210,6 +210,16 @@ func (c *certificateRequestPatchHelper) SetUnexpectedError(err error) {
 	c.eventRecorder.Event(c.readOnlyObj, corev1.EventTypeWarning, eventRequestUnexpectedError, message)
 }
 
+func (c *certificateRequestPatchHelper) SetPending(reason string) {
+	message, _ := c.setCondition(
+		cmapi.CertificateRequestConditionReady,
+		cmmeta.ConditionFalse,
+		cmapi.CertificateRequestReasonPending,
+		fmt.Sprintf("Signing still in progress. Reason: %s", reason),
+	)
+	c.eventRecorder.Event(c.readOnlyObj, corev1.EventTypeWarning, eventRequestRetryableError, message)
+}
+
 func (c *certificateRequestPatchHelper) SetRetryableError(err error) {
 	message, _ := c.setCondition(
 		cmapi.CertificateRequestConditionReady,
