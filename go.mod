@@ -3,16 +3,16 @@ module github.com/cert-manager/issuer-lib
 go 1.21
 
 require (
-	github.com/cert-manager/cert-manager v1.13.1
+	github.com/cert-manager/cert-manager v1.13.2
 	github.com/go-logr/logr v1.3.0
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/zap v1.26.0
-	golang.org/x/sync v0.4.0
+	golang.org/x/sync v0.5.0
 	k8s.io/api v0.28.3
 	k8s.io/apiextensions-apiserver v0.28.3
 	k8s.io/apimachinery v0.28.3
 	k8s.io/client-go v0.28.3
-	k8s.io/klog/v2 v2.100.1
+	k8s.io/klog/v2 v2.110.1
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
 	sigs.k8s.io/controller-runtime v0.16.3
 )
