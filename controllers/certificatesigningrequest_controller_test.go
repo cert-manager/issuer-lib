@@ -344,7 +344,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			},
 			validateError: errormatch.ErrorContains("pending error"),
 			expectedEvents: []string{
-				"Warning RetryableError Failed to sign CertificateSigningRequest, will retry: pending error",
+				"Warning Pending Signing still in progress. Reason: Signing still in progress. Reason: pending error",
 			},
 		},
 
@@ -600,7 +600,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			},
 			validateError: errormatch.ErrorContains("terminal error: test error"),
 			expectedEvents: []string{
-				"Warning RetryableError Failed to sign CertificateSigningRequest, will retry: test error",
+				"Warning Pending Signing still in progress. Reason: Signing still in progress. Reason: test error",
 			},
 		},
 
