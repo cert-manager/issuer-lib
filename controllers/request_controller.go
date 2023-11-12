@@ -314,9 +314,10 @@ func (r *RequestController) reconcileStatusPatch(
 		// Let's not trigger an unnecessary reconciliation when we know that the
 		// user-defined condition was changed and will trigger a reconciliation.
 		if didCustomConditionTransition {
-			return result, statusPatch, reconcile.TerminalError(err) // apply patch, done
+			return result, statusPatch, nil // apply patch, done
 		} else {
-			return result, statusPatch, err // apply patch, requeue with backoff
+			result.Requeue = true
+			return result, statusPatch, nil // apply patch, requeue with backoff
 		}
 	case isPermanentError:
 		logger.V(1).Error(err, "Permanent Request error. Marking as failed.")

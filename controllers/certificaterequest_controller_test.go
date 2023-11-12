@@ -456,7 +456,9 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 					},
 				},
 			},
-			validateError: errormatch.ErrorContains("reason for being pending"),
+			expectedResult: reconcile.Result{
+				Requeue: true,
+			},
 			expectedEvents: []string{
 				"Warning RetryableError Signing still in progress. Reason: Signing still in progress. Reason: reason for being pending",
 			},
@@ -731,7 +733,9 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 					},
 				},
 			},
-			validateError: errormatch.ErrorContains("terminal error: test error"),
+			expectedResult: reconcile.Result{
+				Requeue: false,
+			},
 			expectedEvents: []string{
 				"Warning RetryableError Signing still in progress. Reason: Signing still in progress. Reason: test error",
 			},

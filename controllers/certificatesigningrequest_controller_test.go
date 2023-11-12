@@ -342,7 +342,9 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
 				Conditions: nil,
 			},
-			validateError: errormatch.ErrorContains("pending error"),
+			expectedResult: reconcile.Result{
+				Requeue: true,
+			},
 			expectedEvents: []string{
 				"Warning Pending Signing still in progress. Reason: Signing still in progress. Reason: pending error",
 			},
@@ -598,7 +600,9 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 					},
 				},
 			},
-			validateError: errormatch.ErrorContains("terminal error: test error"),
+			expectedResult: reconcile.Result{
+				Requeue: false,
+			},
 			expectedEvents: []string{
 				"Warning Pending Signing still in progress. Reason: Signing still in progress. Reason: test error",
 			},
