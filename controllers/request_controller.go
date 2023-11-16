@@ -297,22 +297,44 @@ func (r *RequestController) reconcileStatusPatch(
 	}
 
 	// Check if we have still time to requeue & retry
-	isPendingError := errors.As(err, &signer.PendingError{})
+	isPending := errors.As(err, &signer.PendingError{})
 	isPermanentError := errors.As(err, &signer.PermanentError{})
 	pastMaxRetryDuration := r.Clock.Now().After(requestObject.GetCreationTimestamp().Add(r.MaxRetryDuration))
-	if !isPendingError && (isPermanentError || pastMaxRetryDuration) {
-		// fail permanently
+	switch {
+	case isPending:
+		// Signing is pending, wait more.
+		//
+		// The PendingError has a misleading name: although it is an error,
+		// it isn't an error. It just means that we should poll again later.
+		// Its message gives the reason why the signing process is still in
+		// progress. Thus, we don't log any error.
+		logger.V(1).WithValues("reason", err.Error()).Info("Signing in progress.")
+		statusPatch.SetPending(fmt.Sprintf("Signing still in progress. Reason: %s", err))
+
+		// Let's not trigger an unnecessary reconciliation when we know that the
+		// user-defined condition was changed and will trigger a reconciliation.
+		if didCustomConditionTransition {
+			return result, statusPatch, nil // apply patch, done
+		} else {
+			result.Requeue = true
+			return result, statusPatch, nil // apply patch, requeue with backoff
+		}
+	case isPermanentError:
 		logger.V(1).Error(err, "Permanent Request error. Marking as failed.")
 		statusPatch.SetPermanentError(err)
-
 		return result, statusPatch, reconcile.TerminalError(err) // apply patch, done
-	} else {
-		// retry
-		logger.V(1).Error(err, "Retryable Request error.")
+	case pastMaxRetryDuration:
+		logger.V(1).Error(err, "Request has been retried for too long. Marking as failed.")
+		statusPatch.SetPermanentError(err)
+		return result, statusPatch, reconcile.TerminalError(err) // apply patch, done
+	default:
+		// We consider all the other errors as being retryable.
+		logger.V(1).Error(err, "Got an error, will be retried.")
 		statusPatch.SetRetryableError(err)
 
+		// Let's not trigger an unnecessary reconciliation when we know that the
+		// user-defined condition was changed and will trigger a reconciliation.
 		if didCustomConditionTransition {
-			// the reconciliation loop will be retriggered because of the added/ changed custom condition
 			return result, statusPatch, reconcile.TerminalError(err) // apply patch, done
 		} else {
 			return result, statusPatch, err // apply patch, requeue with backoff

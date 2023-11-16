@@ -426,12 +426,12 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 			},
 		},
 
-		// If the sign function returns a Pending error, set the Ready condition to Pending (even if
+		// If the sign function returns a reason for being pending, set the Ready condition to Pending (even if
 		// the MaxRetryDuration has been exceeded).
 		{
 			name: "retry-on-pending-error",
 			sign: func(_ context.Context, cr signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, error) {
-				return signer.PEMBundle{}, signer.PendingError{Err: fmt.Errorf("pending error")}
+				return signer.PEMBundle{}, signer.PendingError{Err: fmt.Errorf("reason for being pending")}
 			},
 			objects: []client.Object{
 				cmgen.CertificateRequestFrom(cr1,
@@ -451,14 +451,16 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonPending,
-						Message:            "Failed to sign CertificateRequest, will retry: pending error",
+						Message:            "Signing still in progress. Reason: Signing still in progress. Reason: reason for being pending",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
-			validateError: errormatch.ErrorContains("pending error"),
+			expectedResult: reconcile.Result{
+				Requeue: true,
+			},
 			expectedEvents: []string{
-				"Warning RetryableError Failed to sign CertificateRequest, will retry: pending error",
+				"Warning RetryableError Signing still in progress. Reason: Signing still in progress. Reason: reason for being pending",
 			},
 		},
 
@@ -726,14 +728,16 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonPending,
-						Message:            "Failed to sign CertificateRequest, will retry: test error",
+						Message:            "Signing still in progress. Reason: Signing still in progress. Reason: test error",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
-			validateError: errormatch.ErrorContains("terminal error: test error"),
+			expectedResult: reconcile.Result{
+				Requeue: false,
+			},
 			expectedEvents: []string{
-				"Warning RetryableError Failed to sign CertificateRequest, will retry: test error",
+				"Warning RetryableError Signing still in progress. Reason: Signing still in progress. Reason: test error",
 			},
 		},
 

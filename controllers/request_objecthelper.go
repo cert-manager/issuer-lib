@@ -28,7 +28,8 @@ import (
 )
 
 const (
-	eventRequestIssued = "Issued"
+	eventRequestIssued    = "Issued"
+	eventRequestRetryable = "Pending"
 
 	eventRequestUnexpectedError = "UnexpectedError"
 	eventRequestRetryableError  = "RetryableError"
@@ -66,6 +67,7 @@ type RequestPatchHelper interface { //nolint:interfacebloat
 		conditionStatus metav1.ConditionStatus,
 		conditionReason string, conditionMessage string,
 	) (didCustomConditionTransition bool)
+	SetPending(reason string)
 	SetRetryableError(error)
 	SetPermanentError(error)
 	SetUnexpectedError(error)
