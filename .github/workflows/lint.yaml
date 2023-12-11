@@ -21,7 +21,7 @@ jobs:
       # Set up Go so that golangci-lint has the right $GOROOT and can find
       # the right standard libraries. See:
       # https://github.com/reviewdog/action-golangci-lint/issues/73#issuecomment-813386935
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
       - uses: golangci/golangci-lint-action@v3.7.0

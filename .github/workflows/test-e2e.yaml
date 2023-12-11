@@ -20,7 +20,7 @@ jobs:
           # Full git history is needed to get a Git tags which are used to
           # calculate a valid semver for the Helm chart
           fetch-depth: 0
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           cache: true
