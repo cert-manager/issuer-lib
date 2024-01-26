@@ -43,9 +43,9 @@ import (
 	"github.com/cert-manager/issuer-lib/conditions"
 	"github.com/cert-manager/issuer-lib/controllers/signer"
 	"github.com/cert-manager/issuer-lib/internal/kubeutil"
+	"github.com/cert-manager/issuer-lib/internal/testapi/api"
+	"github.com/cert-manager/issuer-lib/internal/testapi/testutil"
 	"github.com/cert-manager/issuer-lib/internal/tests/errormatch"
-	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/api"
-	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/testutil"
 )
 
 func TestCertificateRequestReconcilerReconcile(t *testing.T) {
@@ -73,11 +73,11 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 	fakeTimeObj2 := metav1.NewTime(fakeTime2)
 	fakeClock2 := clocktesting.NewFakeClock(fakeTime2)
 
-	issuer1 := testutil.SimpleIssuer(
+	issuer1 := testutil.TestIssuer(
 		"issuer-1",
-		testutil.SetSimpleIssuerNamespace("ns1"),
-		testutil.SetSimpleIssuerGeneration(70),
-		testutil.SetSimpleIssuerStatusCondition(
+		testutil.SetTestIssuerNamespace("ns1"),
+		testutil.SetTestIssuerGeneration(70),
+		testutil.SetTestIssuerStatusCondition(
 			fakeClock1,
 			cmapi.IssuerConditionReady,
 			cmmeta.ConditionTrue,
@@ -86,10 +86,10 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		),
 	)
 
-	clusterIssuer1 := testutil.SimpleClusterIssuer(
+	clusterIssuer1 := testutil.TestClusterIssuer(
 		"cluster-issuer-1",
-		testutil.SetSimpleClusterIssuerGeneration(70),
-		testutil.SetSimpleClusterIssuerStatusCondition(
+		testutil.SetTestClusterIssuerGeneration(70),
+		testutil.SetTestClusterIssuerStatusCondition(
 			fakeClock1,
 			cmapi.IssuerConditionReady,
 			cmmeta.ConditionTrue,
@@ -279,13 +279,13 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Type:               cmapi.CertificateRequestConditionReady,
 						Status:             cmmeta.ConditionFalse,
 						Reason:             cmapi.CertificateRequestReasonPending,
-						Message:            "simpleissuers.testing.cert-manager.io \"issuer-1\" not found. Waiting for it to be created.",
+						Message:            "testissuers.testing.cert-manager.io \"issuer-1\" not found. Waiting for it to be created.",
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
 			},
 			expectedEvents: []string{
-				"Normal WaitingForIssuerExist simpleissuers.testing.cert-manager.io \"issuer-1\" not found. Waiting for it to be created.",
+				"Normal WaitingForIssuerExist testissuers.testing.cert-manager.io \"issuer-1\" not found. Waiting for it to be created.",
 			},
 		},
 
@@ -300,8 +300,8 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Group: api.SchemeGroupVersion.Group,
 					}),
 				),
-				testutil.SimpleIssuerFrom(issuer1,
-					func(si *api.SimpleIssuer) {
+				testutil.TestIssuerFrom(issuer1,
+					func(si *api.TestIssuer) {
 						si.Status.Conditions = nil
 					},
 				),
@@ -332,8 +332,8 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Group: api.SchemeGroupVersion.Group,
 					}),
 				),
-				testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerStatusCondition(
+				testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerStatusCondition(
 						fakeClock1,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionFalse,
@@ -369,8 +369,8 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Group: api.SchemeGroupVersion.Group,
 					}),
 				),
-				testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerGeneration(issuer1.Generation+1),
+				testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerGeneration(issuer1.Generation+1),
 				),
 			},
 			expectedStatusPatch: &cmapi.CertificateRequestStatus{
@@ -406,7 +406,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
 					},
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.TestIssuerFrom(issuer1),
 			},
 			expectedStatusPatch: &cmapi.CertificateRequestStatus{
 				Conditions: []cmapi.CertificateRequestCondition{
@@ -443,7 +443,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
 					},
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.TestIssuerFrom(issuer1),
 			},
 			expectedStatusPatch: &cmapi.CertificateRequestStatus{
 				Conditions: []cmapi.CertificateRequestCondition{
@@ -490,7 +490,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Group: api.SchemeGroupVersion.Group,
 					}),
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.TestIssuerFrom(issuer1),
 			},
 			expectedStatusPatch: &cmapi.CertificateRequestStatus{
 				Conditions: []cmapi.CertificateRequestCondition{
@@ -549,7 +549,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						LastTransitionTime: &fakeTimeObj2,
 					}),
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.TestIssuerFrom(issuer1),
 			},
 			expectedStatusPatch: &cmapi.CertificateRequestStatus{
 				Conditions: []cmapi.CertificateRequestCondition{
@@ -601,7 +601,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
 					},
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.TestIssuerFrom(issuer1),
 			},
 			expectedStatusPatch: &cmapi.CertificateRequestStatus{
 				Conditions: []cmapi.CertificateRequestCondition{
@@ -661,7 +661,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						LastTransitionTime: &fakeTimeObj1,
 					}),
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.TestIssuerFrom(issuer1),
 			},
 			expectedStatusPatch: &cmapi.CertificateRequestStatus{
 				Conditions: []cmapi.CertificateRequestCondition{
@@ -713,7 +713,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
 					},
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.TestIssuerFrom(issuer1),
 			},
 			expectedStatusPatch: &cmapi.CertificateRequestStatus{
 				Conditions: []cmapi.CertificateRequestCondition{
@@ -763,7 +763,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Group: api.SchemeGroupVersion.Group,
 					}),
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.TestIssuerFrom(issuer1),
 			},
 			expectedStatusPatch: &cmapi.CertificateRequestStatus{
 				Conditions: []cmapi.CertificateRequestCondition{
@@ -803,7 +803,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						Group: api.SchemeGroupVersion.Group,
 					}),
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.TestIssuerFrom(issuer1),
 			},
 			expectedStatusPatch: &cmapi.CertificateRequestStatus{
 				Conditions: []cmapi.CertificateRequestCondition{
@@ -840,7 +840,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						cr.Spec.IssuerRef.Kind = issuer1.Kind
 					},
 				),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.TestIssuerFrom(issuer1),
 			},
 			expectedStatusPatch: &cmapi.CertificateRequestStatus{
 				Conditions: []cmapi.CertificateRequestCondition{
@@ -867,7 +867,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 					cr.Spec.IssuerRef.Name = issuer1.Name
 					cr.Spec.IssuerRef.Kind = issuer1.Kind
 				}),
-				testutil.SimpleIssuerFrom(issuer1),
+				testutil.TestIssuerFrom(issuer1),
 			},
 			expectedStatusPatch: &cmapi.CertificateRequestStatus{
 				Certificate: []byte("a-signed-certificate"),
@@ -894,7 +894,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 					cr.Spec.IssuerRef.Name = clusterIssuer1.Name
 					cr.Spec.IssuerRef.Kind = clusterIssuer1.Kind
 				}),
-				testutil.SimpleClusterIssuerFrom(clusterIssuer1),
+				testutil.TestClusterIssuerFrom(clusterIssuer1),
 			},
 			expectedStatusPatch: &cmapi.CertificateRequestStatus{
 				Certificate: []byte("a-signed-certificate"),
@@ -943,8 +943,8 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 
 			controller := (&CertificateRequestReconciler{
 				RequestController: RequestController{
-					IssuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
-					ClusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
+					IssuerTypes:        []v1alpha1.Issuer{&api.TestIssuer{}},
+					ClusterIssuerTypes: []v1alpha1.Issuer{&api.TestClusterIssuer{}},
 					FieldOwner:         fieldOwner,
 					MaxRetryDuration:   time.Minute,
 					EventSource:        kubeutil.NewEventStore(),
@@ -1048,47 +1048,47 @@ func TestCertificateRequestMatchIssuerType(t *testing.T) {
 		},
 		{
 			name:               "match issuer",
-			issuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
-			clusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
-			cr:                 createCr("name", "namespace", "SimpleIssuer", "testing.cert-manager.io"),
+			issuerTypes:        []v1alpha1.Issuer{&api.TestIssuer{}},
+			clusterIssuerTypes: []v1alpha1.Issuer{&api.TestClusterIssuer{}},
+			cr:                 createCr("name", "namespace", "TestIssuer", "testing.cert-manager.io"),
 
-			expectedIssuerType: &api.SimpleIssuer{},
+			expectedIssuerType: &api.TestIssuer{},
 			expectedIssuerName: types.NamespacedName{Name: "name", Namespace: "namespace"},
 		},
 		{
 			name:               "match cluster issuer",
-			issuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
-			clusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
-			cr:                 createCr("name", "namespace", "SimpleClusterIssuer", "testing.cert-manager.io"),
+			issuerTypes:        []v1alpha1.Issuer{&api.TestIssuer{}},
+			clusterIssuerTypes: []v1alpha1.Issuer{&api.TestClusterIssuer{}},
+			cr:                 createCr("name", "namespace", "TestClusterIssuer", "testing.cert-manager.io"),
 
-			expectedIssuerType: &api.SimpleClusterIssuer{},
+			expectedIssuerType: &api.TestClusterIssuer{},
 			expectedIssuerName: types.NamespacedName{Name: "name"},
 		},
 		{
 			name:               "select kind if empty",
 			issuerTypes:        []v1alpha1.Issuer{},
-			clusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
+			clusterIssuerTypes: []v1alpha1.Issuer{&api.TestClusterIssuer{}},
 			cr:                 createCr("name", "namespace", "", "testing.cert-manager.io"),
 
-			expectedIssuerType: &api.SimpleClusterIssuer{},
+			expectedIssuerType: &api.TestClusterIssuer{},
 			expectedIssuerName: types.NamespacedName{Name: "name"},
 		},
 		{
 			name:               "prefer issuer over cluster issuer (v1)",
-			issuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
-			clusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
+			issuerTypes:        []v1alpha1.Issuer{&api.TestIssuer{}},
+			clusterIssuerTypes: []v1alpha1.Issuer{&api.TestClusterIssuer{}},
 			cr:                 createCr("name", "namespace", "", "testing.cert-manager.io"),
 
-			expectedIssuerType: &api.SimpleIssuer{},
+			expectedIssuerType: &api.TestIssuer{},
 			expectedIssuerName: types.NamespacedName{Name: "name", Namespace: "namespace"},
 		},
 		{
 			name:               "prefer issuer over cluster issuer (v2)",
-			issuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
-			clusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleIssuer{}},
+			issuerTypes:        []v1alpha1.Issuer{&api.TestIssuer{}},
+			clusterIssuerTypes: []v1alpha1.Issuer{&api.TestIssuer{}},
 			cr:                 createCr("name", "namespace", "", "testing.cert-manager.io"),
 
-			expectedIssuerType: &api.SimpleIssuer{},
+			expectedIssuerType: &api.TestIssuer{},
 			expectedIssuerName: types.NamespacedName{Name: "name", Namespace: "namespace"},
 		},
 	}

@@ -98,9 +98,9 @@ tools: $(TOOLS_PATHS) $(K8S_CODEGEN_TOOLS_PATHS)
 generate-manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 generate-manifests: | $(NEEDS_CONTROLLER-GEN)
 	$(CONTROLLER-GEN) rbac:roleName=simple-issuer-controller-role crd \
-		paths="./internal/testsetups/simple/..." \
-		output:crd:artifacts:config=internal/testsetups/simple/deploy/crds \
-		output:rbac:artifacts:config=internal/testsetups/simple/deploy/rbac
+		paths="./examples/simple/..." \
+		output:crd:artifacts:config=examples/simple/deploy/crds \
+		output:rbac:artifacts:config=examples/simple/deploy/rbac
 
 .PHONY: generate-deepcopy
 generate-deepcopy: ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -163,7 +163,9 @@ test: test-unit-deps | $(NEEDS_GO) $(NEEDS_GOTESTSUM) ## Run unit tests.
 
 .PHONY: test-e2e
 test-e2e: test-e2e-deps | $(NEEDS_GOTESTSUM) ## Run e2e tests. This creates a Kind cluster, installs dependencies, deploys the issuer-lib and runs the E2E tests.
-	$(GOTESTSUM) ./internal/testsetups/simple/e2e/... -coverprofile cover.out -timeout 1m
+	cd ./examples/simple/e2e && \
+	KUBECONFIG=$(PWD)/$(KIND_KUBECONFIG) \
+	$(GOTESTSUM) ./... -coverprofile cover.out -timeout 1m
 
 ##@ Build
 
@@ -191,8 +193,8 @@ docker-build: ## Build the docker image.
 docker-build: | $(NEEDS_KO)
 	KIND_CLUSTER_NAME=$(KIND_CLUSTER_NAME) \
 	KO_DOCKER_REPO=$(DOCKER_REGISTRY) \
-	KOCACHE=$(KOCACHE) \
-	$(KO) build github.com/cert-manager/issuer-lib/internal/testsetups/simple/cmd/ \
+	KOCACHE=$(CURDIR)/$(KOCACHE) \
+	$(KO) build ./examples/simple \
 		--platform=$(DOCKER_IMAGE_PLATFORMS) \
 		$(if $(DOCKER_IMAGE_PLATFORMS),,--tarball=$(DOCKER_IMAGE_TAR)) \
 		--tags=$(DOCKER_TAG) \
@@ -218,20 +220,20 @@ $(BINDIR)/scratch/yaml/kustomization.yaml: FORCE | $(NEEDS_KUSTOMIZE)
 	$(KUSTOMIZE) create \
 		--namespace "my-namespace" \
 		--nameprefix "simple-issuer-" \
-		--resources ../../../internal/testsetups/simple/deploy/static/
+		--resources ../../../examples/simple/deploy/static/
 
 	cd $(BINDIR)/scratch/yaml; \
-	$(KUSTOMIZE) edit set image "controller:latest=$(DOCKER_REGISTRY)/cmd:$(DOCKER_TAG)"
+	$(KUSTOMIZE) edit set image "controller:latest=$(DOCKER_REGISTRY)/simple-issuer:$(DOCKER_TAG)"
 
 .PHONY: install
 install: generate-manifests $(BINDIR)/scratch/yaml/kustomization.yaml | $(NEEDS_KUBECTL) $(NEEDS_YQ) ## Install CRDs into the K8s cluster specified in ~/.kube/config.
-	$(KUBECTL) apply -f internal/testsetups/simple/deploy/crds
-	$(KUBECTL) apply -f internal/testsetups/simple/deploy/rbac
+	$(KUBECTL) apply -f examples/simple/deploy/crds
+	$(KUBECTL) apply -f examples/simple/deploy/rbac
 	$(KUBECTL) apply -k $(BINDIR)/scratch/yaml/
 
 .PHONY: uninstall
 uninstall: generate-manifests | $(NEEDS_KUBECTL) ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f internal/testsetups/simple/deploy/crds
+	$(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f examples/simple/deploy/crds
 
 TEMP_DIR := _tmp
 .PHONY: clean

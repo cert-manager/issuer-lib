@@ -23,14 +23,14 @@ $(CERT_MANAGER_CRDS):
 $(BINDIR)/envs/CERT_MANAGER_CRDS: $(CERT_MANAGER_CRDS) | $(BINDIR)/envs
 	@echo "$(PWD)/$(CERT_MANAGER_CRDS)" > $@
 
-$(BINDIR)/envs/SIMPLE_CRDS: generate-manifests | $(BINDIR)/envs
-	@echo "$(PWD)/internal/testsetups/simple/deploy/crds" > $@
+$(BINDIR)/envs/TEST_CRDS: generate-manifests | $(BINDIR)/envs
+	@echo "$(PWD)/internal/testapi/crds" > $@
 
 $(BINDIR)/envs/KUBEBUILDER_ASSETS: | $(BINDIR)/envs $(NEEDS_KUBECTL) $(NEEDS_ETCD) $(NEEDS_KUBE-APISERVER)
 	@echo "$(PWD)/$(BINDIR)/tools" > $@
 
 test-envs: $(BINDIR)/envs/CERT_MANAGER_CRDS
-test-envs: $(BINDIR)/envs/SIMPLE_CRDS
+test-envs: $(BINDIR)/envs/TEST_CRDS
 test-envs: $(BINDIR)/envs/KUBEBUILDER_ASSETS
 test-envs: FORCE
 	@echo "SETTING test environment variables"

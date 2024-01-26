@@ -36,13 +36,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/api"
-	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/controller"
+	"simple-issuer/api"
+	"simple-issuer/controller"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
+
+// This value is replaced during the build process.
+var Version = "v0.0.0"
 
 const inClusterNamespacePath = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
 
@@ -111,6 +114,8 @@ func main() {
 	ctrl.SetLogger(logr)
 
 	setupLog := ctrl.Log.WithName("setup")
+
+	setupLog.Info("versionInfo", "Version", Version)
 
 	err := getInClusterNamespace(&clusterResourceNamespace)
 	if err != nil {

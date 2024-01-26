@@ -33,8 +33,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	"github.com/cert-manager/issuer-lib/internal/testapi/api"
 	"github.com/cert-manager/issuer-lib/internal/tests/testresource"
-	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/api"
 )
 
 func createNS(t *testing.T, ctx context.Context, kc client.Client, nsName string) {
@@ -71,7 +71,7 @@ func setupControllersAPIServerAndClient(t *testing.T, parentCtx context.Context,
 	_, err := kubeClients.InstallCRDs(envtest.CRDInstallOptions{
 		Scheme: kubeClients.Scheme,
 		Paths: []string{
-			os.Getenv("SIMPLE_CRDS"),
+			os.Getenv("TEST_CRDS"),
 			os.Getenv("CERT_MANAGER_CRDS"),
 		},
 		ErrorIfPathMissing: true,

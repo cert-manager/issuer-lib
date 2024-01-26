@@ -35,8 +35,8 @@ rules:
 - apiGroups:
   - certificates.k8s.io
   resourceNames:
-  - simpleclusterissuers.issuer.cert-manager.io/*
-  - simpleissuers.issuer.cert-manager.io/*
+  - simpleclusterissuers.testing.cert-manager.io/*
+  - simpleissuers.testing.cert-manager.io/*
   resources:
   - signers
   verbs:
