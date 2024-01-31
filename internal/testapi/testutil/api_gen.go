@@ -23,15 +23,15 @@ import (
 	"k8s.io/utils/clock"
 
 	"github.com/cert-manager/issuer-lib/conditions"
-	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/api"
+	"github.com/cert-manager/issuer-lib/internal/testapi/api"
 )
 
-type SimpleIssuerModifier func(*api.SimpleIssuer)
+type TestIssuerModifier func(*api.TestIssuer)
 
-func SimpleIssuer(name string, mods ...SimpleIssuerModifier) *api.SimpleIssuer {
-	c := &api.SimpleIssuer{
+func TestIssuer(name string, mods ...TestIssuerModifier) *api.TestIssuer {
+	c := &api.TestIssuer{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "SimpleIssuer",
+			Kind:       "TestIssuer",
 			APIVersion: api.SchemeGroupVersion.Identifier(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -44,7 +44,7 @@ func SimpleIssuer(name string, mods ...SimpleIssuerModifier) *api.SimpleIssuer {
 	return c
 }
 
-func SimpleIssuerFrom(cr *api.SimpleIssuer, mods ...SimpleIssuerModifier) *api.SimpleIssuer {
+func TestIssuerFrom(cr *api.TestIssuer, mods ...TestIssuerModifier) *api.TestIssuer {
 	cr = cr.DeepCopy()
 	for _, mod := range mods {
 		mod(cr)
@@ -52,25 +52,25 @@ func SimpleIssuerFrom(cr *api.SimpleIssuer, mods ...SimpleIssuerModifier) *api.S
 	return cr
 }
 
-func SetSimpleIssuerNamespace(namespace string) SimpleIssuerModifier {
-	return func(si *api.SimpleIssuer) {
+func SetTestIssuerNamespace(namespace string) TestIssuerModifier {
+	return func(si *api.TestIssuer) {
 		si.Namespace = namespace
 	}
 }
 
-func SetSimpleIssuerGeneration(generation int64) SimpleIssuerModifier {
-	return func(si *api.SimpleIssuer) {
+func SetTestIssuerGeneration(generation int64) TestIssuerModifier {
+	return func(si *api.TestIssuer) {
 		si.Generation = generation
 	}
 }
 
-func SetSimpleIssuerStatusCondition(
+func SetTestIssuerStatusCondition(
 	clock clock.PassiveClock,
 	conditionType cmapi.IssuerConditionType,
 	status cmmeta.ConditionStatus,
 	reason, message string,
-) SimpleIssuerModifier {
-	return func(si *api.SimpleIssuer) {
+) TestIssuerModifier {
+	return func(si *api.TestIssuer) {
 		conditions.SetIssuerStatusCondition(
 			clock,
 			si.Status.Conditions,
@@ -84,12 +84,12 @@ func SetSimpleIssuerStatusCondition(
 	}
 }
 
-type SimpleClusterIssuerModifier func(*api.SimpleClusterIssuer)
+type TestClusterIssuerModifier func(*api.TestClusterIssuer)
 
-func SimpleClusterIssuer(name string, mods ...SimpleClusterIssuerModifier) *api.SimpleClusterIssuer {
-	c := &api.SimpleClusterIssuer{
+func TestClusterIssuer(name string, mods ...TestClusterIssuerModifier) *api.TestClusterIssuer {
+	c := &api.TestClusterIssuer{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "SimpleClusterIssuer",
+			Kind:       "TestClusterIssuer",
 			APIVersion: api.SchemeGroupVersion.Identifier(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -102,7 +102,7 @@ func SimpleClusterIssuer(name string, mods ...SimpleClusterIssuerModifier) *api.
 	return c
 }
 
-func SimpleClusterIssuerFrom(cr *api.SimpleClusterIssuer, mods ...SimpleClusterIssuerModifier) *api.SimpleClusterIssuer {
+func TestClusterIssuerFrom(cr *api.TestClusterIssuer, mods ...TestClusterIssuerModifier) *api.TestClusterIssuer {
 	cr = cr.DeepCopy()
 	for _, mod := range mods {
 		mod(cr)
@@ -110,19 +110,19 @@ func SimpleClusterIssuerFrom(cr *api.SimpleClusterIssuer, mods ...SimpleClusterI
 	return cr
 }
 
-func SetSimpleClusterIssuerGeneration(generation int64) SimpleClusterIssuerModifier {
-	return func(si *api.SimpleClusterIssuer) {
+func SetTestClusterIssuerGeneration(generation int64) TestClusterIssuerModifier {
+	return func(si *api.TestClusterIssuer) {
 		si.Generation = generation
 	}
 }
 
-func SetSimpleClusterIssuerStatusCondition(
+func SetTestClusterIssuerStatusCondition(
 	clock clock.PassiveClock,
 	conditionType cmapi.IssuerConditionType,
 	status cmmeta.ConditionStatus,
 	reason, message string,
-) SimpleClusterIssuerModifier {
-	return func(si *api.SimpleClusterIssuer) {
+) TestClusterIssuerModifier {
+	return func(si *api.TestClusterIssuer) {
 		conditions.SetIssuerStatusCondition(
 			clock,
 			si.Status.Conditions,

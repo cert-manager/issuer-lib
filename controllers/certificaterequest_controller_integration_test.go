@@ -44,9 +44,9 @@ import (
 	"github.com/cert-manager/issuer-lib/controllers/signer"
 	"github.com/cert-manager/issuer-lib/internal/kubeutil"
 	"github.com/cert-manager/issuer-lib/internal/ssaclient"
+	"github.com/cert-manager/issuer-lib/internal/testapi/api"
 	"github.com/cert-manager/issuer-lib/internal/tests/testcontext"
 	"github.com/cert-manager/issuer-lib/internal/tests/testresource"
-	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/api"
 )
 
 func extractIdFromNamespace(t *testing.T, namespace string) int {
@@ -85,8 +85,8 @@ func TestCertificateRequestControllerIntegrationIssuerInitiallyNotFoundAndNotRea
 		func(mgr ctrl.Manager) controllerInterface {
 			return &CertificateRequestReconciler{
 				RequestController: RequestController{
-					IssuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
-					ClusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
+					IssuerTypes:        []v1alpha1.Issuer{&api.TestIssuer{}},
+					ClusterIssuerTypes: []v1alpha1.Issuer{&api.TestClusterIssuer{}},
 					FieldOwner:         fieldOwner,
 					MaxRetryDuration:   time.Minute,
 					EventSource:        kubeutil.NewEventStore(),
@@ -112,11 +112,11 @@ func TestCertificateRequestControllerIntegrationIssuerInitiallyNotFoundAndNotRea
 	tests := []testCase{
 		{
 			name:       "issuer",
-			issuerType: "SimpleIssuer",
+			issuerType: "TestIssuer",
 		},
 		{
 			name:       "clusterissuer",
-			issuerType: "SimpleClusterIssuer",
+			issuerType: "TestClusterIssuer",
 		},
 	}
 
@@ -226,8 +226,8 @@ func TestCertificateRequestControllerIntegrationSetCondition(t *testing.T) {
 		func(mgr ctrl.Manager) controllerInterface {
 			return &CertificateRequestReconciler{
 				RequestController: RequestController{
-					IssuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
-					ClusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
+					IssuerTypes:        []v1alpha1.Issuer{&api.TestIssuer{}},
+					ClusterIssuerTypes: []v1alpha1.Issuer{&api.TestClusterIssuer{}},
 					FieldOwner:         fieldOwner,
 					MaxRetryDuration:   time.Minute,
 					EventSource:        kubeutil.NewEventStore(),
@@ -249,7 +249,7 @@ func TestCertificateRequestControllerIntegrationSetCondition(t *testing.T) {
 	)
 
 	namespace := "clusterissuer"
-	issuerType := "SimpleClusterIssuer"
+	issuerType := "TestClusterIssuer"
 
 	crName := types.NamespacedName{
 		Name:      "cr1",
@@ -393,15 +393,15 @@ func createIssuerForCR(t *testing.T, ctx context.Context, kc client.Client, cr *
 
 	var issuer v1alpha1.Issuer
 	switch cr.Spec.IssuerRef.Kind {
-	case "SimpleIssuer":
-		issuer = &api.SimpleIssuer{
+	case "TestIssuer":
+		issuer = &api.TestIssuer{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      cr.Spec.IssuerRef.Name,
 				Namespace: cr.Namespace,
 			},
 		}
-	case "SimpleClusterIssuer":
-		issuer = &api.SimpleClusterIssuer{
+	case "TestClusterIssuer":
+		issuer = &api.TestClusterIssuer{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: cr.Spec.IssuerRef.Name,
 			},

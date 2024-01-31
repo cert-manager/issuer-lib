@@ -1,6 +1,7 @@
 builds:
 - id: manager
   main: .
+  dir: ./examples/simple
   env:
   - CGO_ENABLED=0
   ldflags:

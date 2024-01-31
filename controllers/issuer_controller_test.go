@@ -42,9 +42,9 @@ import (
 
 	"github.com/cert-manager/issuer-lib/api/v1alpha1"
 	"github.com/cert-manager/issuer-lib/controllers/signer"
+	"github.com/cert-manager/issuer-lib/internal/testapi/api"
+	"github.com/cert-manager/issuer-lib/internal/testapi/testutil"
 	"github.com/cert-manager/issuer-lib/internal/tests/errormatch"
-	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/api"
-	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/testutil"
 )
 
 // We are using a random time generator to generate random times for the
@@ -61,7 +61,7 @@ func randomTime() time.Time {
 	return time.Unix(sec, 0)
 }
 
-func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
+func TestTestIssuerReconcilerReconcile(t *testing.T) {
 	t.Parallel()
 
 	fieldOwner := "test-simple-issuer-reconciler-reconcile"
@@ -87,9 +87,9 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 	fakeTimeObj2 := metav1.NewTime(fakeTime2)
 	fakeClock2 := clocktesting.NewFakeClock(fakeTime2)
 
-	issuer1 := testutil.SimpleIssuer(
+	issuer1 := testutil.TestIssuer(
 		"issuer-1",
-		testutil.SetSimpleIssuerNamespace("ns1"),
+		testutil.SetTestIssuerNamespace("ns1"),
 	)
 
 	staticChecker := func(err error) signer.Check {
@@ -112,9 +112,9 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 			name:  "trigger-when-ready",
 			check: staticChecker(nil),
 			objects: []client.Object{
-				testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerGeneration(80),
-					testutil.SetSimpleIssuerStatusCondition(
+				testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerGeneration(80),
+					testutil.SetTestIssuerStatusCondition(
 						fakeClock1,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionTrue,
@@ -145,9 +145,9 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 			name:  "ignore-failed",
 			check: staticChecker(nil),
 			objects: []client.Object{
-				testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerGeneration(80),
-					testutil.SetSimpleIssuerStatusCondition(
+				testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerGeneration(80),
+					testutil.SetTestIssuerStatusCondition(
 						fakeClock1,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionFalse,
@@ -164,9 +164,9 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 			name:  "failed-ignore-reported-error",
 			check: staticChecker(nil),
 			objects: []client.Object{
-				testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerGeneration(80),
-					testutil.SetSimpleIssuerStatusCondition(
+				testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerGeneration(80),
+					testutil.SetTestIssuerStatusCondition(
 						fakeClock1,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionFalse,
@@ -184,9 +184,9 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 			name:  "ready-reported-error",
 			check: staticChecker(nil),
 			objects: []client.Object{
-				testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerGeneration(80),
-					testutil.SetSimpleIssuerStatusCondition(
+				testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerGeneration(80),
+					testutil.SetTestIssuerStatusCondition(
 						fakeClock1,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionTrue,
@@ -219,16 +219,16 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 			name:  "recheck-outdated-ready",
 			check: staticChecker(nil),
 			objects: []client.Object{
-				testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerGeneration(80),
-					testutil.SetSimpleIssuerStatusCondition(
+				testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerGeneration(80),
+					testutil.SetTestIssuerStatusCondition(
 						fakeClock1,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionTrue,
 						v1alpha1.IssuerConditionReasonChecked,
 						"Succeeded checking the issuer",
 					),
-					testutil.SetSimpleIssuerGeneration(81),
+					testutil.SetTestIssuerGeneration(81),
 				),
 			},
 			expectedStatusPatch: &v1alpha1.IssuerStatus{
@@ -272,8 +272,8 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 			name:  "retry-on-error",
 			check: staticChecker(fmt.Errorf("[specific error]")),
 			objects: []client.Object{
-				testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerStatusCondition(
+				testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerStatusCondition(
 						fakeClock1,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionUnknown,
@@ -304,8 +304,8 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 			name:  "dont-retry-on-permanent-error",
 			check: staticChecker(signer.PermanentError{Err: fmt.Errorf("[specific error]")}),
 			objects: []client.Object{
-				testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerStatusCondition(
+				testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerStatusCondition(
 						fakeClock1,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionUnknown,
@@ -339,8 +339,8 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 			name:  "success-issuer",
 			check: staticChecker(nil),
 			objects: []client.Object{
-				testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerStatusCondition(
+				testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerStatusCondition(
 						fakeClock1,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionUnknown,
@@ -370,16 +370,16 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 			name:  "success-recover",
 			check: staticChecker(nil),
 			objects: []client.Object{
-				testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerGeneration(80),
-					testutil.SetSimpleIssuerStatusCondition(
+				testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerGeneration(80),
+					testutil.SetTestIssuerStatusCondition(
 						fakeClock1,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionFalse,
 						v1alpha1.IssuerConditionReasonInitializing,
 						fieldOwner+" has started reconciling this Issuer",
 					),
-					testutil.SetSimpleIssuerGeneration(81),
+					testutil.SetTestIssuerGeneration(81),
 				),
 			},
 			expectedStatusPatch: &v1alpha1.IssuerStatus{
@@ -419,7 +419,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 				},
 			}
 
-			var vciBefore api.SimpleIssuer
+			var vciBefore api.TestIssuer
 			err := fakeClient.Get(context.TODO(), req.NamespacedName, &vciBefore)
 			require.NoError(t, client.IgnoreNotFound(err), "unexpected error from fake client")
 
@@ -427,7 +427,7 @@ func TestSimpleIssuerReconcilerReconcile(t *testing.T) {
 			fakeRecorder := record.NewFakeRecorder(100)
 
 			controller := IssuerReconciler{
-				ForObject:  &api.SimpleIssuer{},
+				ForObject:  &api.TestIssuer{},
 				FieldOwner: fieldOwner,
 				EventSource: fakeEventSource{
 					err: tc.eventSourceError,

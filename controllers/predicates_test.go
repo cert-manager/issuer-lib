@@ -34,8 +34,8 @@ import (
 
 	"github.com/cert-manager/issuer-lib/api/v1alpha1"
 	"github.com/cert-manager/issuer-lib/controllers"
-	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/api"
-	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/testutil"
+	"github.com/cert-manager/issuer-lib/internal/testapi/api"
+	"github.com/cert-manager/issuer-lib/internal/testapi/testutil"
 )
 
 func TestCertificateRequestPredicate(t *testing.T) {
@@ -406,7 +406,7 @@ func (ti *testissuer) GetIssuerTypeIdentifier() string {
 func TestLinkedIssuerPredicate(t *testing.T) {
 	predicate := controllers.LinkedIssuerPredicate{}
 
-	issuer1 := testutil.SimpleIssuer("issuer-1")
+	issuer1 := testutil.TestIssuer("issuer-1")
 
 	fakeTime := time.Now()
 	fakeClock := clocktesting.NewFakeClock(fakeTime)
@@ -430,8 +430,8 @@ func TestLinkedIssuerPredicate(t *testing.T) {
 			name:            "random-condition-changed",
 			shouldReconcile: false,
 			event: event.UpdateEvent{
-				ObjectOld: testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerStatusCondition(
+				ObjectOld: testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerStatusCondition(
 						fakeClock,
 						"random",
 						cmmeta.ConditionFalse,
@@ -439,8 +439,8 @@ func TestLinkedIssuerPredicate(t *testing.T) {
 						"test1",
 					),
 				),
-				ObjectNew: testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerStatusCondition(
+				ObjectNew: testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerStatusCondition(
 						fakeClock,
 						"random",
 						cmmeta.ConditionTrue,
@@ -455,8 +455,8 @@ func TestLinkedIssuerPredicate(t *testing.T) {
 			shouldReconcile: true,
 			event: event.UpdateEvent{
 				ObjectOld: &testissuer{Status: nil},
-				ObjectNew: testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerStatusCondition(
+				ObjectNew: testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerStatusCondition(
 						fakeClock,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionFalse,
@@ -470,9 +470,9 @@ func TestLinkedIssuerPredicate(t *testing.T) {
 			name:            "ready-condition-added",
 			shouldReconcile: true,
 			event: event.UpdateEvent{
-				ObjectOld: testutil.SimpleIssuerFrom(issuer1),
-				ObjectNew: testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerStatusCondition(
+				ObjectOld: testutil.TestIssuerFrom(issuer1),
+				ObjectNew: testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerStatusCondition(
 						fakeClock,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionFalse,
@@ -486,8 +486,8 @@ func TestLinkedIssuerPredicate(t *testing.T) {
 			name:            "ready-condition-identical",
 			shouldReconcile: false,
 			event: event.UpdateEvent{
-				ObjectOld: testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerStatusCondition(
+				ObjectOld: testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerStatusCondition(
 						fakeClock,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionFalse,
@@ -495,8 +495,8 @@ func TestLinkedIssuerPredicate(t *testing.T) {
 						"message1",
 					),
 				),
-				ObjectNew: testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerStatusCondition(
+				ObjectNew: testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerStatusCondition(
 						fakeClock,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionFalse,
@@ -510,8 +510,8 @@ func TestLinkedIssuerPredicate(t *testing.T) {
 			name:            "ready-condition-identical-new-observed-generation",
 			shouldReconcile: true,
 			event: event.UpdateEvent{
-				ObjectOld: testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerStatusCondition(
+				ObjectOld: testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerStatusCondition(
 						fakeClock,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionFalse,
@@ -519,9 +519,9 @@ func TestLinkedIssuerPredicate(t *testing.T) {
 						"message1",
 					),
 				),
-				ObjectNew: testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerGeneration(2),
-					testutil.SetSimpleIssuerStatusCondition(
+				ObjectNew: testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerGeneration(2),
+					testutil.SetTestIssuerStatusCondition(
 						fakeClock,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionFalse,
@@ -535,8 +535,8 @@ func TestLinkedIssuerPredicate(t *testing.T) {
 			name:            "ready-condition-changed",
 			shouldReconcile: true,
 			event: event.UpdateEvent{
-				ObjectOld: testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerStatusCondition(
+				ObjectOld: testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerStatusCondition(
 						fakeClock,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionFalse,
@@ -544,8 +544,8 @@ func TestLinkedIssuerPredicate(t *testing.T) {
 						"message",
 					),
 				),
-				ObjectNew: testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerStatusCondition(
+				ObjectNew: testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerStatusCondition(
 						fakeClock,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionTrue,
@@ -569,7 +569,7 @@ func TestLinkedIssuerPredicate(t *testing.T) {
 func TestIssuerPredicate(t *testing.T) {
 	predicate := controllers.IssuerPredicate{}
 
-	issuer1 := testutil.SimpleIssuer("issuer-1")
+	issuer1 := testutil.TestIssuer("issuer-1")
 
 	fakeTime := time.Now()
 	fakeClock := clocktesting.NewFakeClock(fakeTime)
@@ -601,11 +601,11 @@ func TestIssuerPredicate(t *testing.T) {
 			name:            "identical-generations",
 			shouldReconcile: false,
 			event: event.UpdateEvent{
-				ObjectOld: testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerGeneration(80),
+				ObjectOld: testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerGeneration(80),
 				),
-				ObjectNew: testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerGeneration(80),
+				ObjectNew: testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerGeneration(80),
 				),
 			},
 		},
@@ -613,11 +613,11 @@ func TestIssuerPredicate(t *testing.T) {
 			name:            "changed-generations",
 			shouldReconcile: true,
 			event: event.UpdateEvent{
-				ObjectOld: testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerGeneration(80),
+				ObjectOld: testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerGeneration(80),
 				),
-				ObjectNew: testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerGeneration(2),
+				ObjectNew: testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerGeneration(2),
 				),
 			},
 		},
@@ -625,16 +625,16 @@ func TestIssuerPredicate(t *testing.T) {
 			name:            "changed-annotations",
 			shouldReconcile: true,
 			event: event.UpdateEvent{
-				ObjectOld: testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerGeneration(80),
-					func(si *api.SimpleIssuer) {
+				ObjectOld: testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerGeneration(80),
+					func(si *api.TestIssuer) {
 						si.SetAnnotations(map[string]string{
 							"test-annotation": "test",
 						})
 					},
 				),
-				ObjectNew: testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerGeneration(80),
+				ObjectNew: testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerGeneration(80),
 				),
 			},
 		},
@@ -642,9 +642,9 @@ func TestIssuerPredicate(t *testing.T) {
 			name:            "ready-condition-added",
 			shouldReconcile: true,
 			event: event.UpdateEvent{
-				ObjectOld: testutil.SimpleIssuerFrom(issuer1),
-				ObjectNew: testutil.SimpleIssuerFrom(issuer1,
-					testutil.SetSimpleIssuerStatusCondition(
+				ObjectOld: testutil.TestIssuerFrom(issuer1),
+				ObjectNew: testutil.TestIssuerFrom(issuer1,
+					testutil.SetTestIssuerStatusCondition(
 						fakeClock,
 						cmapi.IssuerConditionReady,
 						cmmeta.ConditionFalse,

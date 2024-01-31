@@ -52,7 +52,7 @@ const (
 	eventIssuerPermanentError = "PermanentError"
 )
 
-// IssuerReconciler reconciles a SimpleIssuer object
+// IssuerReconciler reconciles a TestIssuer object
 type IssuerReconciler struct {
 	ForObject v1alpha1.Issuer
 

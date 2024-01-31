@@ -52,7 +52,7 @@ It takes care of:
 
 ## Usage
 
-An example issuer implementation can be found in the [`./internal/testsetups/simple`](./internal/testsetups/simple) subdirectory.
+An example issuer implementation can be found in the [`./examples/simple`](./examples/simple) subdirectory.
 
 ## Log levels
 

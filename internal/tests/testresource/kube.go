@@ -41,7 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
 	"github.com/cert-manager/issuer-lib/internal/kubeutil"
-	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/api"
+	"github.com/cert-manager/issuer-lib/internal/testapi/api"
 )
 
 type OwnedKubeClients struct {

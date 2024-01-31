@@ -24,6 +24,7 @@ import (
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].status"
 // +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].reason"
 // +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].message"
@@ -32,34 +33,34 @@ import (
 // +kubebuilder:printcolumn:name="Generation",type="integer",JSONPath=".metadata.generation"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
-// SimpleIssuer is the Schema for the SimpleIssuers API
-type SimpleIssuer struct {
+// TestClusterIssuer is the Schema for the TestClusterIssuers API
+type TestClusterIssuer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   SimpleCertificateSource `json:"spec,omitempty"`
-	Status v1alpha1.IssuerStatus   `json:"status,omitempty"`
+	Spec   TestSpec              `json:"spec,omitempty"`
+	Status v1alpha1.IssuerStatus `json:"status,omitempty"`
 }
 
-func (vi *SimpleIssuer) GetStatus() *v1alpha1.IssuerStatus {
+func (vi *TestClusterIssuer) GetStatus() *v1alpha1.IssuerStatus {
 	return &vi.Status
 }
 
-func (vi *SimpleIssuer) GetIssuerTypeIdentifier() string {
-	return "simpleissuers.issuer.cert-manager.io"
+func (vi *TestClusterIssuer) GetIssuerTypeIdentifier() string {
+	return "testclusterissuers.testing.cert-manager.io"
 }
 
-var _ v1alpha1.Issuer = &SimpleIssuer{}
+var _ v1alpha1.Issuer = &TestClusterIssuer{}
 
 // +kubebuilder:object:root=true
 
-// SimpleIssuerList contains a list of SimpleIssuers
-type SimpleIssuerList struct {
+// TestClusterIssuerList contains a list of TestClusterIssuer
+type TestClusterIssuerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []SimpleIssuer `json:"items"`
+	Items           []TestClusterIssuer `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&SimpleIssuer{}, &SimpleIssuerList{})
+	SchemeBuilder.Register(&TestClusterIssuer{}, &TestClusterIssuerList{})
 }

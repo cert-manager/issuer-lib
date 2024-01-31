@@ -36,10 +36,10 @@ import (
 	v1alpha1 "github.com/cert-manager/issuer-lib/api/v1alpha1"
 	"github.com/cert-manager/issuer-lib/conditions"
 	"github.com/cert-manager/issuer-lib/controllers/signer"
+	"github.com/cert-manager/issuer-lib/internal/testapi/api"
+	"github.com/cert-manager/issuer-lib/internal/testapi/testutil"
 	"github.com/cert-manager/issuer-lib/internal/tests/testcontext"
 	"github.com/cert-manager/issuer-lib/internal/tests/testresource"
-	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/api"
-	"github.com/cert-manager/issuer-lib/internal/testsetups/simple/testutil"
 )
 
 // TestCombinedControllerIntegration runs the
@@ -63,8 +63,8 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 	ctx = setupControllersAPIServerAndClient(t, ctx, kubeClients,
 		func(mgr ctrl.Manager) controllerInterface {
 			return &CombinedController{
-				IssuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
-				ClusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
+				IssuerTypes:        []v1alpha1.Issuer{&api.TestIssuer{}},
+				ClusterIssuerTypes: []v1alpha1.Issuer{&api.TestClusterIssuer{}},
 				FieldOwner:         fieldOwner,
 				MaxRetryDuration:   time.Minute,
 				Check: func(_ context.Context, _ v1alpha1.Issuer) error {
@@ -141,11 +141,11 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 			namespace, cleanup := kubeClients.SetupNamespace(t, ctx)
 			defer cleanup()
 
-			issuer := testutil.SimpleIssuer(
+			issuer := testutil.TestIssuer(
 				"issuer-1",
-				testutil.SetSimpleIssuerNamespace(namespace),
-				testutil.SetSimpleIssuerGeneration(70),
-				testutil.SetSimpleIssuerStatusCondition(
+				testutil.SetTestIssuerNamespace(namespace),
+				testutil.SetTestIssuerGeneration(70),
+				testutil.SetTestIssuerStatusCondition(
 					clock.RealClock{},
 					cmapi.IssuerConditionReady,
 					cmmeta.ConditionTrue,
@@ -166,12 +166,12 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 			)
 
 			checkComplete := kubeClients.StartObjectWatch(t, ctx, issuer)
-			t.Log("Creating the SimpleIssuer")
+			t.Log("Creating the TestIssuer")
 			require.NoError(t, kubeClients.Client.Create(ctx, issuer))
 			checkResult <- error(nil)
-			t.Log("Waiting for the SimpleIssuer to be Ready")
+			t.Log("Waiting for the TestIssuer to be Ready")
 			err := checkComplete(func(obj runtime.Object) error {
-				readyCondition := conditions.GetIssuerStatusCondition(obj.(*api.SimpleIssuer).Status.Conditions, cmapi.IssuerConditionReady)
+				readyCondition := conditions.GetIssuerStatusCondition(obj.(*api.TestIssuer).Status.Conditions, cmapi.IssuerConditionReady)
 
 				if (readyCondition == nil) ||
 					(readyCondition.ObservedGeneration != issuer.Generation) ||
@@ -210,7 +210,7 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 
 			t.Log("Waiting for Issuer to have a Pending IssuerFailedWillRetry condition")
 			err = checkIssuerComplete(func(obj runtime.Object) error {
-				readyCondition := conditions.GetIssuerStatusCondition(obj.(*api.SimpleIssuer).Status.Conditions, cmapi.IssuerConditionReady)
+				readyCondition := conditions.GetIssuerStatusCondition(obj.(*api.TestIssuer).Status.Conditions, cmapi.IssuerConditionReady)
 
 				if (readyCondition == nil) ||
 					(readyCondition.ObservedGeneration != issuer.Generation) ||
@@ -244,7 +244,7 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 				checkComplete = kubeClients.StartObjectWatch(t, ctx, issuer)
 				checkResult <- error(nil)
 				err = checkComplete(func(obj runtime.Object) error {
-					readyCondition := conditions.GetIssuerStatusCondition(obj.(*api.SimpleIssuer).Status.Conditions, cmapi.IssuerConditionReady)
+					readyCondition := conditions.GetIssuerStatusCondition(obj.(*api.TestIssuer).Status.Conditions, cmapi.IssuerConditionReady)
 
 					if (readyCondition == nil) ||
 						(readyCondition.ObservedGeneration != issuer.Generation) ||
