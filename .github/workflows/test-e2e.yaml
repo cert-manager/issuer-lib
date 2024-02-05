@@ -24,7 +24,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         with:
           path: _bin/downloaded
           key: downloaded-${{ runner.os }}-${{ hashFiles('make/tools.mk') }}-${{ hashFiles('make/image-preload.mk') }}
