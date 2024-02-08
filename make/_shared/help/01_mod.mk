@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # Copyright 2023 The cert-manager Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,21 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -eu -o pipefail
 
-# This script takes the hash of its first argument and verifies it against the
-# hex hash given in its second argument
+help_sh := $(dir $(lastword $(MAKEFILE_LIST)))/help.sh
 
-SHASUM=$(./make/util/hash.sh "$1")
-
-# When running 'make learn-sha-tools', we don't want this script to fail.
-# Instead we log what sha values are wrong, so the make.mk file can be updated.
-if [ "$SHASUM" != "$2" ] && [ "${LEARN_FILE:-}" != "" ]; then
-	echo "s/$2/$SHASUM/g" >> "${LEARN_FILE:-}"
-	exit 0
-fi
-
-if [ "$SHASUM" != "$2"  ]; then
-	echo "invalid checksum for \"$1\": wanted \"$2\" but got \"$SHASUM\""
-	exit 1
-fi
+.PHONY: help
+help:
+	@MAKEFILE_LIST="$(MAKEFILE_LIST)" $(help_sh)

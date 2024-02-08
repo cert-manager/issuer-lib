@@ -56,8 +56,8 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 
 	fieldOwner := "failed-certificate-request-should-retrigger-issuer"
 
-	ctx := testresource.EnsureTestDependencies(t, testcontext.ForTest(t), testresource.UnitTest)
-	kubeClients := testresource.KubeClients(t, ctx)
+	ctx := testcontext.ForTest(t)
+	kubeClients := testresource.KubeClients(t, nil)
 
 	checkResult, signResult := make(chan error, 10), make(chan error, 10)
 	ctx = setupControllersAPIServerAndClient(t, ctx, kubeClients,
