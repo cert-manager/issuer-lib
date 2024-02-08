@@ -71,7 +71,7 @@ func setupControllersAPIServerAndClient(t *testing.T, parentCtx context.Context,
 	_, err := kubeClients.InstallCRDs(envtest.CRDInstallOptions{
 		Scheme: kubeClients.Scheme,
 		Paths: []string{
-			os.Getenv("TEST_CRDS"),
+			os.Getenv("SIMPLE_CRDS"),
 			os.Getenv("CERT_MANAGER_CRDS"),
 		},
 		ErrorIfPathMissing: true,

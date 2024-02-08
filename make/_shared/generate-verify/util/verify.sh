@@ -31,7 +31,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-projectdir="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
+projectdir="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../../../.." && pwd )"
 
 cd "${projectdir}"
 
@@ -51,7 +51,10 @@ pushd "${tmp}" >/dev/null
 
 popd >/dev/null
 
-if ! diff --new-file --exclude=.git --exclude=_bin --unified --show-c-function --recursive "${projectdir}" "${tmp}"
+if ! diff \
+    --exclude=".git" \
+    --exclude="_bin" \
+    --new-file --unified --show-c-function --recursive "${projectdir}" "${tmp}"
 then
     echo
     echo "Project '${projectdir}' is out of date."

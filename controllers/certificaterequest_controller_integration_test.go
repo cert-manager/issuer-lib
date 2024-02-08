@@ -77,8 +77,8 @@ func TestCertificateRequestControllerIntegrationIssuerInitiallyNotFoundAndNotRea
 
 	fieldOwner := "issuer-or-clusterissuer-initially-not-found-and-not-ready"
 
-	ctx := testresource.EnsureTestDependencies(t, testcontext.ForTest(t), testresource.UnitTest)
-	kubeClients := testresource.KubeClients(t, ctx)
+	ctx := testcontext.ForTest(t)
+	kubeClients := testresource.KubeClients(t, nil)
 
 	counters := []uint64{}
 	ctx = setupControllersAPIServerAndClient(t, ctx, kubeClients,
@@ -217,8 +217,8 @@ func TestCertificateRequestControllerIntegrationSetCondition(t *testing.T) {
 
 	fieldOwner := "cr-set-condition"
 
-	ctx := testresource.EnsureTestDependencies(t, testcontext.ForTest(t), testresource.UnitTest)
-	kubeClients := testresource.KubeClients(t, ctx)
+	ctx := testcontext.ForTest(t)
+	kubeClients := testresource.KubeClients(t, nil)
 
 	counter := uint64(0)
 	signResult := make(chan error, 10)

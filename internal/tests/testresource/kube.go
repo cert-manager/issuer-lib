@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"os"
 	goruntime "runtime"
 	"testing"
 	"time"
@@ -52,7 +53,7 @@ type OwnedKubeClients struct {
 	Client     client.WithWatch
 }
 
-func KubeClients(tb testing.TB, ctx context.Context) *OwnedKubeClients {
+func KubeClients(tb testing.TB, kubeconfig *string) *OwnedKubeClients {
 	tb.Helper()
 
 	scheme := runtime.NewScheme()
@@ -65,13 +66,10 @@ func KubeClients(tb testing.TB, ctx context.Context) *OwnedKubeClients {
 		Scheme: scheme,
 	}
 
-	switch CurrentTestMode(ctx) {
-	case UnitTest:
+	if kubeconfig == nil {
 		testKubernetes.initTestEnv(tb, testKubernetes.Scheme)
-	case EndToEndTest:
-		testKubernetes.initExistingKubernetes(tb, testKubernetes.Scheme)
-	default:
-		tb.Fatalf("unknown test mode specified")
+	} else {
+		testKubernetes.initExistingKubernetes(tb, *kubeconfig)
 	}
 
 	kubeClientset, err := kubernetes.NewForConfig(testKubernetes.Rest)
@@ -106,9 +104,10 @@ func (k *OwnedKubeClients) initTestEnv(tb testing.TB, scheme *runtime.Scheme) {
 	k.Rest = cfg
 }
 
-func (k *OwnedKubeClients) initExistingKubernetes(tb testing.TB, scheme *runtime.Scheme) {
+func (k *OwnedKubeClients) initExistingKubernetes(tb testing.TB, kubeconfig string) {
 	tb.Helper()
 
+	os.Setenv("KUBECONFIG", kubeconfig)
 	kubeConfig, err := config.GetConfigWithContext("")
 	require.NoError(tb, err)
 
