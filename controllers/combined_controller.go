@@ -82,7 +82,14 @@ type CombinedController struct {
 	// controller.
 	DisableKubernetesCSRController bool
 
-	PreSetupWithManager  func(context.Context, schema.GroupVersionKind, ctrl.Manager, *builder.Builder) error
+	// PreSetupWithManager is an optional function that can be used to perform
+	// additional setup before the controller is built and registered with the
+	// manager.
+	PreSetupWithManager func(context.Context, schema.GroupVersionKind, ctrl.Manager, *builder.Builder) error
+
+	// PostSetupWithManager is an optional function that can be used to perform
+	// additional setup after the controller is built and registered with the
+	// manager.
 	PostSetupWithManager func(context.Context, schema.GroupVersionKind, ctrl.Manager, controller.Controller) error
 }
 
