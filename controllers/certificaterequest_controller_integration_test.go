@@ -148,7 +148,7 @@ func TestCertificateRequestControllerIntegrationIssuerInitiallyNotFoundAndNotRea
 
 			checkComplete := kubeClients.StartObjectWatch(t, ctx, cr)
 			t.Log("Creating & approving the CertificateRequest")
-			createApprovedCR(t, ctx, kubeClients.Client, clock.RealClock{}, cr)
+			createApprovedCR(t, ctx, kubeClients.Client, cr)
 			t.Log("Waiting for controller to mark the CertificateRequest as IssuerNotFound")
 			err := checkComplete(func(obj runtime.Object) error {
 				readyCondition := cmutil.GetCertificateRequestCondition(obj.(*cmapi.CertificateRequest), cmapi.CertificateRequestConditionReady)
@@ -272,7 +272,7 @@ func TestCertificateRequestControllerIntegrationSetCondition(t *testing.T) {
 
 	checkComplete := kubeClients.StartObjectWatch(t, ctx, cr)
 	t.Log("Creating & approving the CertificateRequest")
-	createApprovedCR(t, ctx, kubeClients.Client, clock.RealClock{}, cr)
+	createApprovedCR(t, ctx, kubeClients.Client, cr)
 	t.Log("Waiting for controller to mark the CertificateRequest as IssuerNotFound")
 	err := checkComplete(func(obj runtime.Object) error {
 		readyCondition := cmutil.GetCertificateRequestCondition(obj.(*cmapi.CertificateRequest), cmapi.CertificateRequestConditionReady)
@@ -372,12 +372,12 @@ func TestCertificateRequestControllerIntegrationSetCondition(t *testing.T) {
 	require.Equal(t, uint64(3), atomic.LoadUint64(&counter))
 }
 
-func createApprovedCR(t *testing.T, ctx context.Context, kc client.Client, clock clock.PassiveClock, cr *cmapi.CertificateRequest) {
+func createApprovedCR(t *testing.T, ctx context.Context, kc client.Client, cr *cmapi.CertificateRequest) {
 	t.Helper()
 
 	require.NoError(t, kc.Create(ctx, cr))
 	conditions.SetCertificateRequestStatusCondition(
-		clock,
+		clock.RealClock{},
 		cr.Status.Conditions,
 		&cr.Status.Conditions,
 		cmapi.CertificateRequestConditionApproved,

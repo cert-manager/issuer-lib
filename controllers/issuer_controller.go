@@ -129,7 +129,7 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 	logger logr.Logger,
 	ctx context.Context,
 	req ctrl.Request,
-) (result ctrl.Result, issuerStatusPatch *v1alpha1.IssuerStatus, reconcileError error) {
+) (result ctrl.Result, issuerStatusPatch *v1alpha1.IssuerStatus, reconcileError error) { // nolint:unparam
 	// Get the ClusterIssuer
 	issuer := r.ForObject.DeepCopyObject().(v1alpha1.Issuer)
 	forObjectGvk := r.ForObject.GetObjectKind().GroupVersionKind()
@@ -170,8 +170,7 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 	// for updating its Status.
 	issuerStatusPatch = &v1alpha1.IssuerStatus{}
 
-	setCondition := func(
-		conditionType cmapi.IssuerConditionType,
+	setReadyCondition := func(
 		status cmmeta.ConditionStatus,
 		reason, message string,
 	) string {
@@ -180,8 +179,8 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 			issuer.GetStatus().Conditions,
 			&issuerStatusPatch.Conditions,
 			issuer.GetGeneration(),
-			conditionType, status,
-			reason, message,
+			cmapi.IssuerConditionReady,
+			status, reason, message,
 		)
 		return condition.Message
 	}
@@ -190,8 +189,7 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 	// to Unknown.
 	if readyCondition == nil {
 		logger.V(1).Info("Initializing Ready condition")
-		setCondition(
-			cmapi.IssuerConditionReady,
+		setReadyCondition(
 			cmmeta.ConditionUnknown,
 			v1alpha1.IssuerConditionReasonInitializing,
 			fmt.Sprintf("%s has started reconciling this Issuer", r.FieldOwner),
@@ -212,8 +210,7 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 	}
 	if err == nil {
 		logger.V(1).Info("Successfully finished the reconciliation.")
-		message := setCondition(
-			cmapi.IssuerConditionReady,
+		message := setReadyCondition(
 			cmmeta.ConditionTrue,
 			v1alpha1.IssuerConditionReasonChecked,
 			"Succeeded checking the issuer",
@@ -227,8 +224,7 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 	if isPermanentError {
 		// fail permanently
 		logger.V(1).Error(err, "Permanent Issuer error. Marking as failed.")
-		message := setCondition(
-			cmapi.IssuerConditionReady,
+		message := setReadyCondition(
 			cmmeta.ConditionFalse,
 			v1alpha1.IssuerConditionReasonFailed,
 			fmt.Sprintf("Failed permanently: %s", err),
@@ -238,8 +234,7 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 	} else {
 		// retry
 		logger.V(1).Error(err, "Retryable Issuer error.")
-		message := setCondition(
-			cmapi.IssuerConditionReady,
+		message := setReadyCondition(
 			cmmeta.ConditionFalse,
 			v1alpha1.IssuerConditionReasonPending,
 			fmt.Sprintf("Not ready yet: %s", err),

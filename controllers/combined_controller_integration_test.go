@@ -193,7 +193,7 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 			}, watch.Added, watch.Modified)
 			require.NoError(t, err)
 
-			createApprovedCR(t, ctx, kubeClients.Client, clock.RealClock{}, cr)
+			createApprovedCR(t, ctx, kubeClients.Client, cr)
 
 			checkCr1Complete := kubeClients.StartObjectWatch(t, ctx, cr)
 			checkCr2Complete := kubeClients.StartObjectWatch(t, ctx, cr)
@@ -538,7 +538,7 @@ func TestCombinedControllerTiming(t *testing.T) { //nolint:tparallel
 			)
 
 			require.NoError(t, kubeClients.Client.Create(ctx, issuer))
-			createApprovedCR(t, ctx, kubeClients.Client, clock.RealClock{}, cr)
+			createApprovedCR(t, ctx, kubeClients.Client, cr)
 
 			<-done
 			time.Sleep(1 * time.Second)
