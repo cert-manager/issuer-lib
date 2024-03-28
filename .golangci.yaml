@@ -3,7 +3,6 @@ issues:
     - linters:
         - gosec
         - unparam
-        - gci
         - gocritic
       text: ".*"
 linters:
