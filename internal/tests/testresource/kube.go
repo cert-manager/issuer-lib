@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"os"
 	goruntime "runtime"
 	"testing"
 	"time"
@@ -107,7 +106,7 @@ func (k *OwnedKubeClients) initTestEnv(tb testing.TB, scheme *runtime.Scheme) {
 func (k *OwnedKubeClients) initExistingKubernetes(tb testing.TB, kubeconfig string) {
 	tb.Helper()
 
-	os.Setenv("KUBECONFIG", kubeconfig)
+	tb.Setenv("KUBECONFIG", kubeconfig)
 	kubeConfig, err := config.GetConfigWithContext("")
 	require.NoError(tb, err)
 

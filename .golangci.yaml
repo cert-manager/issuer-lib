@@ -3,8 +3,6 @@ issues:
     - linters:
         - gosec
         - unparam
-        - errorlint
-        - tenv
         - gci
         - gocritic
       text: ".*"
