@@ -28,7 +28,6 @@ import (
 	"time"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-
 	"simple-issuer/api"
 
 	"github.com/cert-manager/issuer-lib/api/v1alpha1"

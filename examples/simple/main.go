@@ -35,7 +35,6 @@ import (
 	ctrlzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
-
 	"simple-issuer/api"
 	"simple-issuer/controller"
 
@@ -113,6 +112,23 @@ func main() {
 	klog.SetLogger(logr)
 	ctrl.SetLogger(logr)
 
+	if err := run(
+		clusterResourceNamespace,
+		metricsAddr,
+		enableLeaderElection,
+		probeAddr,
+	); err != nil {
+		logr.Error(err, "error running manager")
+		os.Exit(1)
+	}
+}
+
+func run(
+	clusterResourceNamespace string,
+	metricsAddr string,
+	enableLeaderElection bool,
+	probeAddr string,
+) error {
 	setupLog := ctrl.Log.WithName("setup")
 
 	setupLog.Info("versionInfo", "Version", Version)
@@ -124,7 +140,6 @@ func main() {
 		} else {
 			setupLog.Error(err, "unexpected error while getting in-cluster Namespace")
 		}
-		os.Exit(1)
 	}
 
 	scheme := runtime.NewScheme()
@@ -160,30 +175,27 @@ func main() {
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), options)
 	if err != nil {
-		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
+		return fmt.Errorf("unable to start manager: %w", err)
 	}
 
 	if err = (&controller.Signer{}).SetupWithManager(ctx, mgr); err != nil {
-		setupLog.Error(err, "unable to create controller")
-		os.Exit(1)
+		return fmt.Errorf("unable to create controller: %w", err)
 	}
 	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up health check")
-		os.Exit(1)
+		return fmt.Errorf("unable to set up health check: %w", err)
 	}
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up ready check")
-		os.Exit(1)
+		return fmt.Errorf("unable to set up ready check: %w", err)
 	}
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctx); err != nil {
-		setupLog.Error(err, "problem running manager")
-		os.Exit(1)
+		return fmt.Errorf("problem running manager: %w", err)
 	}
+
+	return nil
 }
 
 var errNotInCluster = errors.New("not running in-cluster")
