@@ -23,7 +23,6 @@ go_manager_main_dir := .
 go_manager_mod_dir := ./examples/simple
 go_manager_ldflags := -X main.Version=$(VERSION)
 oci_manager_base_image_flavor := static
-oci_manager_image_name := cert-manager.local/simple-issuer
 oci_manager_image_tag := $(VERSION)
 oci_manager_image_name_development := cert-manager.local/simple-issuer
 
@@ -33,3 +32,5 @@ deploy_namespace := cert-manager
 api_docs_outfile := docs/api.md
 api_docs_package := $(repo_name)/api/v1alpha1
 api_docs_branch := main
+
+golangci_lint_config := .golangci.yaml
