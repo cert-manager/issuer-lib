@@ -16,7 +16,6 @@ linters:
     - asciicheck
     - bidichk
     - bodyclose
-    - containedctx
     - contextcheck
     - decorder
     - dogsled
@@ -25,7 +24,6 @@ linters:
     - errcheck
     - errchkjson
     - errname
-    - errorlint
     - execinquery
     - exhaustive
     - exportloopref
@@ -37,7 +35,6 @@ linters:
     - gocritic
     - gofmt
     - goheader
-    - goimports
     - gomoddirectives
     - gomodguard
     - goprintffuncname
@@ -59,7 +56,6 @@ linters:
     - nilnil
     - noctx
     - nosprintfhostport
-    - prealloc
     - predeclared
     - promlinter
     - protogetter
