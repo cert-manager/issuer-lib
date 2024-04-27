@@ -24,8 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -110,7 +108,7 @@ func (cs *eventConsumer) String() string {
 }
 
 // Start implements Source and should only be called by the Controller.
-func (cs *eventConsumer) Start(_ context.Context, _ handler.EventHandler, queue workqueue.RateLimitingInterface, _ ...predicate.Predicate) error {
+func (cs *eventConsumer) Start(_ context.Context, queue workqueue.RateLimitingInterface) error {
 	if cs.register == nil {
 		return fmt.Errorf("register function not provided")
 	}
