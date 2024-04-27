@@ -263,10 +263,7 @@ func (r *IssuerReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manage
 				IssuerPredicate{},
 			),
 		).
-		WatchesRawSource(
-			r.EventSource.AddConsumer(forObjectGvk),
-			nil,
-		)
+		WatchesRawSource(r.EventSource.AddConsumer(forObjectGvk))
 
 	if r.PreSetupWithManager != nil {
 		err := r.PreSetupWithManager(ctx, forObjectGvk, mgr, build)
