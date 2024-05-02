@@ -57,7 +57,7 @@ func randomTime() time.Time {
 	max := time.Date(2070, 1, 0, 0, 0, 0, 0, time.UTC).Unix()
 	delta := max - min
 
-	sec := rand.Int63n(delta) + min
+	sec := rand.Int63n(delta) + min // #nosec: G404 -- The random time does not have to be secure.
 	return time.Unix(sec, 0)
 }
 

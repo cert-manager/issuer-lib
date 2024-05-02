@@ -35,7 +35,7 @@ func TestSetIssuerStatusCondition(t *testing.T) {
 		conditionType      cmapi.IssuerConditionType
 		status             cmmeta.ConditionStatus
 
-		expectedCondition *cmapi.IssuerCondition
+		expectedCondition cmapi.IssuerCondition
 		expectNewEntry    bool
 	}
 
@@ -59,7 +59,7 @@ func TestSetIssuerStatusCondition(t *testing.T) {
 			conditionType:   cmapi.IssuerConditionReady,
 			status:          cmmeta.ConditionTrue,
 
-			expectedCondition: &cmapi.IssuerCondition{
+			expectedCondition: cmapi.IssuerCondition{
 				Type:               cmapi.IssuerConditionReady,
 				Status:             cmmeta.ConditionTrue,
 				LastTransitionTime: &fakeTimeObj1,
@@ -78,7 +78,7 @@ func TestSetIssuerStatusCondition(t *testing.T) {
 			conditionType:   cmapi.IssuerConditionReady,
 			status:          cmmeta.ConditionFalse,
 
-			expectedCondition: &cmapi.IssuerCondition{
+			expectedCondition: cmapi.IssuerCondition{
 				Type:               cmapi.IssuerConditionReady,
 				Status:             cmmeta.ConditionFalse,
 				LastTransitionTime: &fakeTimeObj2,
@@ -102,7 +102,7 @@ func TestSetIssuerStatusCondition(t *testing.T) {
 			conditionType: cmapi.IssuerConditionReady,
 			status:        cmmeta.ConditionTrue,
 
-			expectedCondition: &cmapi.IssuerCondition{
+			expectedCondition: cmapi.IssuerCondition{
 				Type:               cmapi.IssuerConditionReady,
 				Status:             cmmeta.ConditionTrue,
 				LastTransitionTime: &fakeTimeObj1,
@@ -126,7 +126,7 @@ func TestSetIssuerStatusCondition(t *testing.T) {
 			conditionType: cmapi.IssuerConditionType("AnotherCondition"),
 			status:        cmmeta.ConditionTrue,
 
-			expectedCondition: &cmapi.IssuerCondition{
+			expectedCondition: cmapi.IssuerCondition{
 				Type:               cmapi.IssuerConditionType("AnotherCondition"),
 				Status:             cmmeta.ConditionTrue,
 				LastTransitionTime: &fakeTimeObj2,
@@ -182,7 +182,7 @@ func TestSetIssuerStatusCondition(t *testing.T) {
 			test.expectedCondition.Reason = "NewReason"
 			test.expectedCondition.Message = "NewMessage"
 			test.expectedCondition.ObservedGeneration = 8
-			require.Equal(t, test.expectedCondition, cond)
+			require.Equal(t, test.expectedCondition, *cond)
 			require.Equal(t, &fakeTimeObj2, time)
 
 			// Check that the patchConditions slice got a new entry if expected
@@ -195,7 +195,7 @@ func TestSetIssuerStatusCondition(t *testing.T) {
 			// Make sure only the expected condition in the patchConditions slice got updated
 			for _, c := range patchConditions {
 				if c.Type == test.conditionType {
-					require.Equal(t, test.expectedCondition, &c)
+					require.Equal(t, test.expectedCondition, c)
 					continue
 				}
 

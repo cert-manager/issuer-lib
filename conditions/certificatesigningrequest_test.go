@@ -35,7 +35,7 @@ func TestSetCertificateSigningRequestStatusCondition(t *testing.T) {
 		conditionType      certificatesv1.RequestConditionType
 		status             v1.ConditionStatus
 
-		expectedCondition *certificatesv1.CertificateSigningRequestCondition
+		expectedCondition certificatesv1.CertificateSigningRequestCondition
 		expectNewEntry    bool
 	}
 
@@ -59,7 +59,7 @@ func TestSetCertificateSigningRequestStatusCondition(t *testing.T) {
 			conditionType:   certificatesv1.CertificateApproved,
 			status:          v1.ConditionTrue,
 
-			expectedCondition: &certificatesv1.CertificateSigningRequestCondition{
+			expectedCondition: certificatesv1.CertificateSigningRequestCondition{
 				Type:               certificatesv1.CertificateApproved,
 				Status:             v1.ConditionTrue,
 				LastTransitionTime: fakeTimeObj1,
@@ -78,7 +78,7 @@ func TestSetCertificateSigningRequestStatusCondition(t *testing.T) {
 			conditionType:   certificatesv1.CertificateApproved,
 			status:          v1.ConditionFalse,
 
-			expectedCondition: &certificatesv1.CertificateSigningRequestCondition{
+			expectedCondition: certificatesv1.CertificateSigningRequestCondition{
 				Type:               certificatesv1.CertificateApproved,
 				Status:             v1.ConditionFalse,
 				LastTransitionTime: fakeTimeObj2,
@@ -102,7 +102,7 @@ func TestSetCertificateSigningRequestStatusCondition(t *testing.T) {
 			conditionType: certificatesv1.CertificateApproved,
 			status:        v1.ConditionTrue,
 
-			expectedCondition: &certificatesv1.CertificateSigningRequestCondition{
+			expectedCondition: certificatesv1.CertificateSigningRequestCondition{
 				Type:               certificatesv1.CertificateApproved,
 				Status:             v1.ConditionTrue,
 				LastTransitionTime: fakeTimeObj1,
@@ -126,7 +126,7 @@ func TestSetCertificateSigningRequestStatusCondition(t *testing.T) {
 			conditionType: certificatesv1.CertificateDenied,
 			status:        v1.ConditionTrue,
 
-			expectedCondition: &certificatesv1.CertificateSigningRequestCondition{
+			expectedCondition: certificatesv1.CertificateSigningRequestCondition{
 				Type:               certificatesv1.CertificateDenied,
 				Status:             v1.ConditionTrue,
 				LastTransitionTime: fakeTimeObj2,
@@ -181,7 +181,7 @@ func TestSetCertificateSigningRequestStatusCondition(t *testing.T) {
 			test.expectedCondition.LastUpdateTime = fakeTimeObj2
 			test.expectedCondition.Reason = "NewReason"
 			test.expectedCondition.Message = "NewMessage"
-			require.Equal(t, test.expectedCondition, cond)
+			require.Equal(t, test.expectedCondition, *cond)
 			require.Equal(t, &fakeTimeObj2, time)
 
 			// Check that the patchConditions slice got a new entry if expected
@@ -194,7 +194,7 @@ func TestSetCertificateSigningRequestStatusCondition(t *testing.T) {
 			// Make sure only the expected condition in the patchConditions slice got updated
 			for _, c := range patchConditions {
 				if c.Type == test.conditionType {
-					require.Equal(t, test.expectedCondition, &c)
+					require.Equal(t, test.expectedCondition, c)
 					continue
 				}
 

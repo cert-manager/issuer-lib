@@ -19,12 +19,12 @@ package kubeutil
 import (
 	"context"
 	"fmt"
-	"math/rand"
 
 	"github.com/go-logr/logr"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -73,7 +73,7 @@ func NewLinkedResourceHandler(
 	addToQueue func(q workqueue.RateLimitingInterface, req reconcile.Request),
 ) (handler.EventHandler, error) {
 	// a random index name prevents collisions with other indexes
-	refField := fmt.Sprintf(".x-index.%s", randStringRunes(10))
+	refField := fmt.Sprintf(".x-index.%s", rand.String(10))
 
 	if err := SetGroupVersionKind(scheme, objType); err != nil {
 		return nil, err
@@ -140,16 +140,6 @@ func (r *linkedResourceHandler) findObjectsForKind(ctx context.Context, object c
 	}
 
 	return requests
-}
-
-var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-func randStringRunes(n int) string {
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
-	}
-	return string(b)
 }
 
 // Based on https://github.com/kubernetes-sigs/controller-runtime/blob/00f2425ce068525e0ff674dba51c3e76ee6ad2da/pkg/handler/enqueue_mapped.go

@@ -38,7 +38,7 @@ func randomTime() time.Time {
 	max := time.Date(2070, 1, 0, 0, 0, 0, 0, time.UTC).Unix()
 	delta := max - min
 
-	sec := rand.Int63n(delta) + min
+	sec := rand.Int63n(delta) + min // #nosec: G404 -- The random time does not have to be secure.
 	return time.Unix(sec, 0)
 }
 
@@ -51,7 +51,7 @@ func TestSetCertificateRequestStatusCondition(t *testing.T) {
 		conditionType      cmapi.CertificateRequestConditionType
 		status             cmmeta.ConditionStatus
 
-		expectedCondition *cmapi.CertificateRequestCondition
+		expectedCondition cmapi.CertificateRequestCondition
 		expectNewEntry    bool
 	}
 
@@ -75,7 +75,7 @@ func TestSetCertificateRequestStatusCondition(t *testing.T) {
 			conditionType:   cmapi.CertificateRequestConditionReady,
 			status:          cmmeta.ConditionTrue,
 
-			expectedCondition: &cmapi.CertificateRequestCondition{
+			expectedCondition: cmapi.CertificateRequestCondition{
 				Type:               cmapi.CertificateRequestConditionReady,
 				Status:             cmmeta.ConditionTrue,
 				LastTransitionTime: &fakeTimeObj1,
@@ -94,7 +94,7 @@ func TestSetCertificateRequestStatusCondition(t *testing.T) {
 			conditionType:   cmapi.CertificateRequestConditionReady,
 			status:          cmmeta.ConditionFalse,
 
-			expectedCondition: &cmapi.CertificateRequestCondition{
+			expectedCondition: cmapi.CertificateRequestCondition{
 				Type:               cmapi.CertificateRequestConditionReady,
 				Status:             cmmeta.ConditionFalse,
 				LastTransitionTime: &fakeTimeObj2,
@@ -118,7 +118,7 @@ func TestSetCertificateRequestStatusCondition(t *testing.T) {
 			conditionType: cmapi.CertificateRequestConditionReady,
 			status:        cmmeta.ConditionTrue,
 
-			expectedCondition: &cmapi.CertificateRequestCondition{
+			expectedCondition: cmapi.CertificateRequestCondition{
 				Type:               cmapi.CertificateRequestConditionReady,
 				Status:             cmmeta.ConditionTrue,
 				LastTransitionTime: &fakeTimeObj1,
@@ -142,7 +142,7 @@ func TestSetCertificateRequestStatusCondition(t *testing.T) {
 			conditionType: cmapi.CertificateRequestConditionApproved,
 			status:        cmmeta.ConditionTrue,
 
-			expectedCondition: &cmapi.CertificateRequestCondition{
+			expectedCondition: cmapi.CertificateRequestCondition{
 				Type:               cmapi.CertificateRequestConditionApproved,
 				Status:             cmmeta.ConditionTrue,
 				LastTransitionTime: &fakeTimeObj2,
@@ -193,7 +193,7 @@ func TestSetCertificateRequestStatusCondition(t *testing.T) {
 			}
 			test.expectedCondition.Reason = "NewReason"
 			test.expectedCondition.Message = "NewMessage"
-			require.Equal(t, test.expectedCondition, cond)
+			require.Equal(t, test.expectedCondition, *cond)
 			require.Equal(t, &fakeTimeObj2, time)
 
 			// Check that the patchConditions slice got a new entry if expected
@@ -206,7 +206,7 @@ func TestSetCertificateRequestStatusCondition(t *testing.T) {
 			// Make sure only the expected condition in the patchConditions slice got updated
 			for _, c := range patchConditions {
 				if c.Type == test.conditionType {
-					require.Equal(t, test.expectedCondition, &c)
+					require.Equal(t, test.expectedCondition, c)
 					continue
 				}
 
