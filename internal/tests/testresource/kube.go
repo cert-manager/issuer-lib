@@ -256,6 +256,7 @@ func (k *OwnedKubeClients) SetupNamespace(tb testing.TB, ctx context.Context) (s
 	stopped := false
 	checkFunctionCalledBeforeCleanup(tb, "SetupNamespace", "CancelFunc", &stopped)
 
+	// nolint: contextcheck // This cleanup context is used for cleanup and is created after the test context has been cancelled.
 	return namespace, func() {
 		defer func() { stopped = true }()
 
