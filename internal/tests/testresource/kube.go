@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand"
 	goruntime "runtime"
 	"testing"
 	"time"
@@ -33,6 +32,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -205,20 +205,10 @@ func (k *OwnedKubeClients) StartObjectWatch(
 	}
 }
 
-const letterBytes = "abcdefghijklmnopqrstuvwxyz"
-
-func randStringBytes(n int) string {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return string(b)
-}
-
 func (k *OwnedKubeClients) SetupNamespace(tb testing.TB, ctx context.Context) (string, context.CancelFunc) {
 	tb.Helper()
 
-	namespace := randStringBytes(15)
+	namespace := rand.String(15)
 
 	removeNamespace := func(cleanupCtx context.Context) (bool, error) {
 		err := k.KubeClient.CoreV1().Namespaces().Delete(cleanupCtx, namespace, metav1.DeleteOptions{})
