@@ -4,7 +4,7 @@ go 1.22.0
 
 require (
 	github.com/cert-manager/cert-manager v1.14.5
-	github.com/go-logr/logr v1.4.1
+	github.com/go-logr/logr v1.4.2
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/sync v0.7.0
 	k8s.io/api v0.30.1
@@ -13,7 +13,7 @@ require (
 	k8s.io/client-go v0.30.1
 	k8s.io/klog/v2 v2.120.1
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
-	sigs.k8s.io/controller-runtime v0.18.2
+	sigs.k8s.io/controller-runtime v0.18.3
 )
 
 require (
