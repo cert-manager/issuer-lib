@@ -34,11 +34,11 @@ import (
 // WARNING: This approach does not guarantee that incorrect use of `time.Now()`
 // is always detected, but after a few test runs it should be very unlikely.
 func randomTime() time.Time {
-	min := time.Date(1970, 1, 0, 0, 0, 0, 0, time.UTC).Unix()
-	max := time.Date(2070, 1, 0, 0, 0, 0, 0, time.UTC).Unix()
-	delta := max - min
+	minTime := time.Date(1970, 1, 0, 0, 0, 0, 0, time.UTC).Unix()
+	maxTime := time.Date(2070, 1, 0, 0, 0, 0, 0, time.UTC).Unix()
+	delta := maxTime - minTime
 
-	sec := rand.Int63n(delta) + min // #nosec: G404 -- The random time does not have to be secure.
+	sec := rand.Int63n(delta) + minTime // #nosec: G404 -- The random time does not have to be secure.
 	return time.Unix(sec, 0)
 }
 
