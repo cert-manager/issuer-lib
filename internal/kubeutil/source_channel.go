@@ -41,13 +41,13 @@ type resource struct {
 
 type eventSource struct {
 	mu         sync.RWMutex
-	dest       map[schema.GroupVersionKind]workqueue.RateLimitingInterface
+	dest       map[schema.GroupVersionKind]workqueue.TypedRateLimitingInterface[reconcile.Request]
 	invalidate sync.Map
 }
 
 func NewEventStore() EventSource {
 	return &eventSource{
-		dest: make(map[schema.GroupVersionKind]workqueue.RateLimitingInterface),
+		dest: make(map[schema.GroupVersionKind]workqueue.TypedRateLimitingInterface[reconcile.Request]),
 	}
 }
 
@@ -81,7 +81,7 @@ func (es *eventSource) ReportError(gvk schema.GroupVersionKind, namespacedName t
 
 func (es *eventSource) AddConsumer(gvk schema.GroupVersionKind) source.Source {
 	return &eventConsumer{
-		register: func(queue workqueue.RateLimitingInterface) error {
+		register: func(queue workqueue.TypedRateLimitingInterface[reconcile.Request]) error {
 			es.mu.Lock()
 			defer es.mu.Unlock()
 
@@ -98,7 +98,7 @@ func (es *eventSource) AddConsumer(gvk schema.GroupVersionKind) source.Source {
 }
 
 type eventConsumer struct {
-	register func(queue workqueue.RateLimitingInterface) error
+	register func(queue workqueue.TypedRateLimitingInterface[reconcile.Request]) error
 }
 
 var _ source.Source = &eventConsumer{}
@@ -108,7 +108,7 @@ func (cs *eventConsumer) String() string {
 }
 
 // Start implements Source and should only be called by the Controller.
-func (cs *eventConsumer) Start(_ context.Context, queue workqueue.RateLimitingInterface) error {
+func (cs *eventConsumer) Start(_ context.Context, queue workqueue.TypedRateLimitingInterface[reconcile.Request]) error {
 	if cs.register == nil {
 		return fmt.Errorf("register function not provided")
 	}

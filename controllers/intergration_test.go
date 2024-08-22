@@ -28,8 +28,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
@@ -90,6 +92,11 @@ func setupControllersAPIServerAndClient(t *testing.T, parentCtx context.Context,
 		LeaderElection: false,
 		Metrics: server.Options{
 			BindAddress: "0",
+		},
+		Controller: config.Controller{
+			// need to skip unique controller name validation
+			// since all tests need a dedicated controller
+			SkipNameValidation: ptr.To(true),
 		},
 	})
 	require.NoError(t, err)

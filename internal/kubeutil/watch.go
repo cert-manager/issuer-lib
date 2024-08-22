@@ -36,7 +36,7 @@ import (
 type linkedResourceHandler struct {
 	cache      cache.Cache
 	objType    client.Object
-	addToQueue func(q workqueue.RateLimitingInterface, req reconcile.Request)
+	addToQueue func(q workqueue.TypedRateLimitingInterface[reconcile.Request], req reconcile.Request)
 
 	refField string
 	scheme   *runtime.Scheme
@@ -70,7 +70,7 @@ func NewLinkedResourceHandler(
 	cache cache.Cache,
 	objType client.Object,
 	toId func(obj client.Object) []string,
-	addToQueue func(q workqueue.RateLimitingInterface, req reconcile.Request),
+	addToQueue func(q workqueue.TypedRateLimitingInterface[reconcile.Request], req reconcile.Request),
 ) (handler.EventHandler, error) {
 	// a random index name prevents collisions with other indexes
 	refField := fmt.Sprintf(".x-index.%s", rand.String(10))
@@ -148,31 +148,31 @@ func (r *linkedResourceHandler) findObjectsForKind(ctx context.Context, object c
 var _ handler.EventHandler = &linkedResourceHandler{}
 
 // Create implements EventHandler.
-func (e *linkedResourceHandler) Create(ctx context.Context, evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+func (e *linkedResourceHandler) Create(ctx context.Context, evt event.CreateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	reqs := map[reconcile.Request]struct{}{}
 	e.mapAndEnqueue(ctx, q, evt.Object, reqs)
 }
 
 // Update implements EventHandler.
-func (e *linkedResourceHandler) Update(ctx context.Context, evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+func (e *linkedResourceHandler) Update(ctx context.Context, evt event.UpdateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	reqs := map[reconcile.Request]struct{}{}
 	e.mapAndEnqueue(ctx, q, evt.ObjectOld, reqs)
 	e.mapAndEnqueue(ctx, q, evt.ObjectNew, reqs)
 }
 
 // Delete implements EventHandler.
-func (e *linkedResourceHandler) Delete(ctx context.Context, evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+func (e *linkedResourceHandler) Delete(ctx context.Context, evt event.DeleteEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	reqs := map[reconcile.Request]struct{}{}
 	e.mapAndEnqueue(ctx, q, evt.Object, reqs)
 }
 
 // Generic implements EventHandler.
-func (e *linkedResourceHandler) Generic(ctx context.Context, evt event.GenericEvent, q workqueue.RateLimitingInterface) {
+func (e *linkedResourceHandler) Generic(ctx context.Context, evt event.GenericEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	reqs := map[reconcile.Request]struct{}{}
 	e.mapAndEnqueue(ctx, q, evt.Object, reqs)
 }
 
-func (e *linkedResourceHandler) mapAndEnqueue(ctx context.Context, q workqueue.RateLimitingInterface, object client.Object, reqs map[reconcile.Request]struct{}) {
+func (e *linkedResourceHandler) mapAndEnqueue(ctx context.Context, q workqueue.TypedRateLimitingInterface[reconcile.Request], object client.Object, reqs map[reconcile.Request]struct{}) {
 	for _, req := range e.findObjectsForKind(ctx, object) {
 		_, ok := reqs[req]
 		if !ok {

@@ -40,6 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1alpha1 "github.com/cert-manager/issuer-lib/api/v1alpha1"
 	"github.com/cert-manager/issuer-lib/conditions"
@@ -509,7 +510,7 @@ func TestCombinedControllerTiming(t *testing.T) { //nolint:tparallel
 
 						PreSetupWithManager: func(ctx context.Context, gvk schema.GroupVersionKind, mgr ctrl.Manager, b *builder.Builder) error {
 							b.WithOptions(controller.Options{
-								RateLimiter: workqueue.NewItemExponentialFailureRateLimiter(200*time.Millisecond, 5*time.Second),
+								RateLimiter: workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](200*time.Millisecond, 5*time.Second),
 							})
 							return nil
 						},
