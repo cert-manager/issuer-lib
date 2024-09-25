@@ -915,7 +915,6 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -1097,7 +1096,6 @@ func TestCertificateRequestMatchIssuerType(t *testing.T) {
 	require.NoError(t, api.AddToScheme(scheme))
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
