@@ -433,7 +433,6 @@ func (r *RequestController) SetupWithManager(
 	// is useful when the certificate request undergoes long backoff retry
 	// periods and wouldn't react quickly to a fix in the issuer configuration.
 	for _, issuerType := range r.AllIssuerTypes() {
-		issuerType := issuerType
 		gvk := issuerType.Type.GetObjectKind().GroupVersionKind()
 
 		// This context is passed through to the client-go informer factory and the

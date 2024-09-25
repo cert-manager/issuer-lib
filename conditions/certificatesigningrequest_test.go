@@ -155,8 +155,6 @@ func TestSetCertificateSigningRequestStatusCondition(t *testing.T) {
 	}
 
 	for _, test := range testCases {
-		test := test
-
 		t.Run(test.name, func(t *testing.T) {
 			test.existingConditions = defaultConditions(t, test.existingConditions)
 			test.patchConditions = defaultConditions(t, test.patchConditions)

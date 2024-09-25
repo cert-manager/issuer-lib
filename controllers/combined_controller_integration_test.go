@@ -144,7 +144,6 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 
 	// run tests sequentially
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Logf("Creating a namespace")
 			namespace, cleanup := kubeClients.SetupNamespace(t, ctx)
@@ -448,8 +447,6 @@ func TestCombinedControllerTiming(t *testing.T) { //nolint:tparallel
 	}
 
 	for _, tc := range testcases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			resultsMutex := sync.Mutex{}
 			resultsIndex := 0

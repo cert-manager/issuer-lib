@@ -122,8 +122,6 @@ func TestCertificateRequestControllerIntegrationIssuerInitiallyNotFoundAndNotRea
 
 	for testId, tc := range tests {
 		counters = append(counters, 0)
-		tc := tc
-		testId := testId
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 

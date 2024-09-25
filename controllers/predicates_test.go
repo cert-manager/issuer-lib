@@ -201,7 +201,6 @@ func TestCertificateRequestPredicate(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			result := predicate.Update(tc.event)
 			require.Equal(t, tc.shouldReconcile, result)
@@ -372,7 +371,6 @@ func TestCertificateSigningRequestPredicate(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			result := predicate.Update(tc.event)
 			require.Equal(t, tc.shouldReconcile, result)
@@ -558,7 +556,6 @@ func TestLinkedIssuerPredicate(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			result := predicate.Update(tc.event)
 			require.Equal(t, tc.shouldReconcile, result)
@@ -657,7 +654,6 @@ func TestIssuerPredicate(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			result := predicate.Update(tc.event)
 			require.Equal(t, tc.shouldReconcile, result)
