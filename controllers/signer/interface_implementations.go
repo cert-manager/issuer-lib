@@ -17,11 +17,9 @@ limitations under the License.
 package signer
 
 import (
-	"crypto/x509"
-	"time"
-
 	apiutil "github.com/cert-manager/cert-manager/pkg/api/util"
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	experimentalapi "github.com/cert-manager/cert-manager/pkg/apis/experimental/v1alpha1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	"github.com/cert-manager/cert-manager/pkg/util/pki"
 	certificatesv1 "k8s.io/api/certificates/v1"
@@ -37,15 +35,22 @@ func CertificateRequestObjectFromCertificateRequest(cr *cmapi.CertificateRequest
 	return &certificateRequestImpl{cr}
 }
 
-func (c *certificateRequestImpl) GetRequest() (*x509.Certificate, time.Duration, []byte, error) {
-	duration := apiutil.DefaultCertDuration(c.CertificateRequest.Spec.Duration)
+func (c *certificateRequestImpl) GetCertificateDetails() (CertificateDetails, error) {
+	duration := apiutil.DefaultCertDuration(c.Spec.Duration)
 
-	template, err := pki.CertificateTemplateFromCertificateRequest(c.CertificateRequest)
+	keyUsage, extKeyUsage, err := pki.KeyUsagesForCertificateOrCertificateRequest(c.Spec.Usages, c.Spec.IsCA)
 	if err != nil {
-		return nil, 0, nil, err
+		return CertificateDetails{}, err
 	}
 
-	return template, duration, c.Spec.Request, nil
+	return CertificateDetails{
+		CSR:         c.Spec.Request,
+		Duration:    duration,
+		IsCA:        c.Spec.IsCA,
+		MaxPathLen:  nil,
+		KeyUsage:    keyUsage,
+		ExtKeyUsage: extKeyUsage,
+	}, nil
 }
 
 func (c *certificateRequestImpl) GetConditions() []cmapi.CertificateRequestCondition {
@@ -62,18 +67,27 @@ func CertificateRequestObjectFromCertificateSigningRequest(csr *certificatesv1.C
 	return &certificateSigningRequestImpl{csr}
 }
 
-func (c *certificateSigningRequestImpl) GetRequest() (*x509.Certificate, time.Duration, []byte, error) {
+func (c *certificateSigningRequestImpl) GetCertificateDetails() (CertificateDetails, error) {
 	duration, err := pki.DurationFromCertificateSigningRequest(c.CertificateSigningRequest)
 	if err != nil {
-		return nil, 0, nil, err
+		return CertificateDetails{}, err
 	}
 
-	template, err := pki.CertificateTemplateFromCertificateSigningRequest(c.CertificateSigningRequest)
+	isCA := c.CertificateSigningRequest.Annotations[experimentalapi.CertificateSigningRequestIsCAAnnotationKey] == "true"
+
+	keyUsage, extKeyUsage, err := pki.BuildKeyUsagesKube(c.Spec.Usages)
 	if err != nil {
-		return nil, 0, nil, err
+		return CertificateDetails{}, err
 	}
 
-	return template, duration, c.Spec.Request, nil
+	return CertificateDetails{
+		CSR:         c.Spec.Request,
+		Duration:    duration,
+		IsCA:        isCA,
+		MaxPathLen:  nil,
+		KeyUsage:    keyUsage,
+		ExtKeyUsage: extKeyUsage,
+	}, nil
 }
 
 func (c *certificateSigningRequestImpl) GetConditions() []cmapi.CertificateRequestCondition {
