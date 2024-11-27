@@ -17,8 +17,6 @@ limitations under the License.
 package conditions
 
 import (
-	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
 )
@@ -27,14 +25,14 @@ import (
 // the added condition.
 func SetIssuerStatusCondition(
 	clock clock.PassiveClock,
-	existingConditions []cmapi.IssuerCondition,
-	patchConditions *[]cmapi.IssuerCondition,
+	existingConditions []metav1.Condition,
+	patchConditions *[]metav1.Condition,
 	observedGeneration int64,
-	conditionType cmapi.IssuerConditionType,
-	status cmmeta.ConditionStatus,
+	conditionType string,
+	status metav1.ConditionStatus,
 	reason, message string,
-) (*cmapi.IssuerCondition, *metav1.Time) {
-	newCondition := cmapi.IssuerCondition{
+) (*metav1.Condition, metav1.Time) {
+	newCondition := metav1.Condition{
 		Type:               conditionType,
 		Status:             status,
 		Reason:             reason,
@@ -43,7 +41,7 @@ func SetIssuerStatusCondition(
 	}
 
 	nowTime := metav1.NewTime(clock.Now())
-	newCondition.LastTransitionTime = &nowTime
+	newCondition.LastTransitionTime = nowTime
 
 	// Reset the LastTransitionTime if the status hasn't changed
 	for _, cond := range existingConditions {
@@ -68,20 +66,20 @@ func SetIssuerStatusCondition(
 		// Overwrite the existing condition
 		(*patchConditions)[idx] = newCondition
 
-		return &newCondition, &nowTime
+		return &newCondition, nowTime
 	}
 
 	// If we've not found an existing condition of this type, we simply insert
 	// the new condition into the slice.
 	*patchConditions = append(*patchConditions, newCondition)
 
-	return &newCondition, &nowTime
+	return &newCondition, nowTime
 }
 
 func GetIssuerStatusCondition(
-	conditions []cmapi.IssuerCondition,
-	conditionType cmapi.IssuerConditionType,
-) *cmapi.IssuerCondition {
+	conditions []metav1.Condition,
+	conditionType string,
+) *metav1.Condition {
 	for _, cond := range conditions {
 		if cond.Type == conditionType {
 			return &cond
