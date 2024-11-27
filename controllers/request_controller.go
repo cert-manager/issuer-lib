@@ -53,8 +53,14 @@ import (
 // is used to interact with the request object.
 // Currently, we support cert-manager CertificateRequests and Kubernetes CertificateSigningRequests.
 type RequestController struct {
-	IssuerTypes        []v1alpha1.Issuer
-	ClusterIssuerTypes []v1alpha1.Issuer
+	// IssuerTypes is a map of empty namespaced issuer objects, each supported issuer type
+	// should have its own entry. The key should be the GroupResource for that issuer, the
+	// resource being the plural lowercase resource name.
+	IssuerTypes map[schema.GroupResource]v1alpha1.Issuer
+	// Cluster is a map of empty cluster-scoped issuer objects, each supported issuer type
+	// should have its own entry. The key should be the GroupResource for that issuer, the
+	// resource being the plural lowercase resource name.
+	ClusterIssuerTypes map[schema.GroupResource]v1alpha1.Issuer
 
 	FieldOwner       string
 	MaxRetryDuration time.Duration
@@ -97,8 +103,9 @@ type MatchIssuerType func(client.Object) (v1alpha1.Issuer, client.ObjectKey, err
 type RequestObjectHelperCreator func(client.Object) RequestObjectHelper
 
 type IssuerType struct {
-	Type         v1alpha1.Issuer
-	IsNamespaced bool
+	Type                 v1alpha1.Issuer
+	IssuerTypeIdentifier string
+	IsNamespaced         bool
 }
 
 func (r *RequestController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -352,17 +359,20 @@ func (r *RequestController) reconcileStatusPatch(
 
 func (r *RequestController) setAllIssuerTypesWithGroupVersionKind(scheme *runtime.Scheme) error {
 	issuers := make([]IssuerType, 0, len(r.IssuerTypes)+len(r.ClusterIssuerTypes))
-	for _, issuer := range r.IssuerTypes {
+	for gr, issuer := range r.IssuerTypes {
 		issuers = append(issuers, IssuerType{
-			Type:         issuer,
-			IsNamespaced: true,
+			Type: issuer,
+			// "<issuer resource (plural)>.<issuer group>"
+			IssuerTypeIdentifier: fmt.Sprintf("%s.%s", gr.Resource, gr.Group),
+			IsNamespaced:         true,
 		})
-
 	}
-	for _, issuer := range r.ClusterIssuerTypes {
+	for gr, issuer := range r.ClusterIssuerTypes {
 		issuers = append(issuers, IssuerType{
-			Type:         issuer,
-			IsNamespaced: false,
+			Type: issuer,
+			// "<issuer resource (plural)>.<issuer group>"
+			IssuerTypeIdentifier: fmt.Sprintf("%s.%s", gr.Resource, gr.Group),
+			IsNamespaced:         false,
 		})
 	}
 

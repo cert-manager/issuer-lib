@@ -27,6 +27,7 @@ import (
 	"math/big"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"simple-issuer/api"
 
@@ -51,8 +52,12 @@ type Signer struct{}
 
 func (s Signer) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	return (&controllers.CombinedController{
-		IssuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
-		ClusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
+		IssuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+			api.SimpleIssuerGroupVersionResource.GroupResource(): &api.SimpleIssuer{},
+		},
+		ClusterIssuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+			api.SimpleClusterIssuerGroupVersionResource.GroupResource(): &api.SimpleClusterIssuer{},
+		},
 
 		FieldOwner:       "simpleissuer.testing.cert-manager.io",
 		MaxRetryDuration: 1 * time.Minute,
