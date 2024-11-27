@@ -21,11 +21,10 @@ import (
 	"errors"
 	"fmt"
 
-	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
@@ -143,11 +142,11 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 		return result, nil, fmt.Errorf("unexpected get error: %v", err) // requeue with backoff
 	}
 
-	readyCondition := conditions.GetIssuerStatusCondition(issuer.GetStatus().Conditions, cmapi.IssuerConditionReady)
+	readyCondition := conditions.GetIssuerStatusCondition(issuer.GetConditions(), v1alpha1.IssuerConditionTypeReady)
 
 	// Ignore Issuer if it is already permanently Failed
 	isFailed := (readyCondition != nil) &&
-		(readyCondition.Status == cmmeta.ConditionFalse) &&
+		(readyCondition.Status == metav1.ConditionFalse) &&
 		(readyCondition.Reason == v1alpha1.IssuerConditionReasonFailed) &&
 		(readyCondition.ObservedGeneration >= issuer.GetGeneration())
 	if isFailed {
@@ -171,15 +170,15 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 	issuerStatusPatch = &v1alpha1.IssuerStatus{}
 
 	setReadyCondition := func(
-		status cmmeta.ConditionStatus,
+		status metav1.ConditionStatus,
 		reason, message string,
 	) string {
 		condition, _ := conditions.SetIssuerStatusCondition(
 			r.Clock,
-			issuer.GetStatus().Conditions,
+			issuer.GetConditions(),
 			&issuerStatusPatch.Conditions,
 			issuer.GetGeneration(),
-			cmapi.IssuerConditionReady,
+			v1alpha1.IssuerConditionTypeReady,
 			status, reason, message,
 		)
 		return condition.Message
@@ -190,7 +189,7 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 	if readyCondition == nil {
 		logger.V(1).Info("Initializing Ready condition")
 		setReadyCondition(
-			cmmeta.ConditionUnknown,
+			metav1.ConditionUnknown,
 			v1alpha1.IssuerConditionReasonInitializing,
 			fmt.Sprintf("%s has started reconciling this Issuer", r.FieldOwner),
 		)
@@ -201,7 +200,7 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 	}
 
 	var err error
-	if (readyCondition.Status == cmmeta.ConditionTrue) && (reportedError != nil) {
+	if (readyCondition.Status == metav1.ConditionTrue) && (reportedError != nil) {
 		// We received an error from a Certificaterequest while our current status is Ready,
 		// update the ready state of the issuer to reflect the error.
 		err = reportedError
@@ -211,7 +210,7 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 	if err == nil {
 		logger.V(1).Info("Successfully finished the reconciliation.")
 		message := setReadyCondition(
-			cmmeta.ConditionTrue,
+			metav1.ConditionTrue,
 			v1alpha1.IssuerConditionReasonChecked,
 			"Succeeded checking the issuer",
 		)
@@ -225,7 +224,7 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 		// fail permanently
 		logger.V(1).Error(err, "Permanent Issuer error. Marking as failed.")
 		message := setReadyCondition(
-			cmmeta.ConditionFalse,
+			metav1.ConditionFalse,
 			v1alpha1.IssuerConditionReasonFailed,
 			fmt.Sprintf("Failed permanently: %s", err),
 		)
@@ -235,7 +234,7 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 		// retry
 		logger.V(1).Error(err, "Retryable Issuer error.")
 		message := setReadyCondition(
-			cmmeta.ConditionFalse,
+			metav1.ConditionFalse,
 			v1alpha1.IssuerConditionReasonPending,
 			fmt.Sprintf("Not ready yet: %s", err),
 		)
