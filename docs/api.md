@@ -49,8 +49,18 @@ const (
 )
 ```
 
+<a name="IssuerConditionTypeReady"></a>
+
+```go
+const (
+    // IssuerConditionTypeReady is the type of condition that indicates whether
+    // an Issuer is ready for use.
+    IssuerConditionTypeReady = "Ready"
+)
+```
+
 <a name="Issuer"></a>
-## type [Issuer](<https://github.com/cert-manager/issuer-lib/blob/main/api/v1alpha1/issuer_interface.go#L27-L41>)
+## type [Issuer](<https://github.com/cert-manager/issuer-lib/blob/main/api/v1alpha1/issuer_interface.go#L27-L42>)
 
 
 
@@ -58,7 +68,8 @@ const (
 type Issuer interface {
     runtime.Object
     metav1.Object
-    GetStatus() *IssuerStatus
+
+    GetConditions() []metav1.Condition
 
     // GetIssuerTypeIdentifier returns a string that uniquely identifies the
     // issuer type. This should be a constant across all instances of this
@@ -73,7 +84,7 @@ type Issuer interface {
 ```
 
 <a name="IssuerStatus"></a>
-## type [IssuerStatus](<https://github.com/cert-manager/issuer-lib/blob/main/api/v1alpha1/issuer_status_types.go#L23-L30>)
+## type [IssuerStatus](<https://github.com/cert-manager/issuer-lib/blob/main/api/v1alpha1/issuer_status_types.go#L21-L28>)
 
 
 
@@ -84,7 +95,7 @@ type IssuerStatus struct {
     // +listType=map
     // +listMapKey=type
     // +optional
-    Conditions []cmapi.IssuerCondition `json:"conditions,omitempty"`
+    Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 ```
 
