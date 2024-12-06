@@ -27,7 +27,8 @@ import (
 type Issuer interface {
 	runtime.Object
 	metav1.Object
-	GetStatus() *IssuerStatus
+
+	GetConditions() []metav1.Condition
 
 	// GetIssuerTypeIdentifier returns a string that uniquely identifies the
 	// issuer type. This should be a constant across all instances of this
