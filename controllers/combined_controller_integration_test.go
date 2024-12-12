@@ -29,6 +29,7 @@ import (
 	cmgen "github.com/cert-manager/cert-manager/test/unit/gen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
@@ -100,7 +101,7 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 	type testcase struct {
 		name                      string
 		issuerError               error
-		issuerReadyCondition      *cmapi.IssuerCondition
+		issuerReadyCondition      *metav1.Condition
 		certificateReadyCondition *cmapi.CertificateRequestCondition
 		checkAutoRecovery         bool
 	}
@@ -109,9 +110,9 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 		{
 			name:        "test-normal-error",
 			issuerError: fmt.Errorf("[error message]"),
-			issuerReadyCondition: &cmapi.IssuerCondition{
-				Type:    cmapi.IssuerConditionReady,
-				Status:  cmmeta.ConditionFalse,
+			issuerReadyCondition: &metav1.Condition{
+				Type:    v1alpha1.IssuerConditionTypeReady,
+				Status:  metav1.ConditionFalse,
 				Reason:  v1alpha1.IssuerConditionReasonPending,
 				Message: "Not ready yet: [error message]",
 			},
@@ -126,9 +127,9 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 		{
 			name:        "test-permanent-error",
 			issuerError: signer.PermanentError{Err: fmt.Errorf("[error message]")},
-			issuerReadyCondition: &cmapi.IssuerCondition{
-				Type:    cmapi.IssuerConditionReady,
-				Status:  cmmeta.ConditionFalse,
+			issuerReadyCondition: &metav1.Condition{
+				Type:    v1alpha1.IssuerConditionTypeReady,
+				Status:  metav1.ConditionFalse,
 				Reason:  v1alpha1.IssuerConditionReasonFailed,
 				Message: "Failed permanently: [error message]",
 			},
@@ -155,8 +156,8 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 				testutil.SetTestIssuerGeneration(70),
 				testutil.SetTestIssuerStatusCondition(
 					clock.RealClock{},
-					cmapi.IssuerConditionReady,
-					cmmeta.ConditionTrue,
+					v1alpha1.IssuerConditionTypeReady,
+					metav1.ConditionTrue,
 					v1alpha1.IssuerConditionReasonChecked,
 					"Succeeded checking the issuer",
 				),
@@ -179,11 +180,11 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 			checkResult <- error(nil)
 			t.Log("Waiting for the TestIssuer to be Ready")
 			err := checkComplete(func(obj runtime.Object) error {
-				readyCondition := conditions.GetIssuerStatusCondition(obj.(*api.TestIssuer).Status.Conditions, cmapi.IssuerConditionReady)
+				readyCondition := conditions.GetIssuerStatusCondition(obj.(*api.TestIssuer).Status.Conditions, v1alpha1.IssuerConditionTypeReady)
 
 				if (readyCondition == nil) ||
 					(readyCondition.ObservedGeneration != issuer.Generation) ||
-					(readyCondition.Status != cmmeta.ConditionTrue) ||
+					(readyCondition.Status != metav1.ConditionTrue) ||
 					(readyCondition.Reason != v1alpha1.IssuerConditionReasonChecked) ||
 					(readyCondition.Message != "Succeeded checking the issuer") {
 					return fmt.Errorf("incorrect ready condition: %v", readyCondition)
@@ -218,7 +219,7 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 
 			t.Log("Waiting for Issuer to have a Pending IssuerFailedWillRetry condition")
 			err = checkIssuerComplete(func(obj runtime.Object) error {
-				readyCondition := conditions.GetIssuerStatusCondition(obj.(*api.TestIssuer).Status.Conditions, cmapi.IssuerConditionReady)
+				readyCondition := conditions.GetIssuerStatusCondition(obj.(*api.TestIssuer).Status.Conditions, v1alpha1.IssuerConditionTypeReady)
 
 				if (readyCondition == nil) ||
 					(readyCondition.ObservedGeneration != issuer.Generation) ||
@@ -252,11 +253,11 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 				checkComplete = kubeClients.StartObjectWatch(t, ctx, issuer)
 				checkResult <- error(nil)
 				err = checkComplete(func(obj runtime.Object) error {
-					readyCondition := conditions.GetIssuerStatusCondition(obj.(*api.TestIssuer).Status.Conditions, cmapi.IssuerConditionReady)
+					readyCondition := conditions.GetIssuerStatusCondition(obj.(*api.TestIssuer).Status.Conditions, v1alpha1.IssuerConditionTypeReady)
 
 					if (readyCondition == nil) ||
 						(readyCondition.ObservedGeneration != issuer.Generation) ||
-						(readyCondition.Status != cmmeta.ConditionTrue) ||
+						(readyCondition.Status != metav1.ConditionTrue) ||
 						(readyCondition.Reason != v1alpha1.IssuerConditionReasonChecked) ||
 						(readyCondition.Message != "Succeeded checking the issuer") {
 						return fmt.Errorf("incorrect ready condition: %v", readyCondition)
