@@ -23,8 +23,6 @@ import (
 	"testing"
 	"time"
 
-	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	logrtesting "github.com/go-logr/logr/testing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -116,22 +114,22 @@ func TestTestIssuerReconcilerReconcile(t *testing.T) {
 					testutil.SetTestIssuerGeneration(80),
 					testutil.SetTestIssuerStatusCondition(
 						fakeClock1,
-						cmapi.IssuerConditionReady,
-						cmmeta.ConditionTrue,
+						v1alpha1.IssuerConditionTypeReady,
+						metav1.ConditionTrue,
 						v1alpha1.IssuerConditionReasonChecked,
 						"Succeeded checking the issuer",
 					),
 				),
 			},
 			expectedStatusPatch: &v1alpha1.IssuerStatus{
-				Conditions: []cmapi.IssuerCondition{
+				Conditions: []metav1.Condition{
 					{
-						Type:               cmapi.IssuerConditionReady,
-						Status:             cmmeta.ConditionTrue,
+						Type:               v1alpha1.IssuerConditionTypeReady,
+						Status:             metav1.ConditionTrue,
 						Reason:             v1alpha1.IssuerConditionReasonChecked,
 						Message:            "Succeeded checking the issuer",
 						ObservedGeneration: 80,
-						LastTransitionTime: &fakeTimeObj1, // since the status is not updated, the LastTransitionTime is not updated either
+						LastTransitionTime: fakeTimeObj1, // since the status is not updated, the LastTransitionTime is not updated either
 					},
 				},
 			},
@@ -149,8 +147,8 @@ func TestTestIssuerReconcilerReconcile(t *testing.T) {
 					testutil.SetTestIssuerGeneration(80),
 					testutil.SetTestIssuerStatusCondition(
 						fakeClock1,
-						cmapi.IssuerConditionReady,
-						cmmeta.ConditionFalse,
+						v1alpha1.IssuerConditionTypeReady,
+						metav1.ConditionFalse,
 						v1alpha1.IssuerConditionReasonFailed,
 						"[error message]",
 					),
@@ -168,8 +166,8 @@ func TestTestIssuerReconcilerReconcile(t *testing.T) {
 					testutil.SetTestIssuerGeneration(80),
 					testutil.SetTestIssuerStatusCondition(
 						fakeClock1,
-						cmapi.IssuerConditionReady,
-						cmmeta.ConditionFalse,
+						v1alpha1.IssuerConditionTypeReady,
+						metav1.ConditionFalse,
 						v1alpha1.IssuerConditionReasonFailed,
 						"[error message]",
 					),
@@ -188,8 +186,8 @@ func TestTestIssuerReconcilerReconcile(t *testing.T) {
 					testutil.SetTestIssuerGeneration(80),
 					testutil.SetTestIssuerStatusCondition(
 						fakeClock1,
-						cmapi.IssuerConditionReady,
-						cmmeta.ConditionTrue,
+						v1alpha1.IssuerConditionTypeReady,
+						metav1.ConditionTrue,
 						v1alpha1.IssuerConditionReasonChecked,
 						"Succeeded checking the issuer",
 					),
@@ -197,14 +195,14 @@ func TestTestIssuerReconcilerReconcile(t *testing.T) {
 			},
 			eventSourceError: fmt.Errorf("[specific error]"),
 			expectedStatusPatch: &v1alpha1.IssuerStatus{
-				Conditions: []cmapi.IssuerCondition{
+				Conditions: []metav1.Condition{
 					{
-						Type:               cmapi.IssuerConditionReady,
-						Status:             cmmeta.ConditionFalse,
+						Type:               v1alpha1.IssuerConditionTypeReady,
+						Status:             metav1.ConditionFalse,
 						Reason:             v1alpha1.IssuerConditionReasonPending,
 						Message:            "Not ready yet: [specific error]",
 						ObservedGeneration: 80,
-						LastTransitionTime: &fakeTimeObj2,
+						LastTransitionTime: fakeTimeObj2,
 					},
 				},
 			},
@@ -223,8 +221,8 @@ func TestTestIssuerReconcilerReconcile(t *testing.T) {
 					testutil.SetTestIssuerGeneration(80),
 					testutil.SetTestIssuerStatusCondition(
 						fakeClock1,
-						cmapi.IssuerConditionReady,
-						cmmeta.ConditionTrue,
+						v1alpha1.IssuerConditionTypeReady,
+						metav1.ConditionTrue,
 						v1alpha1.IssuerConditionReasonChecked,
 						"Succeeded checking the issuer",
 					),
@@ -232,13 +230,13 @@ func TestTestIssuerReconcilerReconcile(t *testing.T) {
 				),
 			},
 			expectedStatusPatch: &v1alpha1.IssuerStatus{
-				Conditions: []cmapi.IssuerCondition{
+				Conditions: []metav1.Condition{
 					{
-						Type:               cmapi.IssuerConditionReady,
-						Status:             cmmeta.ConditionTrue,
+						Type:               v1alpha1.IssuerConditionTypeReady,
+						Status:             metav1.ConditionTrue,
 						Reason:             v1alpha1.IssuerConditionReasonChecked,
 						Message:            "Succeeded checking the issuer",
-						LastTransitionTime: &fakeTimeObj1, // since the status is not updated, the LastTransitionTime is not updated either
+						LastTransitionTime: fakeTimeObj1, // since the status is not updated, the LastTransitionTime is not updated either
 						ObservedGeneration: 81,
 					},
 				},
@@ -255,13 +253,13 @@ func TestTestIssuerReconcilerReconcile(t *testing.T) {
 				issuer1,
 			},
 			expectedStatusPatch: &v1alpha1.IssuerStatus{
-				Conditions: []cmapi.IssuerCondition{
+				Conditions: []metav1.Condition{
 					{
-						Type:               cmapi.IssuerConditionReady,
-						Status:             cmmeta.ConditionUnknown,
+						Type:               v1alpha1.IssuerConditionTypeReady,
+						Status:             metav1.ConditionUnknown,
 						Reason:             v1alpha1.IssuerConditionReasonInitializing,
 						Message:            fieldOwner + " has started reconciling this Issuer",
-						LastTransitionTime: &fakeTimeObj2,
+						LastTransitionTime: fakeTimeObj2,
 					},
 				},
 			},
@@ -275,21 +273,21 @@ func TestTestIssuerReconcilerReconcile(t *testing.T) {
 				testutil.TestIssuerFrom(issuer1,
 					testutil.SetTestIssuerStatusCondition(
 						fakeClock1,
-						cmapi.IssuerConditionReady,
-						cmmeta.ConditionUnknown,
+						v1alpha1.IssuerConditionTypeReady,
+						metav1.ConditionUnknown,
 						v1alpha1.IssuerConditionReasonInitializing,
 						fieldOwner+" has started reconciling this Issuer",
 					),
 				),
 			},
 			expectedStatusPatch: &v1alpha1.IssuerStatus{
-				Conditions: []cmapi.IssuerCondition{
+				Conditions: []metav1.Condition{
 					{
-						Type:               cmapi.IssuerConditionReady,
-						Status:             cmmeta.ConditionFalse,
+						Type:               v1alpha1.IssuerConditionTypeReady,
+						Status:             metav1.ConditionFalse,
 						Reason:             v1alpha1.IssuerConditionReasonPending,
 						Message:            "Not ready yet: [specific error]",
-						LastTransitionTime: &fakeTimeObj2,
+						LastTransitionTime: fakeTimeObj2,
 					},
 				},
 			},
@@ -307,21 +305,21 @@ func TestTestIssuerReconcilerReconcile(t *testing.T) {
 				testutil.TestIssuerFrom(issuer1,
 					testutil.SetTestIssuerStatusCondition(
 						fakeClock1,
-						cmapi.IssuerConditionReady,
-						cmmeta.ConditionUnknown,
+						v1alpha1.IssuerConditionTypeReady,
+						metav1.ConditionUnknown,
 						v1alpha1.IssuerConditionReasonInitializing,
 						fieldOwner+" has started reconciling this Issuer",
 					),
 				),
 			},
 			expectedStatusPatch: &v1alpha1.IssuerStatus{
-				Conditions: []cmapi.IssuerCondition{
+				Conditions: []metav1.Condition{
 					{
-						Type:               cmapi.IssuerConditionReady,
-						Status:             cmmeta.ConditionFalse,
+						Type:               v1alpha1.IssuerConditionTypeReady,
+						Status:             metav1.ConditionFalse,
 						Reason:             v1alpha1.IssuerConditionReasonFailed,
 						Message:            "Failed permanently: [specific error]",
-						LastTransitionTime: &fakeTimeObj2,
+						LastTransitionTime: fakeTimeObj2,
 					},
 				},
 			},
@@ -342,21 +340,21 @@ func TestTestIssuerReconcilerReconcile(t *testing.T) {
 				testutil.TestIssuerFrom(issuer1,
 					testutil.SetTestIssuerStatusCondition(
 						fakeClock1,
-						cmapi.IssuerConditionReady,
-						cmmeta.ConditionUnknown,
+						v1alpha1.IssuerConditionTypeReady,
+						metav1.ConditionUnknown,
 						v1alpha1.IssuerConditionReasonInitializing,
 						fieldOwner+" has started reconciling this Issuer",
 					),
 				),
 			},
 			expectedStatusPatch: &v1alpha1.IssuerStatus{
-				Conditions: []cmapi.IssuerCondition{
+				Conditions: []metav1.Condition{
 					{
-						Type:               cmapi.IssuerConditionReady,
-						Status:             cmmeta.ConditionTrue,
+						Type:               v1alpha1.IssuerConditionTypeReady,
+						Status:             metav1.ConditionTrue,
 						Reason:             v1alpha1.IssuerConditionReasonChecked,
 						Message:            "Succeeded checking the issuer",
-						LastTransitionTime: &fakeTimeObj2,
+						LastTransitionTime: fakeTimeObj2,
 					},
 				},
 			},
@@ -374,8 +372,8 @@ func TestTestIssuerReconcilerReconcile(t *testing.T) {
 					testutil.SetTestIssuerGeneration(80),
 					testutil.SetTestIssuerStatusCondition(
 						fakeClock1,
-						cmapi.IssuerConditionReady,
-						cmmeta.ConditionFalse,
+						v1alpha1.IssuerConditionTypeReady,
+						metav1.ConditionFalse,
 						v1alpha1.IssuerConditionReasonInitializing,
 						fieldOwner+" has started reconciling this Issuer",
 					),
@@ -383,13 +381,13 @@ func TestTestIssuerReconcilerReconcile(t *testing.T) {
 				),
 			},
 			expectedStatusPatch: &v1alpha1.IssuerStatus{
-				Conditions: []cmapi.IssuerCondition{
+				Conditions: []metav1.Condition{
 					{
-						Type:               cmapi.IssuerConditionReady,
-						Status:             cmmeta.ConditionTrue,
+						Type:               v1alpha1.IssuerConditionTypeReady,
+						Status:             metav1.ConditionTrue,
 						Reason:             v1alpha1.IssuerConditionReasonChecked,
 						Message:            "Succeeded checking the issuer",
-						LastTransitionTime: &fakeTimeObj2,
+						LastTransitionTime: fakeTimeObj2,
 						ObservedGeneration: 81,
 					},
 				},
