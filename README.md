@@ -76,10 +76,9 @@ The business logic of the controllers can be provided to the libary through the 
 If it returns a normal error, the controller will retry with backoff until the `Check` function succeeds.  
 If the error is of type `signer.PermanentError`, the controller will not retry automatically. Instead, an increase in Generation is required to recheck the issuer.
 
-- The `Sign` function is used by the CertificateRequest controller.
+- The `Sign` function is used by the CertificateRequest controller.  
 If it returns a normal error, the `Sign` function will be retried as long as we have not spent more than the configured `MaxRetryDuration` after the certificate request was created.  
 If the error is of type `signer.IssuerError`, the error is an error that should be set on the issuer instead of the CertificateRequest.  
-If the error is of type `signer.SetCertificateRequestConditionError`, the controller will, additional to setting the ready condition, also set the specified condition. This can be used in case we have to store some additional state in the status.  
 If the error is of type `signer.PermanentError`, the controller will not retry automatically. Instead, a new CertificateRequest has to be created.
 
 ## Reconciliation loops
