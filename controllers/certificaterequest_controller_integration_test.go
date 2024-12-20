@@ -32,6 +32,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/tools/record"
@@ -85,12 +86,16 @@ func TestCertificateRequestControllerIntegrationIssuerInitiallyNotFoundAndNotRea
 		func(mgr ctrl.Manager) controllerInterface {
 			return &CertificateRequestReconciler{
 				RequestController: RequestController{
-					IssuerTypes:        []v1alpha1.Issuer{&api.TestIssuer{}},
-					ClusterIssuerTypes: []v1alpha1.Issuer{&api.TestClusterIssuer{}},
-					FieldOwner:         fieldOwner,
-					MaxRetryDuration:   time.Minute,
-					EventSource:        kubeutil.NewEventStore(),
-					Client:             mgr.GetClient(),
+					IssuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+						api.TestIssuerGroupVersionResource.GroupResource(): &api.TestIssuer{},
+					},
+					ClusterIssuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+						api.TestClusterIssuerGroupVersionResource.GroupResource(): &api.TestClusterIssuer{},
+					},
+					FieldOwner:       fieldOwner,
+					MaxRetryDuration: time.Minute,
+					EventSource:      kubeutil.NewEventStore(),
+					Client:           mgr.GetClient(),
 					Sign: func(_ context.Context, cr signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, error) {
 						atomic.AddUint64(&counters[extractIdFromNamespace(t, cr.GetNamespace())], 1)
 						return signer.PEMBundle{
@@ -224,12 +229,16 @@ func TestCertificateRequestControllerIntegrationSetCondition(t *testing.T) {
 		func(mgr ctrl.Manager) controllerInterface {
 			return &CertificateRequestReconciler{
 				RequestController: RequestController{
-					IssuerTypes:        []v1alpha1.Issuer{&api.TestIssuer{}},
-					ClusterIssuerTypes: []v1alpha1.Issuer{&api.TestClusterIssuer{}},
-					FieldOwner:         fieldOwner,
-					MaxRetryDuration:   time.Minute,
-					EventSource:        kubeutil.NewEventStore(),
-					Client:             mgr.GetClient(),
+					IssuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+						api.TestIssuerGroupVersionResource.GroupResource(): &api.TestIssuer{},
+					},
+					ClusterIssuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+						api.TestClusterIssuerGroupVersionResource.GroupResource(): &api.TestClusterIssuer{},
+					},
+					FieldOwner:       fieldOwner,
+					MaxRetryDuration: time.Minute,
+					EventSource:      kubeutil.NewEventStore(),
+					Client:           mgr.GetClient(),
 					Sign: func(ctx context.Context, cr signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, error) {
 						atomic.AddUint64(&counter, 1)
 						select {
