@@ -72,10 +72,14 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 	ctx = setupControllersAPIServerAndClient(t, ctx, kubeClients,
 		func(mgr ctrl.Manager) controllerInterface {
 			return &CombinedController{
-				IssuerTypes:        []v1alpha1.Issuer{&api.TestIssuer{}},
-				ClusterIssuerTypes: []v1alpha1.Issuer{&api.TestClusterIssuer{}},
-				FieldOwner:         fieldOwner,
-				MaxRetryDuration:   time.Minute,
+				IssuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+					api.TestIssuerGroupVersionResource.GroupResource(): &api.TestIssuer{},
+				},
+				ClusterIssuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+					api.TestClusterIssuerGroupVersionResource.GroupResource(): &api.TestClusterIssuer{},
+				},
+				FieldOwner:       fieldOwner,
+				MaxRetryDuration: time.Minute,
 				Check: func(_ context.Context, _ v1alpha1.Issuer) error {
 					select {
 					case err := <-checkResult:
@@ -458,10 +462,14 @@ func TestCombinedControllerTiming(t *testing.T) { //nolint:tparallel
 			ctx := setupControllersAPIServerAndClient(t, ctx, kubeClients,
 				func(mgr ctrl.Manager) controllerInterface {
 					return &CombinedController{
-						IssuerTypes:        []v1alpha1.Issuer{&api.TestIssuer{}},
-						ClusterIssuerTypes: []v1alpha1.Issuer{&api.TestClusterIssuer{}},
-						FieldOwner:         fieldOwner,
-						MaxRetryDuration:   tc.maxRetryDuration,
+						IssuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+							api.TestIssuerGroupVersionResource.GroupResource(): &api.TestIssuer{},
+						},
+						ClusterIssuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+							api.TestClusterIssuerGroupVersionResource.GroupResource(): &api.TestClusterIssuer{},
+						},
+						FieldOwner:       fieldOwner,
+						MaxRetryDuration: tc.maxRetryDuration,
 						Check: func(_ context.Context, _ v1alpha1.Issuer) error {
 							resultsMutex.Lock()
 							defer resultsMutex.Unlock()
