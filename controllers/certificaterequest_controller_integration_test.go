@@ -420,8 +420,8 @@ func markIssuerReady(t *testing.T, ctx context.Context, kc client.Client, clock 
 		issuerStatus.Conditions,
 		&issuerStatus.Conditions,
 		issuer.GetGeneration(),
-		cmapi.IssuerConditionReady,
-		cmmeta.ConditionTrue,
+		v1alpha1.IssuerConditionTypeReady,
+		metav1.ConditionTrue,
 		v1alpha1.IssuerConditionReasonChecked,
 		"Succeeded checking the issuer",
 	)
