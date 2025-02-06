@@ -40,8 +40,10 @@ import (
 // discouraged, instead the CA should be provisioned separately (e.g. using trust-manager).
 type PEMBundle pki.PEMBundle
 
-type Sign func(ctx context.Context, cr CertificateRequestObject, issuerObject v1alpha1.Issuer) (PEMBundle, error)
+type Sign func(ctx context.Context, cr CertificateRequestObject, issuerObject v1alpha1.Issuer) (PEMBundle, ExtraConditions, error)
 type Check func(ctx context.Context, issuerObject v1alpha1.Issuer) error
+
+type ExtraConditions []cmapi.CertificateRequestCondition
 
 // CertificateRequestObject is an interface that represents either a
 // cert-manager CertificateRequest or a Kubernetes CertificateSigningRequest
@@ -53,8 +55,6 @@ type Check func(ctx context.Context, issuerObject v1alpha1.Issuer) error
 // labels and annotations of the underlying resource or any other metadata
 // fields that might be useful to the signer. Also, the signer can use the
 // GetConditions method to retrieve the conditions of the underlying resource.
-// To update the conditions, the special error "SetCertificateRequestConditionError"
-// can be returned from the Sign method.
 type CertificateRequestObject interface {
 	metav1.Object
 
