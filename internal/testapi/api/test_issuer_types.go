@@ -41,8 +41,8 @@ type TestIssuer struct {
 	Status v1alpha1.IssuerStatus `json:"status,omitempty"`
 }
 
-func (vi *TestIssuer) GetStatus() *v1alpha1.IssuerStatus {
-	return &vi.Status
+func (vi *TestIssuer) GetConditions() []metav1.Condition {
+	return vi.Status.Conditions
 }
 
 func (vi *TestIssuer) GetIssuerTypeIdentifier() string {
