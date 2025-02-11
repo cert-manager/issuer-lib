@@ -58,9 +58,29 @@ type Check func(ctx context.Context, issuerObject v1alpha1.Issuer) error
 type CertificateRequestObject interface {
 	metav1.Object
 
-	GetRequest() (template *x509.Certificate, duration time.Duration, csr []byte, err error)
+	// Return the Certificate details originating from the cert-manager
+	// CertificateRequest or Kubernetes CertificateSigningRequest resources.
+	GetCertificateDetails() (details CertificateDetails, err error)
 
 	GetConditions() []cmapi.CertificateRequestCondition
+}
+
+type CertificateDetails struct {
+	CSR         []byte
+	Duration    time.Duration
+	IsCA        bool
+	MaxPathLen  *int
+	KeyUsage    x509.KeyUsage
+	ExtKeyUsage []x509.ExtKeyUsage
+}
+
+func (cd CertificateDetails) CertificateTemplate() (template *x509.Certificate, err error) {
+	return pki.CertificateTemplateFromCSRPEM(
+		cd.CSR,
+		pki.CertificateTemplateOverrideDuration(cd.Duration),
+		pki.CertificateTemplateValidateAndOverrideBasicConstraints(cd.IsCA, cd.MaxPathLen), // Override the basic constraints, but make sure they match the constraints in the CSR if present
+		pki.CertificateTemplateValidateAndOverrideKeyUsages(cd.KeyUsage, cd.ExtKeyUsage),   // Override the key usages, but make sure they match the usages in the CSR if present
+	)
 }
 
 // IgnoreIssuer is an optional function that can prevent the issuer controllers from
