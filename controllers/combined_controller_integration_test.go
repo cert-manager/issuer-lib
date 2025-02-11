@@ -84,12 +84,12 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 						return ctx.Err()
 					}
 				},
-				Sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, error) {
+				Sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, signer.ExtraConditions, error) {
 					select {
 					case err := <-signResult:
-						return signer.PEMBundle{}, err
+						return signer.PEMBundle{}, signer.ExtraConditions{}, err
 					case <-ctx.Done():
-						return signer.PEMBundle{}, ctx.Err()
+						return signer.PEMBundle{}, signer.ExtraConditions{}, ctx.Err()
 					}
 				},
 				EventRecorder: record.NewFakeRecorder(100),
@@ -481,7 +481,7 @@ func TestCombinedControllerTiming(t *testing.T) { //nolint:tparallel
 							}
 							return results[resultsIndex].simulatedCheckResult.err
 						},
-						Sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, error) {
+						Sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, signer.ExtraConditions, error) {
 							resultsMutex.Lock()
 							defer resultsMutex.Unlock()
 							defer func() { resultsIndex++ }()
@@ -489,19 +489,19 @@ func TestCombinedControllerTiming(t *testing.T) { //nolint:tparallel
 							if resultsIndex >= len(results)-1 {
 								if resultsIndex > len(results)-1 {
 									errorCh <- fmt.Errorf("too many calls to Sign")
-									return signer.PEMBundle{}, nil
+									return signer.PEMBundle{}, signer.ExtraConditions{}, nil
 								}
 								defer close(done)
 							}
 							durations[resultsIndex] = time.Now()
 							if results[resultsIndex].simulatedSignResult == nil {
 								errorCh <- fmt.Errorf("unexpected call to Sign")
-								return signer.PEMBundle{}, nil
+								return signer.PEMBundle{}, signer.ExtraConditions{}, nil
 							}
 							result := results[resultsIndex].simulatedSignResult
 							return signer.PEMBundle{
 								ChainPEM: result.cert,
-							}, result.err
+							}, signer.ExtraConditions{}, result.err
 						},
 						EventRecorder: record.NewFakeRecorder(100),
 
