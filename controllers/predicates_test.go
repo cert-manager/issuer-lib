@@ -397,10 +397,6 @@ func (ti *testissuer) GetStatus() *v1alpha1.IssuerStatus {
 	return ti.Status
 }
 
-func (ti *testissuer) GetIssuerTypeIdentifier() string {
-	return "test"
-}
-
 func TestLinkedIssuerPredicate(t *testing.T) {
 	predicate := controllers.LinkedIssuerPredicate{}
 
