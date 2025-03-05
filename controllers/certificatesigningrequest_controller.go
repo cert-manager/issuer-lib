@@ -59,7 +59,7 @@ func (r *CertificateSigningRequestReconciler) matchIssuerType(requestObject clie
 
 	// Search for matching issuer
 	for _, issuerType := range r.AllIssuerTypes() {
-		if issuerTypeIdentifier != issuerType.Type.GetIssuerTypeIdentifier() {
+		if issuerTypeIdentifier != issuerType.IssuerTypeIdentifier {
 			continue
 		}
 

@@ -50,7 +50,7 @@ const (
 ```
 
 <a name="Issuer"></a>
-## type [Issuer](<https://github.com/cert-manager/issuer-lib/blob/main/api/v1alpha1/issuer_interface.go#L27-L41>)
+## type [Issuer](<https://github.com/cert-manager/issuer-lib/blob/main/api/v1alpha1/issuer_interface.go#L27-L32>)
 
 
 
@@ -58,17 +58,8 @@ const (
 type Issuer interface {
     runtime.Object
     metav1.Object
-    GetStatus() *IssuerStatus
 
-    // GetIssuerTypeIdentifier returns a string that uniquely identifies the
-    // issuer type. This should be a constant across all instances of this
-    // issuer type. This string is used as a prefix when determining the
-    // issuer type for a Kubernetes CertificateSigningRequest resource based
-    // on the issuerName field. The value should be formatted as follows:
-    // "<issuer resource (plural)>.<issuer group>". For example, the value
-    // "simpleclusterissuers.issuer.cert-manager.io" will match all CSRs
-    // with an issuerName set to eg. "simpleclusterissuers.issuer.cert-manager.io/issuer1".
-    GetIssuerTypeIdentifier() string
+    GetStatus() *IssuerStatus
 }
 ```
 
