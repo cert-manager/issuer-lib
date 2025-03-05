@@ -22,8 +22,6 @@ import (
 	"fmt"
 	"time"
 
-	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -247,8 +245,8 @@ func (r *RequestController) reconcileStatusPatch(
 	}
 
 	readyCondition := conditions.GetIssuerStatusCondition(
-		issuerObject.GetStatus().Conditions,
-		cmapi.IssuerConditionReady,
+		issuerObject.GetConditions(),
+		v1alpha1.IssuerConditionTypeReady,
 	)
 	if readyCondition == nil {
 		logger.V(1).Info("Issuer is not Ready yet (no ready condition). Waiting for it to become ready.")
@@ -262,7 +260,7 @@ func (r *RequestController) reconcileStatusPatch(
 
 		return result, statusPatch, nil // apply patch, done
 	}
-	if readyCondition.Status != cmmeta.ConditionTrue {
+	if readyCondition.Status != metav1.ConditionTrue {
 		logger.V(1).Info("Issuer is not Ready yet (status == false). Waiting for it to become ready.", "issuer ready condition", readyCondition)
 		statusPatch.SetWaitingForIssuerReadyNotReady(readyCondition)
 

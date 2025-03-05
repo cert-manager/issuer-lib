@@ -120,7 +120,7 @@ func (c *certificatesigningRequestPatchHelper) SetWaitingForIssuerReadyOutdated(
 	c.eventRecorder.Event(c.readOnlyObj, corev1.EventTypeNormal, eventRequestWaitingForIssuerReady, message)
 }
 
-func (c *certificatesigningRequestPatchHelper) SetWaitingForIssuerReadyNotReady(cond *cmapi.IssuerCondition) {
+func (c *certificatesigningRequestPatchHelper) SetWaitingForIssuerReadyNotReady(cond *metav1.Condition) {
 	message := fmt.Sprintf("Waiting for issuer to become ready. Current issuer ready condition is \"%s\": %s.", cond.Reason, cond.Message)
 	c.eventRecorder.Event(c.readOnlyObj, corev1.EventTypeNormal, eventRequestWaitingForIssuerReady, message)
 }
