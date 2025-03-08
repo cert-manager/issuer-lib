@@ -17,8 +17,6 @@ limitations under the License.
 package testutil
 
 import (
-	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
 
@@ -66,8 +64,8 @@ func SetTestIssuerGeneration(generation int64) TestIssuerModifier {
 
 func SetTestIssuerStatusCondition(
 	clock clock.PassiveClock,
-	conditionType cmapi.IssuerConditionType,
-	status cmmeta.ConditionStatus,
+	conditionType string,
+	status metav1.ConditionStatus,
 	reason, message string,
 ) TestIssuerModifier {
 	return func(si *api.TestIssuer) {
@@ -118,8 +116,8 @@ func SetTestClusterIssuerGeneration(generation int64) TestClusterIssuerModifier 
 
 func SetTestClusterIssuerStatusCondition(
 	clock clock.PassiveClock,
-	conditionType cmapi.IssuerConditionType,
-	status cmmeta.ConditionStatus,
+	conditionType string,
+	status metav1.ConditionStatus,
 	reason, message string,
 ) TestClusterIssuerModifier {
 	return func(si *api.TestClusterIssuer) {
