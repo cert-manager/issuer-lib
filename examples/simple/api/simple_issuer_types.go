@@ -18,9 +18,12 @@ package api
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/cert-manager/issuer-lib/api/v1alpha1"
 )
+
+var SimpleIssuerGroupVersionResource schema.GroupVersionResource = SchemeGroupVersion.WithResource("simpleissuers")
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
@@ -43,10 +46,6 @@ type SimpleIssuer struct {
 
 func (vi *SimpleIssuer) GetStatus() *v1alpha1.IssuerStatus {
 	return &vi.Status
-}
-
-func (vi *SimpleIssuer) GetIssuerTypeIdentifier() string {
-	return "simpleissuers.testing.cert-manager.io"
 }
 
 var _ v1alpha1.Issuer = &SimpleIssuer{}
