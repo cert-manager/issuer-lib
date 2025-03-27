@@ -16,9 +16,7 @@ limitations under the License.
 
 package v1alpha1
 
-import (
-	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-)
+import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 type IssuerStatus struct {
 	// List of status conditions to indicate the status of an Issuer.
@@ -26,5 +24,5 @@ type IssuerStatus struct {
 	// +listType=map
 	// +listMapKey=type
 	// +optional
-	Conditions []cmapi.IssuerCondition `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
