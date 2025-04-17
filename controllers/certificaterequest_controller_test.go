@@ -979,7 +979,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 
 func chanToSlice(ch <-chan string) []string {
 	out := make([]string, 0, len(ch))
-	for i := 0; i < len(ch); i++ {
+	for range len(ch) {
 		out = append(out, <-ch)
 	}
 	return out

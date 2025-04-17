@@ -69,12 +69,10 @@ func testClient(t *testing.T) client.WithWatch {
 }
 
 func TestSimpleCertificate(t *testing.T) {
-	ctx := context.Background()
-
 	kubeClient := testClient(t)
 
 	namespace := "test-" + rand.String(20)
-	err := kubeClient.Create(ctx, &corev1.Namespace{
+	err := kubeClient.Create(t.Context(), &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
 		},
@@ -100,13 +98,13 @@ func TestSimpleCertificate(t *testing.T) {
 		}),
 	)
 
-	err = kubeClient.Create(ctx, issuer)
+	err = kubeClient.Create(t.Context(), issuer)
 	require.NoError(t, err)
 
-	err = kubeClient.Create(ctx, certificate)
+	err = kubeClient.Create(t.Context(), certificate)
 	require.NoError(t, err)
 
-	if err := wait.PollUntilContextTimeout(ctx, 1*time.Second, 10*time.Second, true, func(ctx context.Context) (bool, error) {
+	if err := wait.PollUntilContextTimeout(t.Context(), 1*time.Second, 10*time.Second, true, func(ctx context.Context) (bool, error) {
 		err := kubeClient.Get(ctx, types.NamespacedName{Name: certificate.Name, Namespace: certificate.Namespace}, certificate)
 		if err != nil {
 			return false, err
@@ -121,8 +119,6 @@ func TestSimpleCertificate(t *testing.T) {
 }
 
 func TestSimpleCertificateSigningRequest(t *testing.T) {
-	ctx := context.Background()
-
 	kubeClient := testClient(t)
 
 	csrName := "test-" + rand.String(20)
@@ -149,14 +145,14 @@ func TestSimpleCertificateSigningRequest(t *testing.T) {
 		cmgen.SetCertificateSigningRequestSignerName(fmt.Sprintf("simpleclusterissuers.testing.cert-manager.io/%s", clusterIssuer.Name)),
 	)
 
-	err = kubeClient.Create(ctx, clusterIssuer)
+	err = kubeClient.Create(t.Context(), clusterIssuer)
 	require.NoError(t, err)
 
-	err = kubeClient.Create(ctx, csr)
+	err = kubeClient.Create(t.Context(), csr)
 	require.NoError(t, err)
 
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		if err := kubeClient.Get(ctx, types.NamespacedName{Name: csr.Name}, csr); err != nil {
+		if err := kubeClient.Get(t.Context(), types.NamespacedName{Name: csr.Name}, csr); err != nil {
 			return err
 		}
 
@@ -170,11 +166,11 @@ func TestSimpleCertificateSigningRequest(t *testing.T) {
 			Status:         corev1.ConditionTrue,
 		})
 
-		return kubeClient.SubResource("approval").Update(ctx, csr)
+		return kubeClient.SubResource("approval").Update(t.Context(), csr)
 	})
 	require.NoError(t, err)
 
-	if err := wait.PollUntilContextTimeout(ctx, 1*time.Second, 10*time.Second, true, func(ctx context.Context) (bool, error) {
+	if err := wait.PollUntilContextTimeout(t.Context(), 1*time.Second, 10*time.Second, true, func(ctx context.Context) (bool, error) {
 		err := kubeClient.Get(ctx, types.NamespacedName{Name: csr.Name}, csr)
 		if err != nil {
 			return false, err
