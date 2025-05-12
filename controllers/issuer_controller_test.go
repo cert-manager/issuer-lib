@@ -419,7 +419,7 @@ func TestTestIssuerReconcilerReconcile(t *testing.T) {
 			}
 
 			var vciBefore api.TestIssuer
-			err := fakeClient.Get(context.TODO(), req.NamespacedName, &vciBefore)
+			err := fakeClient.Get(t.Context(), req.NamespacedName, &vciBefore)
 			require.NoError(t, client.IgnoreNotFound(err), "unexpected error from fake client")
 
 			logger := logrtesting.NewTestLoggerWithOptions(t, logrtesting.Options{LogTimestamp: true, Verbosity: 10})
@@ -437,7 +437,7 @@ func TestTestIssuerReconcilerReconcile(t *testing.T) {
 				Clock:         fakeClock2,
 			}
 
-			res, issuerStatusPatch, reconcileErr := controller.reconcileStatusPatch(logger, context.TODO(), req)
+			res, issuerStatusPatch, reconcileErr := controller.reconcileStatusPatch(logger, t.Context(), req)
 
 			assert.Equal(t, tc.expectedResult, res)
 			assert.Equal(t, tc.expectedStatusPatch, issuerStatusPatch)

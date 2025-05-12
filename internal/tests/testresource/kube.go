@@ -250,7 +250,7 @@ func (k *OwnedKubeClients) SetupNamespace(tb testing.TB, ctx context.Context) (s
 	return namespace, func() {
 		defer func() { stopped = true }()
 
-		cleanupCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(tb.Context()), 10*time.Second)
 		defer cancel()
 
 		_, err := removeNamespace(cleanupCtx)
