@@ -934,7 +934,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 			}
 
 			var crBefore cmapi.CertificateRequest
-			err := fakeClient.Get(context.TODO(), req.NamespacedName, &crBefore)
+			err := fakeClient.Get(t.Context(), req.NamespacedName, &crBefore)
 			require.NoError(t, client.IgnoreNotFound(err), "unexpected error from fake client")
 
 			logger := logrtesting.NewTestLoggerWithOptions(t, logrtesting.Options{LogTimestamp: true, Verbosity: 10})
@@ -957,7 +957,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 			err = controller.setAllIssuerTypesWithGroupVersionKind(scheme)
 			require.NoError(t, err)
 
-			res, statusPatch, reconcileErr := controller.reconcileStatusPatch(logger, context.TODO(), req)
+			res, statusPatch, reconcileErr := controller.reconcileStatusPatch(logger, t.Context(), req)
 			var crStatusPatch *cmapi.CertificateRequestStatus
 			if statusPatch != nil {
 				crStatusPatch = statusPatch.(CertificateRequestPatch).CertificateRequestPatch()

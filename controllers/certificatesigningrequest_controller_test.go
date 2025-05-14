@@ -768,7 +768,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			}
 
 			var crBefore certificatesv1.CertificateSigningRequest
-			err := fakeClient.Get(context.TODO(), req.NamespacedName, &crBefore)
+			err := fakeClient.Get(t.Context(), req.NamespacedName, &crBefore)
 			require.NoError(t, client.IgnoreNotFound(err), "unexpected error from fake client")
 
 			logger := logrtesting.NewTestLoggerWithOptions(t, logrtesting.Options{LogTimestamp: true, Verbosity: 10})
@@ -791,7 +791,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			err = controller.setAllIssuerTypesWithGroupVersionKind(scheme)
 			require.NoError(t, err)
 
-			res, statusPatch, err := controller.reconcileStatusPatch(logger, context.TODO(), req)
+			res, statusPatch, err := controller.reconcileStatusPatch(logger, t.Context(), req)
 			var csrStatusPatch *certificatesv1.CertificateSigningRequestStatus
 			if statusPatch != nil {
 				csrStatusPatch = statusPatch.(CertificateSigningRequestPatch).CertificateSigningRequestPatch()

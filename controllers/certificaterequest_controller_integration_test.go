@@ -45,7 +45,6 @@ import (
 	"github.com/cert-manager/issuer-lib/internal/kubeutil"
 	"github.com/cert-manager/issuer-lib/internal/ssaclient"
 	"github.com/cert-manager/issuer-lib/internal/testapi/api"
-	"github.com/cert-manager/issuer-lib/internal/tests/testcontext"
 	"github.com/cert-manager/issuer-lib/internal/tests/testresource"
 )
 
@@ -77,7 +76,7 @@ func TestCertificateRequestControllerIntegrationIssuerInitiallyNotFoundAndNotRea
 
 	fieldOwner := "issuer-or-clusterissuer-initially-not-found-and-not-ready"
 
-	ctx := testcontext.ForTest(t)
+	ctx := t.Context()
 	kubeClients := testresource.KubeClients(t, nil)
 
 	counters := []uint64{}
@@ -215,7 +214,7 @@ func TestCertificateRequestControllerIntegrationSetCondition(t *testing.T) {
 
 	fieldOwner := "cr-set-condition"
 
-	ctx := testcontext.ForTest(t)
+	ctx := t.Context()
 	kubeClients := testresource.KubeClients(t, nil)
 
 	counter := uint64(0)

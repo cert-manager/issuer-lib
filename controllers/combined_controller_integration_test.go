@@ -47,7 +47,6 @@ import (
 	"github.com/cert-manager/issuer-lib/controllers/signer"
 	"github.com/cert-manager/issuer-lib/internal/testapi/api"
 	"github.com/cert-manager/issuer-lib/internal/testapi/testutil"
-	"github.com/cert-manager/issuer-lib/internal/tests/testcontext"
 	"github.com/cert-manager/issuer-lib/internal/tests/testresource"
 )
 
@@ -65,7 +64,7 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 
 	fieldOwner := "failed-certificate-request-should-retrigger-issuer"
 
-	ctx := testcontext.ForTest(t)
+	ctx := t.Context()
 	kubeClients := testresource.KubeClients(t, nil)
 
 	checkResult, signResult := make(chan error, 10), make(chan error, 10)
@@ -296,7 +295,7 @@ func TestCombinedControllerTiming(t *testing.T) { //nolint:tparallel
 
 	fieldOwner := "failed-certificate-request-should-retrigger-issuer"
 
-	ctx := testcontext.ForTest(t)
+	ctx := t.Context()
 	kubeClients := testresource.KubeClients(t, nil)
 
 	type simulatedCheckResult struct {
