@@ -402,8 +402,11 @@ func TestCombinedControllerTiming(t *testing.T) { //nolint:tparallel
 					expectedSinceLastResult: 200 * time.Millisecond,
 				},
 				{
-					simulatedSignResult:     &simulatedSignResult{cert: nil, err: signer.PendingError{Err: fmt.Errorf("[error message]")}},
-					expectedSinceLastResult: 0,
+					simulatedSignResult: &simulatedSignResult{cert: nil, err: signer.PendingError{
+						Err:          fmt.Errorf("[error message]"),
+						RequeueAfter: 100 * time.Millisecond,
+					}},
+					expectedSinceLastResult: 100 * time.Millisecond,
 				},
 				{
 					simulatedSignResult:     &simulatedSignResult{cert: []byte("ok"), err: nil},
