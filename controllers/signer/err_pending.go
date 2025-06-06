@@ -16,6 +16,8 @@ limitations under the License.
 
 package signer
 
+import "time"
+
 // PendingError should be returned if we are certain that we will converge to a
 // successful result or another type of error in a finite amount of time by
 // just retrying the same operation.
@@ -25,9 +27,13 @@ package signer
 // answer from an external service that is indicating that the request is still
 // being processed.
 //
+// RequeueAfter can be used to specify how long to wait before retrying. By default
+// we wait for 1s before retrying.
+//
 // > This error should be returned only by the Sign function.
 type PendingError struct {
-	Err error
+	Err          error
+	RequeueAfter time.Duration
 }
 
 var _ error = PendingError{}

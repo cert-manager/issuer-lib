@@ -305,7 +305,8 @@ func (r *RequestController) reconcileStatusPatch(
 	}
 
 	// Check if we have still time to requeue & retry
-	isPending := errors.As(err, &signer.PendingError{})
+	pendingError := &signer.PendingError{}
+	isPending := errors.As(err, pendingError)
 	isPermanentError := errors.As(err, &signer.PermanentError{})
 	pastMaxRetryDuration := r.Clock.Now().After(requestObject.GetCreationTimestamp().Add(r.MaxRetryDuration))
 	switch {
@@ -324,7 +325,11 @@ func (r *RequestController) reconcileStatusPatch(
 		if didCustomConditionTransition {
 			return result, statusPatch, nil // apply patch, done
 		} else {
-			result.Requeue = true
+			if pendingError.RequeueAfter == time.Duration(0) {
+				result.RequeueAfter = 1 * time.Second
+			} else {
+				result.RequeueAfter = pendingError.RequeueAfter
+			}
 			return result, statusPatch, nil // apply patch, requeue with backoff
 		}
 	case isPermanentError:

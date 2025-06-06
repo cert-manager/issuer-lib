@@ -457,7 +457,45 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				},
 			},
 			expectedResult: reconcile.Result{
-				Requeue: true,
+				RequeueAfter: 1 * time.Second,
+			},
+			expectedEvents: []string{
+				"Warning RetryableError Signing still in progress. Reason: Signing still in progress. Reason: reason for being pending",
+			},
+		},
+
+		// If the sign function returns a reason for being pending, set the Ready condition to Pending (even if
+		// the MaxRetryDuration has been exceeded).
+		{
+			name: "retry-on-pending-error-5s",
+			sign: func(_ context.Context, cr signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, error) {
+				return signer.PEMBundle{}, signer.PendingError{Err: fmt.Errorf("reason for being pending"), RequeueAfter: 5 * time.Second}
+			},
+			objects: []client.Object{
+				cmgen.CertificateRequestFrom(cr1,
+					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
+						Name:  issuer1.Name,
+						Group: api.SchemeGroupVersion.Group,
+					}),
+					func(cr *cmapi.CertificateRequest) {
+						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
+					},
+				),
+				testutil.TestIssuerFrom(issuer1),
+			},
+			expectedStatusPatch: &cmapi.CertificateRequestStatus{
+				Conditions: []cmapi.CertificateRequestCondition{
+					{
+						Type:               cmapi.CertificateRequestConditionReady,
+						Status:             cmmeta.ConditionFalse,
+						Reason:             cmapi.CertificateRequestReasonPending,
+						Message:            "Signing still in progress. Reason: Signing still in progress. Reason: reason for being pending",
+						LastTransitionTime: &fakeTimeObj2,
+					},
+				},
+			},
+			expectedResult: reconcile.Result{
+				RequeueAfter: 5 * time.Second,
 			},
 			expectedEvents: []string{
 				"Warning RetryableError Signing still in progress. Reason: Signing still in progress. Reason: reason for being pending",
@@ -732,9 +770,6 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 						LastTransitionTime: &fakeTimeObj2,
 					},
 				},
-			},
-			expectedResult: reconcile.Result{
-				Requeue: false,
 			},
 			expectedEvents: []string{
 				"Warning RetryableError Signing still in progress. Reason: Signing still in progress. Reason: test error",
