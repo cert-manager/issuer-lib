@@ -33,6 +33,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	clocktesting "k8s.io/utils/clock/testing"
@@ -207,7 +208,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			name: "set-ready-pending-missing-issuer",
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1, func(cr *certificatesv1.CertificateSigningRequest) {
-					cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+					cr.Spec.SignerName = fmt.Sprintf("%s.%s/%s", api.TestClusterIssuerGroupVersionResource.Resource, api.TestClusterIssuerGroupVersionResource.Group, clusterIssuer1.Name)
 				}),
 			},
 			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
@@ -224,7 +225,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			name: "set-ready-pending-issuer-has-no-ready-condition",
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1, func(cr *certificatesv1.CertificateSigningRequest) {
-					cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+					cr.Spec.SignerName = fmt.Sprintf("%s.%s/%s", api.TestClusterIssuerGroupVersionResource.Resource, api.TestClusterIssuerGroupVersionResource.Group, clusterIssuer1.Name)
 				}),
 				testutil.TestClusterIssuerFrom(clusterIssuer1,
 					func(si *api.TestClusterIssuer) {
@@ -245,7 +246,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			name: "set-ready-pending-issuer-is-not-ready",
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1, func(cr *certificatesv1.CertificateSigningRequest) {
-					cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+					cr.Spec.SignerName = fmt.Sprintf("%s.%s/%s", api.TestClusterIssuerGroupVersionResource.Resource, api.TestClusterIssuerGroupVersionResource.Group, clusterIssuer1.Name)
 				}),
 				testutil.TestClusterIssuerFrom(clusterIssuer1,
 					testutil.SetTestClusterIssuerStatusCondition(
@@ -271,7 +272,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			name: "set-ready-pending-issuer-ready-outdated",
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1, func(cr *certificatesv1.CertificateSigningRequest) {
-					cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+					cr.Spec.SignerName = fmt.Sprintf("%s.%s/%s", api.TestClusterIssuerGroupVersionResource.Resource, api.TestClusterIssuerGroupVersionResource.Group, clusterIssuer1.Name)
 				}),
 				testutil.TestClusterIssuerFrom(clusterIssuer1,
 					testutil.SetTestClusterIssuerGeneration(issuer1.Generation+1),
@@ -295,7 +296,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1,
 					func(cr *certificatesv1.CertificateSigningRequest) {
-						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+						cr.Spec.SignerName = fmt.Sprintf("%s.%s/%s", api.TestClusterIssuerGroupVersionResource.Resource, api.TestClusterIssuerGroupVersionResource.Group, clusterIssuer1.Name)
 					},
 					func(cr *certificatesv1.CertificateSigningRequest) {
 						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
@@ -331,7 +332,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1,
 					func(cr *certificatesv1.CertificateSigningRequest) {
-						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+						cr.Spec.SignerName = fmt.Sprintf("%s.%s/%s", api.TestClusterIssuerGroupVersionResource.Resource, api.TestClusterIssuerGroupVersionResource.Group, clusterIssuer1.Name)
 					},
 					func(cr *certificatesv1.CertificateSigningRequest) {
 						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
@@ -372,7 +373,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 						cr.CreationTimestamp = fakeTimeObj2
 					},
 					func(cr *certificatesv1.CertificateSigningRequest) {
-						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+						cr.Spec.SignerName = fmt.Sprintf("%s.%s/%s", api.TestClusterIssuerGroupVersionResource.Resource, api.TestClusterIssuerGroupVersionResource.Group, clusterIssuer1.Name)
 					},
 				),
 				testutil.TestClusterIssuerFrom(clusterIssuer1),
@@ -417,7 +418,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 						cr.CreationTimestamp = fakeTimeObj2
 					},
 					func(cr *certificatesv1.CertificateSigningRequest) {
-						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+						cr.Spec.SignerName = fmt.Sprintf("%s.%s/%s", api.TestClusterIssuerGroupVersionResource.Resource, api.TestClusterIssuerGroupVersionResource.Group, clusterIssuer1.Name)
 					},
 					cmgen.SetCertificateSigningRequestStatusCondition(certificatesv1.CertificateSigningRequestCondition{
 						Type:               "[condition type]",
@@ -467,7 +468,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1,
 					func(cr *certificatesv1.CertificateSigningRequest) {
-						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+						cr.Spec.SignerName = fmt.Sprintf("%s.%s/%s", api.TestClusterIssuerGroupVersionResource.Resource, api.TestClusterIssuerGroupVersionResource.Group, clusterIssuer1.Name)
 					},
 					func(cr *certificatesv1.CertificateSigningRequest) {
 						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
@@ -520,7 +521,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1,
 					func(cr *certificatesv1.CertificateSigningRequest) {
-						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+						cr.Spec.SignerName = fmt.Sprintf("%s.%s/%s", api.TestClusterIssuerGroupVersionResource.Resource, api.TestClusterIssuerGroupVersionResource.Group, clusterIssuer1.Name)
 					},
 					func(cr *certificatesv1.CertificateSigningRequest) {
 						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
@@ -580,7 +581,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1,
 					func(cr *certificatesv1.CertificateSigningRequest) {
-						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+						cr.Spec.SignerName = fmt.Sprintf("%s.%s/%s", api.TestClusterIssuerGroupVersionResource.Resource, api.TestClusterIssuerGroupVersionResource.Group, clusterIssuer1.Name)
 					},
 					func(cr *certificatesv1.CertificateSigningRequest) {
 						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
@@ -626,7 +627,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1,
 					func(cr *certificatesv1.CertificateSigningRequest) {
-						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+						cr.Spec.SignerName = fmt.Sprintf("%s.%s/%s", api.TestClusterIssuerGroupVersionResource.Resource, api.TestClusterIssuerGroupVersionResource.Group, clusterIssuer1.Name)
 					},
 				),
 				testutil.TestClusterIssuerFrom(clusterIssuer1),
@@ -666,7 +667,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1,
 					func(cr *certificatesv1.CertificateSigningRequest) {
-						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+						cr.Spec.SignerName = fmt.Sprintf("%s.%s/%s", api.TestClusterIssuerGroupVersionResource.Resource, api.TestClusterIssuerGroupVersionResource.Group, clusterIssuer1.Name)
 					},
 				),
 				testutil.TestClusterIssuerFrom(clusterIssuer1),
@@ -699,7 +700,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1,
 					func(cr *certificatesv1.CertificateSigningRequest) {
-						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+						cr.Spec.SignerName = fmt.Sprintf("%s.%s/%s", api.TestClusterIssuerGroupVersionResource.Resource, api.TestClusterIssuerGroupVersionResource.Group, clusterIssuer1.Name)
 					},
 					func(cr *certificatesv1.CertificateSigningRequest) {
 						cr.CreationTimestamp = fakeTimeObj2
@@ -721,7 +722,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			sign: successSigner("a-signed-certificate"),
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1, func(cr *certificatesv1.CertificateSigningRequest) {
-					cr.Spec.SignerName = fmt.Sprintf("%s/%s.%s", issuer1.GetIssuerTypeIdentifier(), issuer1.Namespace, issuer1.Name)
+					cr.Spec.SignerName = fmt.Sprintf("%s.%s/%s.%s", api.TestIssuerGroupVersionResource.Resource, api.TestIssuerGroupVersionResource.Group, issuer1.Namespace, issuer1.Name)
 				}),
 				testutil.TestIssuerFrom(issuer1),
 			},
@@ -734,7 +735,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			sign: successSigner("a-signed-certificate"),
 			objects: []client.Object{
 				cmgen.CertificateSigningRequestFrom(cr1, func(cr *certificatesv1.CertificateSigningRequest) {
-					cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+					cr.Spec.SignerName = fmt.Sprintf("%s.%s/%s", api.TestClusterIssuerGroupVersionResource.Resource, api.TestClusterIssuerGroupVersionResource.Group, clusterIssuer1.Name)
 				}),
 				testutil.TestClusterIssuerFrom(clusterIssuer1),
 			},
@@ -776,15 +777,19 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 
 			controller := (&CertificateSigningRequestReconciler{
 				RequestController: RequestController{
-					IssuerTypes:        []v1alpha1.Issuer{&api.TestIssuer{}},
-					ClusterIssuerTypes: []v1alpha1.Issuer{&api.TestClusterIssuer{}},
-					FieldOwner:         fieldOwner,
-					MaxRetryDuration:   time.Minute,
-					EventSource:        kubeutil.NewEventStore(),
-					Client:             fakeClient,
-					Sign:               tc.sign,
-					EventRecorder:      fakeRecorder,
-					Clock:              fakeClock2,
+					IssuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+						api.TestIssuerGroupVersionResource.GroupResource(): &api.TestIssuer{},
+					},
+					ClusterIssuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+						api.TestClusterIssuerGroupVersionResource.GroupResource(): &api.TestClusterIssuer{},
+					},
+					FieldOwner:       fieldOwner,
+					MaxRetryDuration: time.Minute,
+					EventSource:      kubeutil.NewEventStore(),
+					Client:           fakeClient,
+					Sign:             tc.sign,
+					EventRecorder:    fakeRecorder,
+					Clock:            fakeClock2,
 				},
 			}).Init()
 
@@ -817,8 +822,8 @@ func TestCertificateSigningRequestMatchIssuerType(t *testing.T) {
 	type testcase struct {
 		name string
 
-		issuerTypes        []v1alpha1.Issuer
-		clusterIssuerTypes []v1alpha1.Issuer
+		issuerTypes        map[schema.GroupResource]v1alpha1.Issuer
+		clusterIssuerTypes map[schema.GroupResource]v1alpha1.Issuer
 		csr                *certificatesv1.CertificateSigningRequest
 
 		expectedIssuerType v1alpha1.Issuer
@@ -856,48 +861,68 @@ func TestCertificateSigningRequestMatchIssuerType(t *testing.T) {
 			expectedError:      errormatch.ErrorContains("invalid signer name, should have format <issuer-type-id>/<issuer-id>: \"aaaaaa\""),
 		},
 		{
-			name:               "unknown issuer type identifier",
-			issuerTypes:        []v1alpha1.Issuer{&api.TestIssuer{}},
-			clusterIssuerTypes: []v1alpha1.Issuer{&api.TestClusterIssuer{}},
-			csr:                createCsr("aaaaa.testing.cert-manager.io/namespace.name"),
+			name: "unknown issuer type identifier",
+			issuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+				api.TestIssuerGroupVersionResource.GroupResource(): &api.TestIssuer{},
+			},
+			clusterIssuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+				api.TestClusterIssuerGroupVersionResource.GroupResource(): &api.TestClusterIssuer{},
+			},
+			csr: createCsr("aaaaa.testing.cert-manager.io/namespace.name"),
 
 			expectedIssuerType: nil,
 			expectedIssuerName: types.NamespacedName{},
 			expectedError:      errormatch.ErrorContains("no issuer found for signer name: \"aaaaa.testing.cert-manager.io/namespace.name\""),
 		},
 		{
-			name:               "match issuer",
-			issuerTypes:        []v1alpha1.Issuer{&api.TestIssuer{}},
-			clusterIssuerTypes: []v1alpha1.Issuer{&api.TestClusterIssuer{}},
-			csr:                createCsr("testissuers.testing.cert-manager.io/namespace.name"),
+			name: "match issuer",
+			issuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+				api.TestIssuerGroupVersionResource.GroupResource(): &api.TestIssuer{},
+			},
+			clusterIssuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+				api.TestClusterIssuerGroupVersionResource.GroupResource(): &api.TestClusterIssuer{},
+			},
+			csr: createCsr("testissuers.testing.cert-manager.io/namespace.name"),
 
 			expectedIssuerType: nil,
 			expectedIssuerName: types.NamespacedName{},
 			expectedError:      errormatch.ErrorContains("invalid SignerName, \"testissuers.testing.cert-manager.io\" is a namespaced issuer type, namespaced issuers are not supported for Kubernetes CSRs"),
 		},
 		{
-			name:               "match cluster issuer",
-			issuerTypes:        []v1alpha1.Issuer{&api.TestIssuer{}},
-			clusterIssuerTypes: []v1alpha1.Issuer{&api.TestClusterIssuer{}},
-			csr:                createCsr("testclusterissuers.testing.cert-manager.io/name"),
+			name: "match cluster issuer",
+			issuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+				api.TestIssuerGroupVersionResource.GroupResource(): &api.TestIssuer{},
+			},
+			clusterIssuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+				api.TestClusterIssuerGroupVersionResource.GroupResource(): &api.TestClusterIssuer{},
+			},
+			csr: createCsr("testclusterissuers.testing.cert-manager.io/name"),
 
 			expectedIssuerType: &api.TestClusterIssuer{},
 			expectedIssuerName: types.NamespacedName{Name: "name"},
 		},
 		{
-			name:               "cluster issuer with dot in name",
-			issuerTypes:        []v1alpha1.Issuer{&api.TestIssuer{}},
-			clusterIssuerTypes: []v1alpha1.Issuer{&api.TestClusterIssuer{}},
-			csr:                createCsr("testclusterissuers.testing.cert-manager.io/name.test"),
+			name: "cluster issuer with dot in name",
+			issuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+				api.TestIssuerGroupVersionResource.GroupResource(): &api.TestIssuer{},
+			},
+			clusterIssuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+				api.TestClusterIssuerGroupVersionResource.GroupResource(): &api.TestClusterIssuer{},
+			},
+			csr: createCsr("testclusterissuers.testing.cert-manager.io/name.test"),
 
 			expectedIssuerType: &api.TestClusterIssuer{},
 			expectedIssuerName: types.NamespacedName{Name: "name.test"},
 		},
 		{
-			name:               "cluster issuer with empty name",
-			issuerTypes:        []v1alpha1.Issuer{&api.TestIssuer{}},
-			clusterIssuerTypes: []v1alpha1.Issuer{&api.TestClusterIssuer{}},
-			csr:                createCsr("testclusterissuers.testing.cert-manager.io/"),
+			name: "cluster issuer with empty name",
+			issuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+				api.TestIssuerGroupVersionResource.GroupResource(): &api.TestIssuer{},
+			},
+			clusterIssuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+				api.TestClusterIssuerGroupVersionResource.GroupResource(): &api.TestClusterIssuer{},
+			},
+			csr: createCsr("testclusterissuers.testing.cert-manager.io/"),
 
 			expectedIssuerType: &api.TestClusterIssuer{},
 			expectedIssuerName: types.NamespacedName{Name: ""},

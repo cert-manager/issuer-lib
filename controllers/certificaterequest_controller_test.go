@@ -31,6 +31,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	clocktesting "k8s.io/utils/clock/testing"
@@ -942,15 +943,19 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 
 			controller := (&CertificateRequestReconciler{
 				RequestController: RequestController{
-					IssuerTypes:        []v1alpha1.Issuer{&api.TestIssuer{}},
-					ClusterIssuerTypes: []v1alpha1.Issuer{&api.TestClusterIssuer{}},
-					FieldOwner:         fieldOwner,
-					MaxRetryDuration:   time.Minute,
-					EventSource:        kubeutil.NewEventStore(),
-					Client:             fakeClient,
-					Sign:               tc.sign,
-					EventRecorder:      fakeRecorder,
-					Clock:              fakeClock2,
+					IssuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+						api.TestIssuerGroupVersionResource.GroupResource(): &api.TestIssuer{},
+					},
+					ClusterIssuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+						api.TestClusterIssuerGroupVersionResource.GroupResource(): &api.TestClusterIssuer{},
+					},
+					FieldOwner:       fieldOwner,
+					MaxRetryDuration: time.Minute,
+					EventSource:      kubeutil.NewEventStore(),
+					Client:           fakeClient,
+					Sign:             tc.sign,
+					EventRecorder:    fakeRecorder,
+					Clock:            fakeClock2,
 				},
 			}).Init()
 
@@ -1000,8 +1005,8 @@ func TestCertificateRequestMatchIssuerType(t *testing.T) {
 	type testcase struct {
 		name string
 
-		issuerTypes        []v1alpha1.Issuer
-		clusterIssuerTypes []v1alpha1.Issuer
+		issuerTypes        map[schema.GroupResource]v1alpha1.Issuer
+		clusterIssuerTypes map[schema.GroupResource]v1alpha1.Issuer
 		cr                 *cmapi.CertificateRequest
 
 		expectedIssuerType v1alpha1.Issuer
@@ -1046,46 +1051,64 @@ func TestCertificateRequestMatchIssuerType(t *testing.T) {
 			expectedError:      errormatch.ErrorContains("no issuer found for reference: [Group=\"test\", Kind=\"\", Name=\"name\"]"),
 		},
 		{
-			name:               "match issuer",
-			issuerTypes:        []v1alpha1.Issuer{&api.TestIssuer{}},
-			clusterIssuerTypes: []v1alpha1.Issuer{&api.TestClusterIssuer{}},
-			cr:                 createCr("name", "namespace", "TestIssuer", "testing.cert-manager.io"),
+			name: "match issuer",
+			issuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+				api.TestIssuerGroupVersionResource.GroupResource(): &api.TestIssuer{},
+			},
+			clusterIssuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+				api.TestClusterIssuerGroupVersionResource.GroupResource(): &api.TestClusterIssuer{},
+			},
+			cr: createCr("name", "namespace", "TestIssuer", "testing.cert-manager.io"),
 
 			expectedIssuerType: &api.TestIssuer{},
 			expectedIssuerName: types.NamespacedName{Name: "name", Namespace: "namespace"},
 		},
 		{
-			name:               "match cluster issuer",
-			issuerTypes:        []v1alpha1.Issuer{&api.TestIssuer{}},
-			clusterIssuerTypes: []v1alpha1.Issuer{&api.TestClusterIssuer{}},
-			cr:                 createCr("name", "namespace", "TestClusterIssuer", "testing.cert-manager.io"),
+			name: "match cluster issuer",
+			issuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+				api.TestIssuerGroupVersionResource.GroupResource(): &api.TestIssuer{},
+			},
+			clusterIssuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+				api.TestClusterIssuerGroupVersionResource.GroupResource(): &api.TestClusterIssuer{},
+			},
+			cr: createCr("name", "namespace", "TestClusterIssuer", "testing.cert-manager.io"),
 
 			expectedIssuerType: &api.TestClusterIssuer{},
 			expectedIssuerName: types.NamespacedName{Name: "name"},
 		},
 		{
-			name:               "select kind if empty",
-			issuerTypes:        []v1alpha1.Issuer{},
-			clusterIssuerTypes: []v1alpha1.Issuer{&api.TestClusterIssuer{}},
-			cr:                 createCr("name", "namespace", "", "testing.cert-manager.io"),
+			name:        "select kind if empty",
+			issuerTypes: map[schema.GroupResource]v1alpha1.Issuer{},
+			clusterIssuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+				api.TestClusterIssuerGroupVersionResource.GroupResource(): &api.TestClusterIssuer{},
+			},
+			cr: createCr("name", "namespace", "", "testing.cert-manager.io"),
 
 			expectedIssuerType: &api.TestClusterIssuer{},
 			expectedIssuerName: types.NamespacedName{Name: "name"},
 		},
 		{
-			name:               "prefer issuer over cluster issuer (v1)",
-			issuerTypes:        []v1alpha1.Issuer{&api.TestIssuer{}},
-			clusterIssuerTypes: []v1alpha1.Issuer{&api.TestClusterIssuer{}},
-			cr:                 createCr("name", "namespace", "", "testing.cert-manager.io"),
+			name: "prefer issuer over cluster issuer (v1)",
+			issuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+				api.TestIssuerGroupVersionResource.GroupResource(): &api.TestIssuer{},
+			},
+			clusterIssuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+				api.TestClusterIssuerGroupVersionResource.GroupResource(): &api.TestClusterIssuer{},
+			},
+			cr: createCr("name", "namespace", "", "testing.cert-manager.io"),
 
 			expectedIssuerType: &api.TestIssuer{},
 			expectedIssuerName: types.NamespacedName{Name: "name", Namespace: "namespace"},
 		},
 		{
-			name:               "prefer issuer over cluster issuer (v2)",
-			issuerTypes:        []v1alpha1.Issuer{&api.TestIssuer{}},
-			clusterIssuerTypes: []v1alpha1.Issuer{&api.TestIssuer{}},
-			cr:                 createCr("name", "namespace", "", "testing.cert-manager.io"),
+			name: "prefer issuer over cluster issuer (v2)",
+			issuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+				api.TestIssuerGroupVersionResource.GroupResource(): &api.TestIssuer{},
+			},
+			clusterIssuerTypes: map[schema.GroupResource]v1alpha1.Issuer{
+				api.TestIssuerGroupVersionResource.GroupResource(): &api.TestIssuer{},
+			},
+			cr: createCr("name", "namespace", "", "testing.cert-manager.io"),
 
 			expectedIssuerType: &api.TestIssuer{},
 			expectedIssuerName: types.NamespacedName{Name: "name", Namespace: "namespace"},
