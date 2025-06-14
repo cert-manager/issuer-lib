@@ -74,6 +74,15 @@ type CertificateDetails struct {
 	ExtKeyUsage []x509.ExtKeyUsage
 }
 
+// CertificateTemplate generates a certificate template for issuance,
+// based on CertificateDetails extracted from the CertificateRequest or
+// CertificateSigningRequest resource.
+//
+// This function internally calls CertificateTemplateFromCSRPEM, which performs
+// additional work such as parsing the CSR and verifying signatures. Since this
+// operation can be expensive, issuer implementations should call this function
+// only when a certificate template is actually needed (e.g., not when proxying
+// the X.509 CSR to a CA).
 func (cd CertificateDetails) CertificateTemplate() (template *x509.Certificate, err error) {
 	return pki.CertificateTemplateFromCSRPEM(
 		cd.CSR,
