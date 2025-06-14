@@ -19,6 +19,7 @@ package signer
 import (
 	"context"
 
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/cert-manager/cert-manager/pkg/util/pki"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -36,8 +37,10 @@ import (
 // discouraged; the CA should instead be provisioned separately (for example, using trust-manager).
 type PEMBundle pki.PEMBundle
 
-type Sign func(ctx context.Context, cr CertificateRequestObject, issuerObject v1alpha1.Issuer) (PEMBundle, error)
+type Sign func(ctx context.Context, cr CertificateRequestObject, issuerObject v1alpha1.Issuer) (PEMBundle, ExtraConditions, error)
 type Check func(ctx context.Context, issuerObject v1alpha1.Issuer) error
+
+type ExtraConditions []cmapi.CertificateRequestCondition
 
 // IgnoreIssuer is an optional function that can prevent the issuer controllers from
 // reconciling an issuer resource. By default, the controllers will reconcile all
