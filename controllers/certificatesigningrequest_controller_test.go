@@ -343,7 +343,36 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 				Conditions: nil,
 			},
 			expectedResult: reconcile.Result{
-				Requeue: true,
+				RequeueAfter: 1 * time.Second,
+			},
+			expectedEvents: []string{
+				"Warning Pending Signing still in progress. Reason: Signing still in progress. Reason: pending error",
+			},
+		},
+
+		// If the sign function returns a Pending error, set the Ready condition to Pending (even if
+		// the MaxRetryDuration has been exceeded).
+		{
+			name: "retry-on-pending-error-custom",
+			sign: func(_ context.Context, cr signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, error) {
+				return signer.PEMBundle{}, signer.PendingError{Err: fmt.Errorf("pending error"), RequeueAfter: 5 * time.Second}
+			},
+			objects: []client.Object{
+				cmgen.CertificateSigningRequestFrom(cr1,
+					func(cr *certificatesv1.CertificateSigningRequest) {
+						cr.Spec.SignerName = fmt.Sprintf("%s/%s", clusterIssuer1.GetIssuerTypeIdentifier(), clusterIssuer1.Name)
+					},
+					func(cr *certificatesv1.CertificateSigningRequest) {
+						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
+					},
+				),
+				testutil.TestClusterIssuerFrom(clusterIssuer1),
+			},
+			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
+				Conditions: nil,
+			},
+			expectedResult: reconcile.Result{
+				RequeueAfter: 5 * time.Second,
 			},
 			expectedEvents: []string{
 				"Warning Pending Signing still in progress. Reason: Signing still in progress. Reason: pending error",
@@ -599,9 +628,6 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 						LastUpdateTime:     fakeTimeObj2,
 					},
 				},
-			},
-			expectedResult: reconcile.Result{
-				Requeue: false,
 			},
 			expectedEvents: []string{
 				"Warning Pending Signing still in progress. Reason: Signing still in progress. Reason: test error",
