@@ -353,7 +353,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 		// If the sign function returns a Pending error, set the Ready condition to Pending (even if
 		// the MaxRetryDuration has been exceeded).
 		{
-			name: "retry-on-pending-error-5s",
+			name: "retry-on-pending-error-custom",
 			sign: func(_ context.Context, cr signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, error) {
 				return signer.PEMBundle{}, signer.PendingError{Err: fmt.Errorf("pending error"), RequeueAfter: 5 * time.Second}
 			},

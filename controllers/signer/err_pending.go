@@ -27,12 +27,12 @@ import "time"
 // answer from an external service that is indicating that the request is still
 // being processed.
 //
-// RequeueAfter can be used to specify how long to wait before retrying. By default
-// we wait for 1s before retrying.
-//
 // > This error should be returned only by the Sign function.
 type PendingError struct {
-	Err          error
+	Err error
+
+	// RequeueAfter can be used to specify how long to wait before retrying. By default
+	// we wait for 1s before retrying.
 	RequeueAfter time.Duration
 }
 
