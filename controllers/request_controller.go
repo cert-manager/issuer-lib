@@ -269,7 +269,20 @@ func (r *RequestController) reconcileStatusPatch(
 		return result, statusPatch, nil // apply patch, done
 	}
 
-	signedCertificate, err := r.Sign(log.IntoContext(ctx, logger), requestObjectHelper.RequestObject(), issuerObject)
+	signedCertificate, extraConditions, err := r.Sign(log.IntoContext(ctx, logger), requestObjectHelper.RequestObject(), issuerObject)
+	didCustomConditionTransition := false
+	for _, condition := range extraConditions {
+		logger.V(1).Info("Set RequestCondition error. Setting condition.", "error", err)
+		if statusPatch.SetCustomCondition(
+			string(condition.Type),
+			metav1.ConditionStatus(condition.Status),
+			condition.Reason,
+			condition.Message,
+		) {
+			didCustomConditionTransition = true
+		}
+	}
+
 	if err == nil {
 		logger.V(1).Info("Successfully finished the reconciliation.")
 		statusPatch.SetIssued(signedCertificate)
@@ -291,17 +304,6 @@ func (r *RequestController) reconcileStatusPatch(
 		statusPatch.SetWaitingForIssuerReadyOutdated()
 
 		return result, statusPatch, nil // apply patch, done
-	}
-
-	didCustomConditionTransition := false
-	if targetCustom := new(signer.SetCertificateRequestConditionError); errors.As(err, targetCustom) {
-		logger.V(1).Info("Set RequestCondition error. Setting condition.", "error", err)
-		didCustomConditionTransition = statusPatch.SetCustomCondition(
-			string(targetCustom.ConditionType),
-			metav1.ConditionStatus(targetCustom.Status),
-			targetCustom.Reason,
-			targetCustom.Error(),
-		)
 	}
 
 	// Check if we have still time to requeue & retry
