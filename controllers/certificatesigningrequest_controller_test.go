@@ -81,8 +81,8 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 		testutil.SetTestIssuerGeneration(70),
 		testutil.SetTestIssuerStatusCondition(
 			fakeClock1,
-			cmapi.IssuerConditionReady,
-			cmmeta.ConditionTrue,
+			v1alpha1.IssuerConditionTypeReady,
+			metav1.ConditionTrue,
 			v1alpha1.IssuerConditionReasonChecked,
 			"Succeeded checking the issuer",
 		),
@@ -93,8 +93,8 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 		testutil.SetTestClusterIssuerGeneration(70),
 		testutil.SetTestClusterIssuerStatusCondition(
 			fakeClock1,
-			cmapi.IssuerConditionReady,
-			cmmeta.ConditionTrue,
+			v1alpha1.IssuerConditionTypeReady,
+			metav1.ConditionTrue,
 			v1alpha1.IssuerConditionReasonChecked,
 			"Succeeded checking the issuer",
 		),
@@ -250,8 +250,8 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 				testutil.TestClusterIssuerFrom(clusterIssuer1,
 					testutil.SetTestClusterIssuerStatusCondition(
 						fakeClock1,
-						cmapi.IssuerConditionReady,
-						cmmeta.ConditionFalse,
+						v1alpha1.IssuerConditionTypeReady,
+						metav1.ConditionFalse,
 						"[REASON]",
 						"[MESSAGE]",
 					),
