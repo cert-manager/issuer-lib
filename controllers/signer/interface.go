@@ -58,9 +58,38 @@ type Check func(ctx context.Context, issuerObject v1alpha1.Issuer) error
 type CertificateRequestObject interface {
 	metav1.Object
 
-	GetRequest() (template *x509.Certificate, duration time.Duration, csr []byte, err error)
+	// Return the Certificate details originating from the cert-manager
+	// CertificateRequest or Kubernetes CertificateSigningRequest resources.
+	GetCertificateDetails() (details CertificateDetails, err error)
 
 	GetConditions() []cmapi.CertificateRequestCondition
+}
+
+type CertificateDetails struct {
+	CSR         []byte
+	Duration    time.Duration
+	IsCA        bool
+	MaxPathLen  *int
+	KeyUsage    x509.KeyUsage
+	ExtKeyUsage []x509.ExtKeyUsage
+}
+
+// CertificateTemplate generates a certificate template for issuance,
+// based on CertificateDetails extracted from the CertificateRequest or
+// CertificateSigningRequest resource.
+//
+// This function internally calls CertificateTemplateFromCSRPEM, which performs
+// additional work such as parsing the CSR and verifying signatures. Since this
+// operation can be expensive, issuer implementations should call this function
+// only when a certificate template is actually needed (e.g., not when proxying
+// the X.509 CSR to a CA).
+func (cd CertificateDetails) CertificateTemplate() (template *x509.Certificate, err error) {
+	return pki.CertificateTemplateFromCSRPEM(
+		cd.CSR,
+		pki.CertificateTemplateOverrideDuration(cd.Duration),
+		pki.CertificateTemplateValidateAndOverrideBasicConstraints(cd.IsCA, cd.MaxPathLen), // Override the basic constraints, but make sure they match the constraints in the CSR if present
+		pki.CertificateTemplateValidateAndOverrideKeyUsages(cd.KeyUsage, cd.ExtKeyUsage),   // Override the key usages, but make sure they match the usages in the CSR if present
+	)
 }
 
 // IgnoreIssuer is an optional function that can prevent the issuer controllers from
