@@ -19,6 +19,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -34,8 +36,14 @@ import (
 )
 
 type CombinedController struct {
-	IssuerTypes        []v1alpha1.Issuer
-	ClusterIssuerTypes []v1alpha1.Issuer
+	// IssuerTypes is a map of empty namespaced issuer objects, each supported issuer type
+	// should have its own entry. The key should be the GroupResource for that issuer, the
+	// resource being the plural lowercase resource name.
+	IssuerTypes map[schema.GroupResource]v1alpha1.Issuer
+	// ClusterIssuerTypes is a map of empty cluster-scoped issuer objects, each supported issuer type
+	// should have its own entry. The key should be the GroupResource for that issuer, the
+	// resource being the plural lowercase resource name.
+	ClusterIssuerTypes map[schema.GroupResource]v1alpha1.Issuer
 
 	FieldOwner string
 
@@ -102,7 +110,10 @@ func (r *CombinedController) SetupWithManager(ctx context.Context, mgr ctrl.Mana
 		r.Clock = clock.RealClock{}
 	}
 
-	for _, issuerType := range append(r.IssuerTypes, r.ClusterIssuerTypes...) {
+	for _, issuerType := range slices.Concat(
+		slices.Collect(maps.Values(r.IssuerTypes)),
+		slices.Collect(maps.Values(r.ClusterIssuerTypes)),
+	) {
 		if err = (&IssuerReconciler{
 			ForObject: issuerType,
 
