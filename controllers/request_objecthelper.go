@@ -61,7 +61,7 @@ type RequestPatchHelper interface { //nolint:interfacebloat
 	SetWaitingForIssuerExist(error)
 	SetWaitingForIssuerReadyNoCondition()
 	SetWaitingForIssuerReadyOutdated()
-	SetWaitingForIssuerReadyNotReady(*cmapi.IssuerCondition)
+	SetWaitingForIssuerReadyNotReady(*metav1.Condition)
 	SetCustomCondition(
 		conditionType string,
 		conditionStatus metav1.ConditionStatus,

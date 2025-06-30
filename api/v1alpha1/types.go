@@ -17,6 +17,12 @@ limitations under the License.
 package v1alpha1
 
 const (
+	// IssuerConditionTypeReady is the type of condition that indicates whether
+	// an Issuer is ready for use.
+	IssuerConditionTypeReady = "Ready"
+)
+
+const (
 	// CertificateRequestConditionReasonInitializing is the value assigned to
 	// the Reason field of the Ready condition when issuer-lib first
 	// reconciles a CertificateRequest which does not already have a Ready

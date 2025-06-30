@@ -177,7 +177,7 @@ func (c *certificateRequestPatchHelper) SetWaitingForIssuerReadyOutdated() {
 	c.eventRecorder.Event(c.readOnlyObj, corev1.EventTypeNormal, eventRequestWaitingForIssuerReady, message)
 }
 
-func (c *certificateRequestPatchHelper) SetWaitingForIssuerReadyNotReady(cond *cmapi.IssuerCondition) {
+func (c *certificateRequestPatchHelper) SetWaitingForIssuerReadyNotReady(cond *metav1.Condition) {
 	message, _ := c.setCondition(
 		cmapi.CertificateRequestConditionReady,
 		cmmeta.ConditionFalse,
