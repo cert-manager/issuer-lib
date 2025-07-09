@@ -3,7 +3,7 @@ module github.com/cert-manager/issuer-lib
 go 1.24.0
 
 require (
-	github.com/cert-manager/cert-manager v1.18.1
+	github.com/cert-manager/cert-manager v1.18.2
 	github.com/go-logr/logr v1.4.3
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/sync v0.15.0
