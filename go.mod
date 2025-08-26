@@ -6,7 +6,7 @@ require (
 	github.com/cert-manager/cert-manager v1.18.2
 	github.com/go-logr/logr v1.4.3
 	github.com/stretchr/testify v1.11.0
-	golang.org/x/sync v0.15.0
+	golang.org/x/sync v0.16.0
 	k8s.io/api v0.33.2
 	k8s.io/apiextensions-apiserver v0.33.2
 	k8s.io/apimachinery v0.33.2
