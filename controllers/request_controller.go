@@ -307,7 +307,21 @@ func (r *RequestController) reconcileStatusPatch(
 	isPending := errors.As(err, pendingError)
 	isPermanentError := errors.As(err, &signer.PermanentError{})
 	pastMaxRetryDuration := r.Clock.Now().After(requestObject.GetCreationTimestamp().Add(r.MaxRetryDuration))
+	contextError := context.Cause(ctx)
+	contextIsDone := contextError != nil
 	switch {
+	case contextIsDone:
+		// The context has been cancelled. Probably because the process is shutting down.
+		// Return nil to prevent further reconcile attempts. Log the
+		// error at debug level as an info message for diagnostic purposes.
+		// We avoid logging the Sign error as an error because an error is
+		// expected if the supplied context has been cancelled. Here's an example of such an error:
+		// > failed to request venafi certificate: vcert error: server error:
+		// > server unavailable: Get
+		// > "https://api.venafi.cloud/outagedetection/v1/applications/tlspk-bench/certificateissuingtemplates/Default":
+		// > context canceled
+		logger.V(1).Info("Exiting", "reason", "context done", "signing-error", err)
+		return result, statusPatch, nil // apply patch, done
 	case isPending:
 		// Signing is pending, wait more.
 		//
