@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"time"
 
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -88,10 +89,12 @@ type RequestController struct {
 	requestType                client.Object
 	requestPredicate           predicate.Predicate
 	matchIssuerType            MatchIssuerType
+	matchNativeIssuerType      MatchNativeCMIssuerType
 	requestObjectHelperCreator RequestObjectHelperCreator
 }
 
 type MatchIssuerType func(client.Object) (v1alpha1.Issuer, client.ObjectKey, error)
+type MatchNativeCMIssuerType func(context.Context, client.Object) (v1alpha1.Issuer, client.ObjectKey, error)
 type RequestObjectHelperCreator func(client.Object) RequestObjectHelper
 
 type IssuerType struct {
@@ -162,8 +165,11 @@ func (r *RequestController) reconcileStatusPatch(
 	issuerObject, issuerName, err := r.matchIssuerType(requestObject)
 	// Ignore Request if issuerRef doesn't match one of our issuer Types
 	if err != nil {
-		logger.V(1).Info("Request has a foreign issuer. Ignoring.", "error", err)
-		return result, nil, nil // done
+		issuerObject, issuerName, err = r.matchNativeIssuerType(ctx, requestObject)
+		if err != nil {
+			logger.V(1).Info("Request has a foreign issuer. Ignoring.", "error", err)
+			return result, nil, nil // done
+		}
 	}
 	issuerGvk := issuerObject.GetObjectKind().GroupVersionKind()
 
@@ -388,11 +394,13 @@ func (r *RequestController) Init(
 	requestType client.Object,
 	requestPredicate predicate.Predicate,
 	matchIssuerType MatchIssuerType,
+	matchNativeIssuerType MatchNativeCMIssuerType,
 	requestObjectHelperCreator RequestObjectHelperCreator,
 ) *RequestController {
 	r.requestType = requestType
 	r.requestPredicate = requestPredicate
 	r.matchIssuerType = matchIssuerType
+	r.matchNativeIssuerType = matchNativeIssuerType
 	r.requestObjectHelperCreator = requestObjectHelperCreator
 
 	r.initialised = true
@@ -425,6 +433,20 @@ func (r *RequestController) SetupWithManager(
 			// certificaterequest, this also prevents us to get in fast reconcile loop
 			// when setting the status to Pending causing the resource to update, while
 			// we only want to re-reconcile with backoff/ when a resource becomes available.
+			builder.WithPredicates(
+				predicate.ResourceVersionChangedPredicate{},
+				r.requestPredicate,
+			),
+		).
+		For(
+			&cmapi.Issuer{},
+			builder.WithPredicates(
+				predicate.ResourceVersionChangedPredicate{},
+				r.requestPredicate,
+			),
+		).
+		For(
+			&cmapi.ClusterIssuer{},
 			builder.WithPredicates(
 				predicate.ResourceVersionChangedPredicate{},
 				r.requestPredicate,

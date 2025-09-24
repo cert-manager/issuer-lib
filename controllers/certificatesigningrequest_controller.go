@@ -84,6 +84,7 @@ func (r *CertificateSigningRequestReconciler) Init() *CertificateSigningRequestR
 		&certificatesv1.CertificateSigningRequest{},
 		CertificateSigningRequestPredicate{},
 		r.matchIssuerType,
+		r.matchNativeIssuerType,
 		func(o client.Object) RequestObjectHelper {
 			return &certificatesigningRequestObjectHelper{
 				readOnlyObj: o.(*certificatesv1.CertificateSigningRequest),

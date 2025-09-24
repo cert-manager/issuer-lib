@@ -40,3 +40,47 @@ type Issuer interface {
 	// with an issuerName set to eg. "simpleclusterissuers.issuer.cert-manager.io/issuer1".
 	GetIssuerTypeIdentifier() string
 }
+
+func (cmi *ClusterNativeIssuer) GetConditions() []metav1.Condition {
+	conditions := make([]metav1.Condition, 0, len(cmi.Status.Conditions))
+
+	for _, cond := range cmi.Status.Conditions {
+		metaCond := metav1.ConditionStatus(string(cond.Status))
+		conditions = append(conditions, metav1.Condition{
+			Type:               string(cond.Type),
+			Status:             metaCond,
+			LastTransitionTime: *cond.LastTransitionTime,
+			ObservedGeneration: cond.ObservedGeneration,
+			Reason:             cond.Reason,
+			Message:            cond.Message,
+		})
+	}
+
+	return conditions
+}
+
+func (cmi *ClusterNativeIssuer) GetIssuerTypeIdentifier() string {
+	return "clusterissuers.native.cert-manager.io"
+}
+
+func (cmi *NativeIssuer) GetConditions() []metav1.Condition {
+	conditions := make([]metav1.Condition, 0, len(cmi.Status.Conditions))
+
+	for _, cond := range cmi.Status.Conditions {
+		metaCond := metav1.ConditionStatus(string(cond.Status))
+		conditions = append(conditions, metav1.Condition{
+			Type:               string(cond.Type),
+			Status:             metaCond,
+			LastTransitionTime: *cond.LastTransitionTime,
+			ObservedGeneration: cond.ObservedGeneration,
+			Reason:             cond.Reason,
+			Message:            cond.Message,
+		})
+	}
+
+	return conditions
+}
+
+func (cmi *NativeIssuer) GetIssuerTypeIdentifier() string {
+	return "issuers.native.cert-manager.io"
+}

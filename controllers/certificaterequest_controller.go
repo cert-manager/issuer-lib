@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -73,11 +74,63 @@ func (r *CertificateRequestReconciler) matchIssuerType(requestObject client.Obje
 	return nil, types.NamespacedName{}, fmt.Errorf("no issuer found for reference: [Group=%q, Kind=%q, Name=%q]", cr.Spec.IssuerRef.Group, cr.Spec.IssuerRef.Kind, cr.Spec.IssuerRef.Name)
 }
 
+func (r *CertificateRequestReconciler) fetchCMIssuers(ctx context.Context, requestObject client.Object) (v1alpha1.Issuer, types.NamespacedName, error) {
+	cr := requestObject.(*cmapi.CertificateRequest)
+
+	if cr == nil {
+		return nil, types.NamespacedName{}, fmt.Errorf("invalid reference, CertificateRequest is nil")
+	}
+
+	// If AllIssuerTypes are empty or doesn't match anything given then return clusterissuer/issuer as issuers
+	if cr.Spec.IssuerRef.Kind == cmapi.IssuerKind {
+		issuerName := &types.NamespacedName{
+			Name:      cr.Spec.IssuerRef.Name,
+			Namespace: cr.Namespace,
+		}
+
+		var iss *cmapi.Issuer
+		err := r.Client.Get(ctx, *issuerName, iss)
+		if err != nil {
+			return nil, types.NamespacedName{}, err
+		}
+
+		nativeIssuer := new(v1alpha1.NativeIssuer)
+		nativeIss := nativeIssuer.DeepCopyObject().(*v1alpha1.NativeIssuer)
+		nativeIss.Issuer = *iss
+
+		return nativeIssuer, *issuerName, nil
+	}
+
+	if cr.Spec.IssuerRef.Kind == cmapi.ClusterIssuerKind {
+		var clusterIssuersList *cmapi.ClusterIssuerList
+		err := r.Client.List(ctx, clusterIssuersList)
+		if err != nil {
+			return nil, types.NamespacedName{}, err
+		}
+
+		var clusterIssuer cmapi.ClusterIssuer
+		for _, cli := range clusterIssuersList.Items {
+			if strings.EqualFold(cli.Name, cr.Spec.IssuerRef.Name) {
+				clusterIssuer = cli
+			}
+		}
+
+		nativeClusterIsser := new(v1alpha1.ClusterNativeIssuer)
+		nativeClusterIss := nativeClusterIsser.DeepCopyObject().(*v1alpha1.ClusterNativeIssuer)
+		nativeClusterIss.ClusterIssuer = clusterIssuer
+
+		return nativeClusterIss, types.NamespacedName{}, nil
+	}
+
+	return nil, types.NamespacedName{}, fmt.Errorf("no cm native issuers found for reference: [Group=%q, Kind=%q, Name=%q]", cr.Spec.IssuerRef.Group, cr.Spec.IssuerRef.Kind, cr.Spec.IssuerRef.Name)
+}
+
 func (r *CertificateRequestReconciler) Init() *CertificateRequestReconciler {
 	r.RequestController.Init(
 		&cmapi.CertificateRequest{},
 		CertificateRequestPredicate{},
 		r.matchIssuerType,
+		r.matchNativeIssuerType,
 		func(o client.Object) RequestObjectHelper {
 			return &certificateRequestObjectHelper{
 				readOnlyObj:               o.(*cmapi.CertificateRequest),
