@@ -94,7 +94,7 @@ func (r *IssuerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res
 
 	logger.V(2).Info("Got StatusPatch result", "result", result, "patch", issuerStatusPatch, "error", reconcileError)
 	if issuerStatusPatch != nil {
-		cr, patch, err := ssaclient.GenerateIssuerStatusPatch(r.ForObject, req.Name, req.Namespace, issuerStatusPatch)
+		cr, patch, err := ssaclient.GenerateIssuerStatusPatch(objectForIssuer(r.ForObject), req.Name, req.Namespace, issuerStatusPatch)
 		if err != nil {
 			return ctrl.Result{}, utilerrors.NewAggregate([]error{err, reconcileError})
 		}
