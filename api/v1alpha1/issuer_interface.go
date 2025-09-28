@@ -22,6 +22,7 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Issuer interface {
@@ -39,4 +40,9 @@ type Issuer interface {
 	// "simpleclusterissuers.issuer.cert-manager.io" will match all CSRs
 	// with an issuerName set to eg. "simpleclusterissuers.issuer.cert-manager.io/issuer1".
 	GetIssuerTypeIdentifier() string
+}
+
+type WrappedIssuer interface {
+	Issuer
+	Unwrap() client.Object
 }
