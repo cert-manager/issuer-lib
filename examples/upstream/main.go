@@ -25,9 +25,6 @@ import (
 	"strconv"
 	"time"
 
-	"simple-issuer/api"
-	"simple-issuer/controller"
-
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -39,6 +36,8 @@ import (
 	ctrlzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"simple-issuer/api"
+	"simple-issuer/controller"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.

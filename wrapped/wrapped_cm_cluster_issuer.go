@@ -1,5 +1,5 @@
 /*
-Copyright 2023 The cert-manager Authors.
+Copyright 2025 The cert-manager Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,31 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package api
+package wrapped
 
 import (
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/cert-manager/issuer-lib/api/v1alpha1"
 )
 
-type GenericWrappedIssuer interface {
-	v1alpha1.WrappedIssuer
-	IssuerSpec() *cmapi.IssuerSpec
+type CMClusterIssuer struct {
+	cmapi.ClusterIssuer
 }
 
-// +kubebuilder:object:root=true
-// +kubebuilder:skip
-
-type WrappedIssuer struct {
-	cmapi.Issuer
-}
-
-func (i *WrappedIssuer) GetConditions() (conditions []metav1.Condition) {
-	for _, condition := range i.Issuer.Status.Conditions {
+func (i *CMClusterIssuer) GetConditions() (conditions []metav1.Condition) {
+	for _, condition := range i.Status.Conditions {
 		conditions = append(conditions, metav1.Condition{
 			Type:               string(condition.Type),
 			Status:             metav1.ConditionStatus(condition.Status),
@@ -51,16 +41,14 @@ func (i *WrappedIssuer) GetConditions() (conditions []metav1.Condition) {
 	return conditions
 }
 
-func (i *WrappedIssuer) GetIssuerTypeIdentifier() string {
-	return "issuers.cert-manager.io"
+func (i *CMClusterIssuer) GetIssuerTypeIdentifier() string {
+	return "cmclusterissuers.issuer.cert-manager.io"
 }
 
-func (i *WrappedIssuer) Unwrap() client.Object {
-	return &i.Issuer
+func (i *CMClusterIssuer) Unwrap() client.Object {
+	return &i.ClusterIssuer
 }
 
-func (i *WrappedIssuer) IssuerSpec() *cmapi.IssuerSpec {
-	return &i.Issuer.Spec
+func (i *CMClusterIssuer) IssuerSpec() *cmapi.IssuerSpec {
+	return &i.Spec
 }
-
-var _ GenericWrappedIssuer = &WrappedIssuer{}

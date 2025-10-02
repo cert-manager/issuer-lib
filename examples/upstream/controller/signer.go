@@ -28,10 +28,9 @@ import (
 	"math/big"
 	"time"
 
-	"simple-issuer/api"
-
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"simple-issuer/api"
 
 	"github.com/cert-manager/issuer-lib/api/v1alpha1"
 	"github.com/cert-manager/issuer-lib/controllers"
