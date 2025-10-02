@@ -94,7 +94,7 @@ func (r *IssuerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res
 
 	logger.V(2).Info("Got StatusPatch result", "result", result, "patch", issuerStatusPatch, "error", reconcileError)
 	if issuerStatusPatch != nil {
-		cr, patch, err := ssaclient.GenerateIssuerStatusPatch(objectForIssuer(r.ForObject), req.Name, req.Namespace, issuerStatusPatch)
+		cr, patch, err := ssaclient.GenerateIssuerStatusPatch(kubeutil.ObjectForIssuer(r.ForObject), req.Name, req.Namespace, issuerStatusPatch)
 		if err != nil {
 			return ctrl.Result{}, utilerrors.NewAggregate([]error{err, reconcileError})
 		}
@@ -135,7 +135,7 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 	// calling IsInvalidated early to make sure the map is always cleared
 	reportedError := r.EventSource.HasReportedError(forObjectGvk, req.NamespacedName)
 
-	if err := r.Client.Get(ctx, req.NamespacedName, objectForIssuer(issuer)); err != nil && apierrors.IsNotFound(err) {
+	if err := r.Client.Get(ctx, req.NamespacedName, kubeutil.ObjectForIssuer(issuer)); err != nil && apierrors.IsNotFound(err) {
 		logger.V(1).Info("Issuer not found. Ignoring.")
 		return result, nil, nil // done
 	} else if err != nil {
@@ -245,14 +245,14 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *IssuerReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
-	if err := kubeutil.SetGroupVersionKind(mgr.GetScheme(), objectForIssuer(r.ForObject)); err != nil {
+	if err := kubeutil.SetGroupVersionKind(mgr.GetScheme(), kubeutil.ObjectForIssuer(r.ForObject)); err != nil {
 		return err
 	}
 	forObjectGvk := r.ForObject.GetObjectKind().GroupVersionKind()
 
 	build := ctrl.NewControllerManagedBy(mgr).
 		For(
-			objectForIssuer(r.ForObject),
+			kubeutil.ObjectForIssuer(r.ForObject),
 			// we are only interested in changes to the .Spec part of the issuer
 			// this also prevents us to get in fast reconcile loop when setting the
 			// status to Pending causing the resource to update, while we only want

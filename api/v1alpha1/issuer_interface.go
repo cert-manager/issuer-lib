@@ -42,6 +42,7 @@ type Issuer interface {
 	GetIssuerTypeIdentifier() string
 }
 
+// WrappedIssuer is an issuer type to support objects which are not directly of the type Issuer. This could include cert-manager issuers for example.
 type WrappedIssuer interface {
 	Issuer
 	Unwrap() client.Object
