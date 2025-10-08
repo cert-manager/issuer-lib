@@ -94,7 +94,7 @@ func (r *IssuerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res
 
 	logger.V(2).Info("Got StatusPatch result", "result", result, "patch", issuerStatusPatch, "error", reconcileError)
 	if issuerStatusPatch != nil {
-		cr, patch, err := ssaclient.GenerateIssuerStatusPatch(r.ForObject, req.Name, req.Namespace, issuerStatusPatch)
+		cr, patch, err := ssaclient.GenerateIssuerStatusPatch(kubeutil.ObjectForIssuer(r.ForObject), req.Name, req.Namespace, issuerStatusPatch)
 		if err != nil {
 			return ctrl.Result{}, utilerrors.NewAggregate([]error{err, reconcileError})
 		}
@@ -135,11 +135,22 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 	// calling IsInvalidated early to make sure the map is always cleared
 	reportedError := r.EventSource.HasReportedError(forObjectGvk, req.NamespacedName)
 
-	if err := r.Client.Get(ctx, req.NamespacedName, issuer); err != nil && apierrors.IsNotFound(err) {
+	if err := r.Client.Get(ctx, req.NamespacedName, kubeutil.ObjectForIssuer(issuer)); err != nil && apierrors.IsNotFound(err) {
 		logger.V(1).Info("Issuer not found. Ignoring.")
 		return result, nil, nil // done
 	} else if err != nil {
 		return result, nil, fmt.Errorf("unexpected get error: %v", err) // requeue with backoff
+	}
+
+	if r.IgnoreIssuer != nil {
+		ignore, err := r.IgnoreIssuer(ctx, issuer)
+		if err != nil {
+			return result, nil, fmt.Errorf("failed to check if issuer should be ignored: %v", err) // requeue with backoff
+		}
+		if ignore {
+			logger.V(1).Info("IgnoreIssuer() returned true. Ignoring.")
+			return result, nil, nil // done
+		}
 	}
 
 	readyCondition := conditions.GetIssuerStatusCondition(issuer.GetConditions(), v1alpha1.IssuerConditionTypeReady)
@@ -152,17 +163,6 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 	if isFailed {
 		logger.V(1).Info("Issuer is Failed Permanently. Ignoring.")
 		return result, nil, nil // done
-	}
-
-	if r.IgnoreIssuer != nil {
-		ignore, err := r.IgnoreIssuer(ctx, issuer)
-		if err != nil {
-			return result, nil, fmt.Errorf("failed to check if issuer should be ignored: %v", err) // requeue with backoff
-		}
-		if ignore {
-			logger.V(1).Info("IgnoreIssuer() returned true. Ignoring.")
-			return result, nil, nil // done
-		}
 	}
 
 	// We now have a Issuer that belongs to us so we are responsible
@@ -245,14 +245,14 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *IssuerReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
-	if err := kubeutil.SetGroupVersionKind(mgr.GetScheme(), r.ForObject); err != nil {
+	if err := kubeutil.SetGroupVersionKind(mgr.GetScheme(), kubeutil.ObjectForIssuer(r.ForObject)); err != nil {
 		return err
 	}
 	forObjectGvk := r.ForObject.GetObjectKind().GroupVersionKind()
 
 	build := ctrl.NewControllerManagedBy(mgr).
 		For(
-			r.ForObject,
+			kubeutil.ObjectForIssuer(r.ForObject),
 			// we are only interested in changes to the .Spec part of the issuer
 			// this also prevents us to get in fast reconcile loop when setting the
 			// status to Pending causing the resource to update, while we only want
