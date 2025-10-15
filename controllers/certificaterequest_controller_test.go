@@ -103,6 +103,8 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		cmgen.SetCertificateRequestNamespace("ns1"),
 		cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
 			Group: api.SchemeGroupVersion.Group,
+			Kind:  issuer1.Kind,
+			Name:  issuer1.Name,
 		}),
 		func(cr *cmapi.CertificateRequest) {
 			conditions.SetCertificateRequestStatusCondition(
@@ -294,12 +296,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		{
 			name: "set-ready-pending-issuer-has-no-ready-condition",
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1,
-					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-						Name:  issuer1.Name,
-						Group: api.SchemeGroupVersion.Group,
-					}),
-				),
+				cmgen.CertificateRequestFrom(cr1),
 				testutil.TestIssuerFrom(issuer1,
 					func(si *api.TestIssuer) {
 						si.Status.Conditions = nil
@@ -326,12 +323,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		{
 			name: "set-ready-pending-issuer-is-not-ready",
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1,
-					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-						Name:  issuer1.Name,
-						Group: api.SchemeGroupVersion.Group,
-					}),
-				),
+				cmgen.CertificateRequestFrom(cr1),
 				testutil.TestIssuerFrom(issuer1,
 					testutil.SetTestIssuerStatusCondition(
 						fakeClock1,
@@ -363,12 +355,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		{
 			name: "set-ready-pending-issuer-ready-outdated",
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1,
-					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-						Name:  issuer1.Name,
-						Group: api.SchemeGroupVersion.Group,
-					}),
-				),
+				cmgen.CertificateRequestFrom(cr1),
 				testutil.TestIssuerFrom(issuer1,
 					testutil.SetTestIssuerGeneration(issuer1.Generation+1),
 				),
@@ -398,10 +385,6 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 			},
 			objects: []client.Object{
 				cmgen.CertificateRequestFrom(cr1,
-					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-						Name:  issuer1.Name,
-						Group: api.SchemeGroupVersion.Group,
-					}),
 					func(cr *cmapi.CertificateRequest) {
 						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
 					},
@@ -435,10 +418,6 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 			},
 			objects: []client.Object{
 				cmgen.CertificateRequestFrom(cr1,
-					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-						Name:  issuer1.Name,
-						Group: api.SchemeGroupVersion.Group,
-					}),
 					func(cr *cmapi.CertificateRequest) {
 						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
 					},
@@ -473,10 +452,6 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 			},
 			objects: []client.Object{
 				cmgen.CertificateRequestFrom(cr1,
-					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-						Name:  issuer1.Name,
-						Group: api.SchemeGroupVersion.Group,
-					}),
 					func(cr *cmapi.CertificateRequest) {
 						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
 					},
@@ -523,10 +498,6 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 					func(cr *cmapi.CertificateRequest) {
 						cr.CreationTimestamp = fakeTimeObj2
 					},
-					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-						Name:  issuer1.Name,
-						Group: api.SchemeGroupVersion.Group,
-					}),
 				),
 				testutil.TestIssuerFrom(issuer1),
 			},
@@ -575,10 +546,6 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 					func(cr *cmapi.CertificateRequest) {
 						cr.CreationTimestamp = fakeTimeObj2
 					},
-					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-						Name:  issuer1.Name,
-						Group: api.SchemeGroupVersion.Group,
-					}),
 					cmgen.AddCertificateRequestStatusCondition(cmapi.CertificateRequestCondition{
 						Type:               "[condition type]",
 						Status:             cmmeta.ConditionTrue,
@@ -631,10 +598,6 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 			},
 			objects: []client.Object{
 				cmgen.CertificateRequestFrom(cr1,
-					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-						Name:  issuer1.Name,
-						Group: api.SchemeGroupVersion.Group,
-					}),
 					func(cr *cmapi.CertificateRequest) {
 						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
 					},
@@ -684,10 +647,6 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 			},
 			objects: []client.Object{
 				cmgen.CertificateRequestFrom(cr1,
-					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-						Name:  issuer1.Name,
-						Group: api.SchemeGroupVersion.Group,
-					}),
 					func(cr *cmapi.CertificateRequest) {
 						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
 					},
@@ -743,10 +702,6 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 			},
 			objects: []client.Object{
 				cmgen.CertificateRequestFrom(cr1,
-					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-						Name:  issuer1.Name,
-						Group: api.SchemeGroupVersion.Group,
-					}),
 					func(cr *cmapi.CertificateRequest) {
 						cr.CreationTimestamp = metav1.NewTime(fakeTimeObj2.Add(-2 * time.Minute))
 					},
@@ -792,12 +747,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				}
 			},
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1,
-					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-						Name:  issuer1.Name,
-						Group: api.SchemeGroupVersion.Group,
-					}),
-				),
+				cmgen.CertificateRequestFrom(cr1),
 				testutil.TestIssuerFrom(issuer1),
 			},
 			expectedStatusPatch: &cmapi.CertificateRequestStatus{
@@ -832,12 +782,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 				return signer.PEMBundle{}, signer.PermanentError{Err: fmt.Errorf("a specific error")}
 			},
 			objects: []client.Object{
-				cmgen.CertificateRequestFrom(cr1,
-					cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
-						Name:  issuer1.Name,
-						Group: api.SchemeGroupVersion.Group,
-					}),
-				),
+				cmgen.CertificateRequestFrom(cr1),
 				testutil.TestIssuerFrom(issuer1),
 			},
 			expectedStatusPatch: &cmapi.CertificateRequestStatus{
