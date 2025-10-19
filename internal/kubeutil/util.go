@@ -22,6 +22,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	v1alpha1 "github.com/cert-manager/issuer-lib/api/v1alpha1"
 )
 
 // setGroupVersionKind populates the Group and Kind fields of obj using the
@@ -54,4 +56,11 @@ func NewListObject(scheme *runtime.Scheme, gvk schema.GroupVersionKind) (client.
 	}
 
 	return listObj, nil
+}
+
+func ObjectForIssuer(issuer v1alpha1.Issuer) client.Object {
+	if wi, ok := issuer.(v1alpha1.WrappedIssuer); ok {
+		return wi.Unwrap()
+	}
+	return issuer
 }
