@@ -65,6 +65,9 @@ type RequestController struct {
 	// IgnoreCertificateRequest is an optional function that can prevent the Request
 	// and Kubernetes CSR controllers from reconciling a Request resource.
 	signer.IgnoreCertificateRequest
+	// IgnoreIssuer is an optional function that can prevent the Request
+	// and Kubernetes CSR controllers from reconciling an issuer resource.
+	signer.IgnoreIssuer
 
 	// EventRecorder is used for creating Kubernetes events on resources.
 	EventRecorder record.EventRecorder
@@ -91,8 +94,10 @@ type RequestController struct {
 	requestObjectHelperCreator RequestObjectHelperCreator
 }
 
-type MatchIssuerType func(client.Object) (v1alpha1.Issuer, client.ObjectKey, error)
-type RequestObjectHelperCreator func(client.Object) RequestObjectHelper
+type (
+	MatchIssuerType            func(client.Object) (v1alpha1.Issuer, client.ObjectKey, error)
+	RequestObjectHelperCreator func(client.Object) RequestObjectHelper
+)
 
 type IssuerType struct {
 	Type         v1alpha1.Issuer
@@ -232,16 +237,33 @@ func (r *RequestController) reconcileStatusPatch(
 		return result, statusPatch, nil // apply patch, done
 	}
 
-	if err := r.Client.Get(ctx, issuerName, issuerObject); err != nil && apierrors.IsNotFound(err) {
+	if err := r.Client.Get(ctx, issuerName, kubeutil.ObjectForIssuer(issuerObject)); err != nil && apierrors.IsNotFound(err) {
 		logger.V(1).Info("Issuer not found. Waiting for it to be created")
-		statusPatch.SetWaitingForIssuerExist(err)
+		if r.IgnoreIssuer == nil {
+			statusPatch.SetWaitingForIssuerExist(err)
+		}
 
 		return result, statusPatch, nil // apply patch, done
 	} else if err != nil {
 		logger.V(1).Error(err, "Unexpected error while getting Issuer")
-		statusPatch.SetUnexpectedError(err)
+		if r.IgnoreIssuer == nil {
+			statusPatch.SetUnexpectedError(err)
+		}
 
 		return result, nil, fmt.Errorf("unexpected get error: %v", err) // requeue with backoff
+	}
+
+	if r.IgnoreIssuer != nil {
+		ignore, err := r.IgnoreIssuer(ctx, issuerObject)
+		if err != nil {
+			logger.V(1).Error(err, "Unexpected error while checking if Request should be ignored")
+			return result, nil, fmt.Errorf("failed to check if Request should be ignored: %v", err) // requeue with backoff
+		}
+
+		if ignore {
+			logger.V(1).Info("Ignoring Request")
+			return result, nil, nil // done
+		}
 	}
 
 	readyCondition := conditions.GetIssuerStatusCondition(
@@ -360,7 +382,6 @@ func (r *RequestController) setAllIssuerTypesWithGroupVersionKind(scheme *runtim
 			Type:         issuer,
 			IsNamespaced: true,
 		})
-
 	}
 	for _, issuer := range r.ClusterIssuerTypes {
 		issuers = append(issuers, IssuerType{
@@ -370,7 +391,7 @@ func (r *RequestController) setAllIssuerTypesWithGroupVersionKind(scheme *runtim
 	}
 
 	for _, issuer := range issuers {
-		if err := kubeutil.SetGroupVersionKind(scheme, issuer.Type); err != nil {
+		if err := kubeutil.SetGroupVersionKind(scheme, kubeutil.ObjectForIssuer(issuer.Type)); err != nil {
 			return err
 		}
 	}
@@ -474,7 +495,7 @@ func (r *RequestController) SetupWithManager(
 		}
 
 		build = build.Watches(
-			issuerType.Type,
+			kubeutil.ObjectForIssuer(issuerType.Type),
 			resourceHandler,
 			builder.WithPredicates(
 				predicate.ResourceVersionChangedPredicate{},

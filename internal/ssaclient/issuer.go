@@ -32,7 +32,7 @@ type issuerApplyConfiguration struct {
 }
 
 func GenerateIssuerStatusPatch(
-	issuerType v1alpha1.Issuer,
+	issuerType client.Object,
 	name string,
 	namespace string,
 	status *v1alpha1.IssuerStatus,
@@ -43,7 +43,7 @@ func GenerateIssuerStatusPatch(
 	}
 
 	// This object is used to deduce the name & namespace + unmarshall the return value in
-	issuerObject := issuerType.DeepCopyObject().(v1alpha1.Issuer)
+	issuerObject := issuerType.DeepCopyObject().(client.Object)
 	issuerObject.SetName(name)
 	issuerObject.SetNamespace(namespace)
 
