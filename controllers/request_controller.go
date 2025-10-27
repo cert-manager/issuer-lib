@@ -65,9 +65,6 @@ type RequestController struct {
 	// IgnoreCertificateRequest is an optional function that can prevent the Request
 	// and Kubernetes CSR controllers from reconciling a Request resource.
 	signer.IgnoreCertificateRequest
-	// IgnoreIssuer is an optional function that can prevent the Request
-	// and Kubernetes CSR controllers from reconciling an issuer resource.
-	signer.IgnoreIssuer
 
 	// EventRecorder is used for creating Kubernetes events on resources.
 	EventRecorder record.EventRecorder
@@ -239,31 +236,14 @@ func (r *RequestController) reconcileStatusPatch(
 
 	if err := r.Client.Get(ctx, issuerName, kubeutil.ObjectForIssuer(issuerObject)); err != nil && apierrors.IsNotFound(err) {
 		logger.V(1).Info("Issuer not found. Waiting for it to be created")
-		if r.IgnoreIssuer == nil {
-			statusPatch.SetWaitingForIssuerExist(err)
-		}
+		statusPatch.SetWaitingForIssuerExist(err)
 
 		return result, statusPatch, nil // apply patch, done
 	} else if err != nil {
 		logger.V(1).Error(err, "Unexpected error while getting Issuer")
-		if r.IgnoreIssuer == nil {
-			statusPatch.SetUnexpectedError(err)
-		}
+		statusPatch.SetUnexpectedError(err)
 
 		return result, nil, fmt.Errorf("unexpected get error: %v", err) // requeue with backoff
-	}
-
-	if r.IgnoreIssuer != nil {
-		ignore, err := r.IgnoreIssuer(ctx, issuerObject)
-		if err != nil {
-			logger.V(1).Error(err, "Unexpected error while checking if Request should be ignored")
-			return result, nil, fmt.Errorf("failed to check if Request should be ignored: %v", err) // requeue with backoff
-		}
-
-		if ignore {
-			logger.V(1).Info("Ignoring Request")
-			return result, nil, nil // done
-		}
 	}
 
 	readyCondition := conditions.GetIssuerStatusCondition(
