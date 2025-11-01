@@ -28,14 +28,13 @@ import (
 	"math/big"
 	"time"
 
-	"upstream-issuer/api"
-
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/cert-manager/issuer-lib/api/v1alpha1"
 	"github.com/cert-manager/issuer-lib/controllers"
 	"github.com/cert-manager/issuer-lib/controllers/signer"
+	"github.com/cert-manager/issuer-lib/intree"
 )
 
 // +kubebuilder:rbac:groups=cert-manager.io,resources=certificaterequests,verbs=get;list;watch
@@ -58,8 +57,8 @@ func (s *Signer) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	s.client = mgr.GetClient()
 
 	return (&controllers.CombinedController{
-		IssuerTypes:        []v1alpha1.Issuer{&api.WrappedIssuer{}},
-		ClusterIssuerTypes: []v1alpha1.Issuer{&api.WrappedClusterIssuer{}},
+		IssuerTypes:        intree.Issuers,
+		ClusterIssuerTypes: intree.ClusterIssuers,
 
 		FieldOwner:       "selfsigned.cert-manager.io",
 		MaxRetryDuration: 1 * time.Minute,
@@ -74,9 +73,9 @@ func (s *Signer) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 }
 
 func (Signer) IgnoreIssuer(ctx context.Context, issuerObject v1alpha1.Issuer) (bool, error) {
-	iss, ok := issuerObject.(api.GenericWrappedIssuer)
+	iss, ok := issuerObject.(intree.CMGenericIssuer)
 	if !ok {
-		return false, fmt.Errorf("issuer does not implement GenericWrappedIssuer")
+		return false, fmt.Errorf("issuer does not implement CMGenericIssuer")
 	}
 
 	return iss.IssuerSpec().SelfSigned == nil, nil

@@ -41,7 +41,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"simple-issuer/api"
 )
 
 func testClient(t *testing.T) client.WithWatch {
@@ -60,7 +59,6 @@ func testClient(t *testing.T) client.WithWatch {
 	require.NoError(t, corev1.AddToScheme(scheme))
 	require.NoError(t, cmapi.AddToScheme(scheme))
 	require.NoError(t, certificatesv1.AddToScheme(scheme))
-	require.NoError(t, api.AddToScheme(scheme))
 
 	controllerClient, err := client.NewWithWatch(kubeConfig, client.Options{Scheme: scheme})
 	require.NoError(t, err)

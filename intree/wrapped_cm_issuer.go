@@ -23,6 +23,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+var _ CMGenericIssuer = (*CMIssuer)(nil)
+
 // +kubebuilder:object:root=true
 type CMIssuer struct {
 	cmapi.Issuer

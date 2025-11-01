@@ -25,9 +25,6 @@ import (
 	"strconv"
 	"time"
 
-	"upstream-issuer/api"
-	"upstream-issuer/controller"
-
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -39,6 +36,7 @@ import (
 	ctrlzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"upstream-issuer/controller"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -146,7 +144,6 @@ func run(
 
 	scheme := runtime.NewScheme()
 	utilruntime.Must(cmapi.AddToScheme(scheme))
-	utilruntime.Must(api.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 
 	options := ctrl.Options{

@@ -17,6 +17,8 @@ limitations under the License.
 package intree
 
 import (
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+
 	v1alpha1 "github.com/cert-manager/issuer-lib/api/v1alpha1"
 )
 
@@ -24,3 +26,9 @@ var (
 	Issuers        []v1alpha1.Issuer = []v1alpha1.Issuer{&CMIssuer{}}
 	ClusterIssuers []v1alpha1.Issuer = []v1alpha1.Issuer{&CMClusterIssuer{}}
 )
+
+// CMGenericIssuer is implemented by both CMIssuer and CMClusterIssuer
+type CMGenericIssuer interface {
+	v1alpha1.WrappedIssuer
+	IssuerSpec() *cmapi.IssuerSpec
+}
