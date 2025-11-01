@@ -118,7 +118,7 @@ func (r *CombinedController) SetupWithManager(ctx context.Context, mgr ctrl.Mana
 			PreSetupWithManager:  r.PreSetupWithManager,
 			PostSetupWithManager: r.PostSetupWithManager,
 		}).SetupWithManager(ctx, mgr); err != nil {
-			return fmt.Errorf("%T: %w", issuerType, err)
+			return fmt.Errorf("%T: %w", kubeutil.ObjectForIssuer(issuerType), err)
 		}
 	}
 
