@@ -1,4 +1,4 @@
-module simple-issuer
+module upstream-issuer
 
 go 1.24.0
 
