@@ -61,6 +61,7 @@ type CombinedController struct {
 
 	// SetCAOnCertificateRequest is used to enable setting the CA status field on
 	// the CertificateRequest resource. This is disabled by default.
+	//
 	// Deprecated: this option is for backwards compatibility only. The use of
 	// ca.crt is discouraged. Instead, the CA certificate should be provided
 	// separately using a tool such as trust-manager.
