@@ -142,6 +142,17 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 		return result, nil, fmt.Errorf("unexpected get error: %v", err) // requeue with backoff
 	}
 
+	if r.IgnoreIssuer != nil {
+		ignore, err := r.IgnoreIssuer(ctx, issuer)
+		if err != nil {
+			return result, nil, fmt.Errorf("failed to check if issuer should be ignored: %v", err) // requeue with backoff
+		}
+		if ignore {
+			logger.V(1).Info("IgnoreIssuer() returned true. Ignoring.")
+			return result, nil, nil // done
+		}
+	}
+
 	readyCondition := conditions.GetIssuerStatusCondition(issuer.GetConditions(), v1alpha1.IssuerConditionTypeReady)
 
 	// Ignore Issuer if it is already permanently Failed

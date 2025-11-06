@@ -138,6 +138,7 @@ func (r *CombinedController) SetupWithManager(ctx context.Context, mgr ctrl.Mana
 
 				Client:                   cl,
 				Sign:                     r.Sign,
+				IgnoreIssuer:             r.IgnoreIssuer,
 				IgnoreCertificateRequest: r.IgnoreCertificateRequest,
 				EventRecorder:            r.EventRecorder,
 				Clock:                    r.Clock,
@@ -164,6 +165,7 @@ func (r *CombinedController) SetupWithManager(ctx context.Context, mgr ctrl.Mana
 
 				Client:                   cl,
 				Sign:                     r.Sign,
+				IgnoreIssuer:             r.IgnoreIssuer,
 				IgnoreCertificateRequest: r.IgnoreCertificateRequest,
 				EventRecorder:            r.EventRecorder,
 				Clock:                    r.Clock,
