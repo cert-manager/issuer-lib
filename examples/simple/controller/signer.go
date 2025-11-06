@@ -27,12 +27,12 @@ import (
 	"math/big"
 	"time"
 
-	ctrl "sigs.k8s.io/controller-runtime"
-	"simple-issuer/api"
-
 	"github.com/cert-manager/issuer-lib/api/v1alpha1"
 	"github.com/cert-manager/issuer-lib/controllers"
 	"github.com/cert-manager/issuer-lib/controllers/signer"
+	ctrl "sigs.k8s.io/controller-runtime"
+
+	"simple-issuer/api"
 )
 
 // +kubebuilder:rbac:groups=cert-manager.io,resources=certificaterequests,verbs=get;list;watch
