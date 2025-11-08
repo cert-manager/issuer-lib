@@ -35,11 +35,14 @@ import (
 
 // TestClusterIssuer is the Schema for the TestClusterIssuers API
 type TestClusterIssuer struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.TypeMeta `json:",inline"`
+	// +optional
+	metav1.ObjectMeta `json:"metadata"`
 
-	Spec   TestSpec              `json:"spec,omitempty"`
-	Status v1alpha1.IssuerStatus `json:"status,omitempty"`
+	// +optional
+	Spec TestSpec `json:"spec"`
+	// +optional
+	Status v1alpha1.IssuerStatus `json:"status,omitzero"`
 }
 
 func (vi *TestClusterIssuer) GetConditions() []metav1.Condition {
@@ -57,7 +60,8 @@ var _ v1alpha1.Issuer = &TestClusterIssuer{}
 // TestClusterIssuerList contains a list of TestClusterIssuer
 type TestClusterIssuerList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
+	// +optional
+	metav1.ListMeta `json:"metadata"`
 	Items           []TestClusterIssuer `json:"items"`
 }
 
