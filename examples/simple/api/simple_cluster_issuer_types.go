@@ -34,11 +34,14 @@ import (
 
 // SimpleClusterIssuer is the Schema for the SimpleClusterIssuers API
 type SimpleClusterIssuer struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.TypeMeta `json:",inline"`
+	// +optional
+	metav1.ObjectMeta `json:"metadata"`
 
-	Spec   SimpleCertificateSource `json:"spec,omitempty"`
-	Status v1alpha1.IssuerStatus   `json:"status,omitempty"`
+	// +optional
+	Spec SimpleCertificateSource `json:"spec"`
+	// +optional
+	Status v1alpha1.IssuerStatus `json:"status,omitzero"`
 }
 
 func (vi *SimpleClusterIssuer) GetConditions() []metav1.Condition {
@@ -56,7 +59,8 @@ var _ v1alpha1.Issuer = &SimpleClusterIssuer{}
 // SimpleClusterIssuerList contains a list of SimpleClusterIssuer
 type SimpleClusterIssuerList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
+	// +optional
+	metav1.ListMeta `json:"metadata"`
 	Items           []SimpleClusterIssuer `json:"items"`
 }
 
