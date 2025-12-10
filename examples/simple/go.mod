@@ -5,7 +5,7 @@ go 1.25.0
 replace github.com/cert-manager/issuer-lib => ../../
 
 require (
-	github.com/cert-manager/cert-manager v1.19.1
+	github.com/cert-manager/cert-manager v1.19.2
 	github.com/cert-manager/issuer-lib v0.0.0-00010101000000-000000000000
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/zap v1.27.1
