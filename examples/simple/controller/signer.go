@@ -32,7 +32,7 @@ import (
 	"github.com/cert-manager/issuer-lib/controllers/signer"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"simple-issuer/api"
+	simplev1alpha1 "simple-issuer/api/v1alpha1"
 )
 
 // +kubebuilder:rbac:groups=cert-manager.io,resources=certificaterequests,verbs=get;list;watch
@@ -51,8 +51,8 @@ type Signer struct{}
 
 func (s Signer) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	return (&controllers.CombinedController{
-		IssuerTypes:        []v1alpha1.Issuer{&api.SimpleIssuer{}},
-		ClusterIssuerTypes: []v1alpha1.Issuer{&api.SimpleClusterIssuer{}},
+		IssuerTypes:        []v1alpha1.Issuer{&simplev1alpha1.SimpleIssuer{}},
+		ClusterIssuerTypes: []v1alpha1.Issuer{&simplev1alpha1.SimpleClusterIssuer{}},
 
 		FieldOwner:       "simpleissuer.testing.cert-manager.io",
 		MaxRetryDuration: 1 * time.Minute,

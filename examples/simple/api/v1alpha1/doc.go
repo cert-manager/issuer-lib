@@ -14,10 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package internal contains API Schema definitions for the  internal API group
+// Package v1alpha1 contains API Schema definitions for the testing.cert-manager.io v1alpha1 API group
 // +kubebuilder:object:generate=true
 // +groupName=testing.cert-manager.io
-package api
+package v1alpha1
 
 import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -26,7 +26,7 @@ import (
 
 var (
 	// SchemeGroupVersion is group version used to register these objects
-	SchemeGroupVersion = schema.GroupVersion{Group: "testing.cert-manager.io", Version: "api"}
+	SchemeGroupVersion = schema.GroupVersion{Group: "testing.cert-manager.io", Version: "v1alpha1"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = &scheme.Builder{GroupVersion: SchemeGroupVersion}

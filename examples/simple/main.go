@@ -36,7 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"simple-issuer/api"
+	simplev1alpha1 "simple-issuer/api/v1alpha1"
 	"simple-issuer/controller"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -144,7 +144,7 @@ func run(
 	}
 
 	scheme := runtime.NewScheme()
-	utilruntime.Must(api.AddToScheme(scheme))
+	utilruntime.Must(simplev1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 
 	options := ctrl.Options{

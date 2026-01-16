@@ -36,7 +36,7 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
-    name: api
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: SimpleIssuer is the Schema for the SimpleIssuers API
