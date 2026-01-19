@@ -56,7 +56,7 @@ $(bin_dir)/scratch/yaml/kustomization.yaml: FORCE | $(NEEDS_KUSTOMIZE)
 	$(KUSTOMIZE) create \
 		--namespace "my-namespace" \
 		--nameprefix "simple-issuer-" \
-		--resources ../../../examples/simple/deploy/static/
+		--resources ../../../examples/simple/deploy/
 
 	cd $(bin_dir)/scratch/yaml; \
 	$(KUSTOMIZE) edit set image "controller:latest=$(oci_manager_image_name_development):$(oci_manager_image_tag)"
@@ -64,7 +64,6 @@ $(bin_dir)/scratch/yaml/kustomization.yaml: FORCE | $(NEEDS_KUSTOMIZE)
 .PHONY: e2e-setup-simple-issuer
 e2e-setup-simple-issuer: | oci-load-manager $(bin_dir)/scratch/yaml/kustomization.yaml kind-cluster $(NEEDS_KUBECTL)
 	$(KUBECTL) apply -f examples/simple/deploy/crds
-	$(KUBECTL) apply -f examples/simple/deploy/rbac
 	$(KUBECTL) apply -k $(bin_dir)/scratch/yaml/
 
 test-e2e-deps: e2e-setup-cert-manager
