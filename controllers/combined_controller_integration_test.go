@@ -33,7 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
@@ -92,7 +92,7 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 						return signer.PEMBundle{}, ctx.Err()
 					}
 				},
-				EventRecorder: record.NewFakeRecorder(100),
+				EventRecorder: events.NewFakeRecorder(100),
 			}
 		},
 	)
@@ -506,7 +506,7 @@ func TestCombinedControllerTiming(t *testing.T) { //nolint:tparallel
 								ChainPEM: result.cert,
 							}, result.err
 						},
-						EventRecorder: record.NewFakeRecorder(100),
+						EventRecorder: events.NewFakeRecorder(100),
 
 						PreSetupWithManager: func(ctx context.Context, gvk schema.GroupVersionKind, mgr ctrl.Manager, b *builder.Builder) error {
 							b.WithOptions(controller.Options{

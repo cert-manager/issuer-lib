@@ -67,7 +67,7 @@ func (s *Signer) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 
 		Sign:          s.Sign,
 		Check:         s.Check,
-		EventRecorder: mgr.GetEventRecorderFor("selfsigned.cert-manager.io"),
+		EventRecorder: mgr.GetEventRecorder("selfsigned.cert-manager.io"),
 	}).SetupWithManager(ctx, mgr)
 }
 

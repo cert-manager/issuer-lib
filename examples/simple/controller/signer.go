@@ -59,7 +59,7 @@ func (s Signer) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 
 		Sign:          s.Sign,
 		Check:         s.Check,
-		EventRecorder: mgr.GetEventRecorderFor("simpleissuer.testing.cert-manager.io"),
+		EventRecorder: mgr.GetEventRecorder("simpleissuer.testing.cert-manager.io"),
 	}).SetupWithManager(ctx, mgr)
 }
 

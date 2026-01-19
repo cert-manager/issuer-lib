@@ -34,7 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/clock"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -96,7 +96,7 @@ func TestCertificateRequestControllerIntegrationIssuerInitiallyNotFoundAndNotRea
 							ChainPEM: []byte("cert"),
 						}, nil
 					},
-					EventRecorder: record.NewFakeRecorder(100),
+					EventRecorder: events.NewFakeRecorder(100),
 					Clock:         clock.RealClock{},
 				},
 			}
@@ -238,7 +238,7 @@ func TestCertificateRequestControllerIntegrationSetCondition(t *testing.T) {
 							return signer.PEMBundle{}, ctx.Err()
 						}
 					},
-					EventRecorder: record.NewFakeRecorder(100),
+					EventRecorder: events.NewFakeRecorder(100),
 					Clock:         clock.RealClock{},
 				},
 			}

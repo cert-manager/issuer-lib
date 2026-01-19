@@ -24,7 +24,7 @@ import (
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -62,7 +62,7 @@ func (c *certificatesigningRequestObjectHelper) RequestObject() signer.Certifica
 func (c *certificatesigningRequestObjectHelper) NewPatch(
 	clock clock.PassiveClock,
 	fieldOwner string,
-	eventRecorder record.EventRecorder,
+	eventRecorder events.EventRecorder,
 ) RequestPatchHelper {
 	return &certificatesigningRequestPatchHelper{
 		clock:         clock,
@@ -79,7 +79,7 @@ type certificatesigningRequestPatchHelper struct {
 	fieldOwner  string
 
 	patch         *certificatesv1.CertificateSigningRequestStatus
-	eventRecorder record.EventRecorder
+	eventRecorder events.EventRecorder
 }
 
 var _ RequestPatchHelper = &certificatesigningRequestPatchHelper{}
@@ -107,22 +107,22 @@ func (c *certificatesigningRequestPatchHelper) SetInitializing() bool {
 
 func (c *certificatesigningRequestPatchHelper) SetWaitingForIssuerExist(err error) {
 	message := fmt.Sprintf("%s. Waiting for it to be created.", err)
-	c.eventRecorder.Event(c.readOnlyObj, corev1.EventTypeNormal, eventRequestWaitingForIssuerExist, message)
+	c.eventRecorder.Eventf(c.readOnlyObj, nil, corev1.EventTypeNormal, eventRequestWaitingForIssuerExist, eventActionSynced, message)
 }
 
 func (c *certificatesigningRequestPatchHelper) SetWaitingForIssuerReadyNoCondition() {
 	message := "Waiting for issuer to become ready. Current issuer ready condition: <none>."
-	c.eventRecorder.Event(c.readOnlyObj, corev1.EventTypeNormal, eventRequestWaitingForIssuerReady, message)
+	c.eventRecorder.Eventf(c.readOnlyObj, nil, corev1.EventTypeNormal, eventRequestWaitingForIssuerReady, eventActionSynced, message)
 }
 
 func (c *certificatesigningRequestPatchHelper) SetWaitingForIssuerReadyOutdated() {
 	message := "Waiting for issuer to become ready. Current issuer ready condition is outdated."
-	c.eventRecorder.Event(c.readOnlyObj, corev1.EventTypeNormal, eventRequestWaitingForIssuerReady, message)
+	c.eventRecorder.Eventf(c.readOnlyObj, nil, corev1.EventTypeNormal, eventRequestWaitingForIssuerReady, eventActionSynced, message)
 }
 
 func (c *certificatesigningRequestPatchHelper) SetWaitingForIssuerReadyNotReady(cond *metav1.Condition) {
 	message := fmt.Sprintf("Waiting for issuer to become ready. Current issuer ready condition is \"%s\": %s.", cond.Reason, cond.Message)
-	c.eventRecorder.Event(c.readOnlyObj, corev1.EventTypeNormal, eventRequestWaitingForIssuerReady, message)
+	c.eventRecorder.Eventf(c.readOnlyObj, nil, corev1.EventTypeNormal, eventRequestWaitingForIssuerReady, eventActionSynced, message)
 }
 
 func (c *certificatesigningRequestPatchHelper) SetCustomCondition(
@@ -145,17 +145,17 @@ func (c *certificatesigningRequestPatchHelper) SetCustomCondition(
 
 func (c *certificatesigningRequestPatchHelper) SetPending(reason string) {
 	message := fmt.Sprintf("Signing still in progress. Reason: %s", reason)
-	c.eventRecorder.Event(c.readOnlyObj, corev1.EventTypeWarning, eventRequestRetryable, message)
+	c.eventRecorder.Eventf(c.readOnlyObj, nil, corev1.EventTypeWarning, eventRequestRetryable, eventActionSynced, message)
 }
 
 func (c *certificatesigningRequestPatchHelper) SetUnexpectedError(err error) {
 	message := "Got an unexpected error while processing the CertificateSigningRequest"
-	c.eventRecorder.Event(c.readOnlyObj, corev1.EventTypeWarning, eventRequestUnexpectedError, message)
+	c.eventRecorder.Eventf(c.readOnlyObj, nil, corev1.EventTypeWarning, eventRequestUnexpectedError, eventActionSyncFailed, message)
 }
 
 func (c *certificatesigningRequestPatchHelper) SetRetryableError(err error) {
 	message := fmt.Sprintf("Failed to sign CertificateSigningRequest, will retry: %s", err)
-	c.eventRecorder.Event(c.readOnlyObj, corev1.EventTypeWarning, eventRequestRetryableError, message)
+	c.eventRecorder.Eventf(c.readOnlyObj, nil, corev1.EventTypeWarning, eventRequestRetryableError, eventActionSyncFailed, message)
 }
 
 func (c *certificatesigningRequestPatchHelper) SetPermanentError(err error) {
@@ -165,13 +165,13 @@ func (c *certificatesigningRequestPatchHelper) SetPermanentError(err error) {
 		cmapi.CertificateRequestReasonFailed,
 		fmt.Sprintf("CertificateSigningRequest has failed permanently: %s", err),
 	)
-	c.eventRecorder.Event(c.readOnlyObj, corev1.EventTypeWarning, eventRequestPermanentError, message)
+	c.eventRecorder.Eventf(c.readOnlyObj, nil, corev1.EventTypeWarning, eventRequestPermanentError, eventActionSyncFailed, message)
 }
 
 func (c *certificatesigningRequestPatchHelper) SetIssued(bundle signer.PEMBundle) {
 	c.patch.Certificate = bundle.ChainPEM
 	message := "Succeeded signing the CertificateSigningRequest"
-	c.eventRecorder.Event(c.readOnlyObj, corev1.EventTypeNormal, eventRequestIssued, message)
+	c.eventRecorder.Eventf(c.readOnlyObj, nil, corev1.EventTypeNormal, eventRequestIssued, eventActionSynced, message)
 }
 
 func (c *certificatesigningRequestPatchHelper) Patch() (client.Object, client.Patch, error) {
