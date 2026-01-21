@@ -287,13 +287,15 @@ func (r *RequestController) reconcileStatusPatch(
 		return result, statusPatch, nil // apply patch, done
 	}
 
-	signedCertificate, extraConditions, signErr := r.Sign(log.IntoContext(ctx, logger), requestObjectHelper.RequestObject(), issuerObject)
+	signResult := r.Sign(log.IntoContext(ctx, logger), requestObjectHelper.RequestObject(), issuerObject)
+	signedCertificate, extraConditions, signErr := signResult.Unpack()
+
 	didCustomConditionTransition := false
 	for _, condition := range extraConditions {
-		logger.V(1).Info("Set RequestCondition error. Setting condition.", "error", signErr)
+		logger.V(1).Info("Setting extra condition.", "type", condition.Type, "status", condition.Status, "reason", condition.Reason, "message", condition.Message)
 		if statusPatch.SetCustomCondition(
-			string(condition.Type),
-			metav1.ConditionStatus(condition.Status),
+			condition.Type,
+			condition.Status,
 			condition.Reason,
 			condition.Message,
 		) {
@@ -308,7 +310,7 @@ func (r *RequestController) reconcileStatusPatch(
 		return result, statusPatch, nil // apply patch, done
 	}
 
-	// An error in the issuer part of the operator should trigger a reconcile
+	// An signError in the issuer part of the operator should trigger a reconcile
 	// of the issuer's state.
 	if issuerError := new(signer.IssuerError); errors.As(signErr, issuerError) {
 		if reportError := r.EventSource.ReportError(

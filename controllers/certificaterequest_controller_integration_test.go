@@ -90,11 +90,9 @@ func TestCertificateRequestControllerIntegrationIssuerInitiallyNotFoundAndNotRea
 					MaxRetryDuration:   time.Minute,
 					EventSource:        kubeutil.NewEventStore(),
 					Client:             mgr.GetClient(),
-					Sign: func(_ context.Context, cr signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, signer.ExtraConditions, error) {
+					Sign: func(_ context.Context, cr signer.CertificateRequestObject, _ v1alpha1.Issuer) signer.SignResult {
 						atomic.AddUint64(&counters[extractIdFromNamespace(t, cr.GetNamespace())], 1)
-						return signer.PEMBundle{
-							ChainPEM: []byte("cert"),
-						}, signer.ExtraConditions{}, nil
+						return signer.SignSuccess([]byte("cert"))
 					},
 					EventRecorder: record.NewFakeRecorder(100),
 					Clock:         clock.RealClock{},
@@ -204,7 +202,7 @@ func TestCertificateRequestControllerIntegrationIssuerInitiallyNotFoundAndNotRea
 
 type signResults struct {
 	err             error
-	extraConditions []cmapi.CertificateRequestCondition
+	extraConditions []metav1.Condition
 }
 
 // TestCertificateRequestControllerIntegrationSetCondition runs the
@@ -234,13 +232,13 @@ func TestCertificateRequestControllerIntegrationSetCondition(t *testing.T) {
 					MaxRetryDuration:   time.Minute,
 					EventSource:        kubeutil.NewEventStore(),
 					Client:             mgr.GetClient(),
-					Sign: func(ctx context.Context, cr signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, signer.ExtraConditions, error) {
+					Sign: func(ctx context.Context, cr signer.CertificateRequestObject, _ v1alpha1.Issuer) signer.SignResult {
 						atomic.AddUint64(&counter, 1)
 						select {
 						case res := <-signResult:
-							return signer.PEMBundle{}, res.extraConditions, res.err
+							return signer.SignError(res.err, signer.WithExtraConditions(res.extraConditions...))
 						case <-ctx.Done():
-							return signer.PEMBundle{}, signer.ExtraConditions{}, ctx.Err()
+							return signer.SignError(ctx.Err())
 						}
 					},
 					EventRecorder: record.NewFakeRecorder(100),
@@ -315,10 +313,10 @@ func TestCertificateRequestControllerIntegrationSetCondition(t *testing.T) {
 	checkComplete = kubeClients.StartObjectWatch(t, ctx, cr)
 	signResult <- signResults{
 		err: fmt.Errorf("[err message1]"),
-		extraConditions: []cmapi.CertificateRequestCondition{
+		extraConditions: []metav1.Condition{
 			{
 				Type:    "[condition type]",
-				Status:  cmmeta.ConditionTrue,
+				Status:  metav1.ConditionTrue,
 				Reason:  "[condition reason]",
 				Message: "[condition message1]",
 			},
@@ -341,10 +339,10 @@ func TestCertificateRequestControllerIntegrationSetCondition(t *testing.T) {
 	checkComplete = kubeClients.StartObjectWatch(t, ctx, cr)
 	signResult <- signResults{
 		err: fmt.Errorf("[err message2]"),
-		extraConditions: []cmapi.CertificateRequestCondition{
+		extraConditions: []metav1.Condition{
 			{
 				Type:    "[condition type]",
-				Status:  cmmeta.ConditionTrue,
+				Status:  metav1.ConditionTrue,
 				Reason:  "[condition reason]",
 				Message: "[condition message2]",
 			},

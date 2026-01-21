@@ -129,10 +129,8 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 	)
 
 	successSigner := func(cert string) signer.Sign {
-		return func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, signer.ExtraConditions, error) {
-			return signer.PEMBundle{
-				ChainPEM: []byte(cert),
-			}, signer.ExtraConditions{}, nil
+		return func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) signer.SignResult {
+			return signer.SignSuccess([]byte(cert))
 		}
 	}
 
@@ -380,8 +378,8 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		// condition to Failed.
 		{
 			name: "timeout-permanent-error",
-			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, signer.ExtraConditions, error) {
-				return signer.PEMBundle{}, signer.ExtraConditions{}, fmt.Errorf("a specific error")
+			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) signer.SignResult {
+				return signer.SignError(fmt.Errorf("a specific error"))
 			},
 			objects: []client.Object{
 				cmgen.CertificateRequestFrom(cr1,
@@ -413,8 +411,8 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		// the MaxRetryDuration has been exceeded).
 		{
 			name: "retry-on-pending-error",
-			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, signer.ExtraConditions, error) {
-				return signer.PEMBundle{}, signer.ExtraConditions{}, signer.PendingError{Err: fmt.Errorf("reason for being pending")}
+			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) signer.SignResult {
+				return signer.SignError(signer.PendingError{Err: fmt.Errorf("reason for being pending")})
 			},
 			objects: []client.Object{
 				cmgen.CertificateRequestFrom(cr1,
@@ -447,8 +445,8 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		// the MaxRetryDuration has been exceeded).
 		{
 			name: "retry-on-pending-error-custom",
-			sign: func(_ context.Context, cr signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, signer.ExtraConditions, error) {
-				return signer.PEMBundle{}, nil, signer.PendingError{Err: fmt.Errorf("reason for being pending"), RequeueAfter: 5 * time.Second}
+			sign: func(_ context.Context, cr signer.CertificateRequestObject, _ v1alpha1.Issuer) signer.SignResult {
+				return signer.SignError(signer.PendingError{Err: fmt.Errorf("reason for being pending"), RequeueAfter: 5 * time.Second})
 			},
 			objects: []client.Object{
 				cmgen.CertificateRequestFrom(cr1,
@@ -483,15 +481,16 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		// an we still *have time left* to retry, set the Ready condition to *Pending*.
 		{
 			name: "error-set-certificate-request-condition-should-add-new-condition-and-retry",
-			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, signer.ExtraConditions, error) {
-				return signer.PEMBundle{}, signer.ExtraConditions{
-					{
+			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) signer.SignResult {
+				return signer.SignError(
+					fmt.Errorf("test error"),
+					signer.WithExtraConditions(metav1.Condition{
 						Type:    "[condition type]",
-						Status:  cmmeta.ConditionTrue,
+						Status:  metav1.ConditionTrue,
 						Reason:  "[condition reason]",
 						Message: "[condition message]",
-					},
-				}, fmt.Errorf("test error")
+					}),
+				)
 			},
 			objects: []client.Object{
 				cmgen.CertificateRequestFrom(cr1,
@@ -531,15 +530,16 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		// an we still *have time left* to retry, set the Ready condition to *Pending*.
 		{
 			name: "error-set-certificate-request-condition-should-update-existing-condition-and-retry",
-			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, signer.ExtraConditions, error) {
-				return signer.PEMBundle{}, signer.ExtraConditions{
-					{
+			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) signer.SignResult {
+				return signer.SignError(
+					fmt.Errorf("test error2"),
+					signer.WithExtraConditions(metav1.Condition{
 						Type:    "[condition type]",
-						Status:  cmmeta.ConditionTrue,
+						Status:  metav1.ConditionTrue,
 						Reason:  "[condition reason2]",
 						Message: "[condition message2]",
-					},
-				}, fmt.Errorf("test error2")
+					}),
+				)
 			},
 			objects: []client.Object{
 				cmgen.CertificateRequestFrom(cr1,
@@ -586,15 +586,16 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		// an we have *no time left* to retry, set the Ready condition to *Failed*.
 		{
 			name: "error-set-certificate-request-condition-should-add-new-condition-and-timeout",
-			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, signer.ExtraConditions, error) {
-				return signer.PEMBundle{}, signer.ExtraConditions{
-					{
+			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) signer.SignResult {
+				return signer.SignError(
+					fmt.Errorf("test error"),
+					signer.WithExtraConditions(metav1.Condition{
 						Type:    "[condition type]",
-						Status:  cmmeta.ConditionTrue,
+						Status:  metav1.ConditionTrue,
 						Reason:  "[condition reason]",
 						Message: "[condition message]",
-					},
-				}, fmt.Errorf("test error")
+					}),
+				)
 			},
 			objects: []client.Object{
 				cmgen.CertificateRequestFrom(cr1,
@@ -635,15 +636,16 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		// an we have *no time left* to retry, set the Ready condition to *Failed*.
 		{
 			name: "error-set-certificate-request-condition-should-update-existing-condition-and-timeout",
-			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, signer.ExtraConditions, error) {
-				return signer.PEMBundle{}, signer.ExtraConditions{
-					{
+			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) signer.SignResult {
+				return signer.SignError(
+					fmt.Errorf("test error2"),
+					signer.WithExtraConditions(metav1.Condition{
 						Type:    "[condition type]",
-						Status:  cmmeta.ConditionTrue,
+						Status:  metav1.ConditionTrue,
 						Reason:  "[condition reason2]",
 						Message: "[condition message2]",
-					},
-				}, fmt.Errorf("test error2")
+					}),
+				)
 			},
 			objects: []client.Object{
 				cmgen.CertificateRequestFrom(cr1,
@@ -691,15 +693,16 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		// set to Pending (even if the MaxRetryDuration has been exceeded).
 		{
 			name: "error-set-certificate-request-condition-should-not-timeout-if-pending",
-			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, signer.ExtraConditions, error) {
-				return signer.PEMBundle{}, signer.ExtraConditions{
-					{
+			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) signer.SignResult {
+				return signer.SignError(
+					signer.PendingError{Err: fmt.Errorf("test error")},
+					signer.WithExtraConditions(metav1.Condition{
 						Type:    "[condition type]",
-						Status:  cmmeta.ConditionTrue,
+						Status:  metav1.ConditionTrue,
 						Reason:  "[condition reason]",
 						Message: "[condition message]",
-					},
-				}, signer.PendingError{Err: fmt.Errorf("test error")}
+					}),
+				)
 			},
 			objects: []client.Object{
 				cmgen.CertificateRequestFrom(cr1,
@@ -738,15 +741,16 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		// set to Failed (even if the MaxRetryDuration has NOT been exceeded).
 		{
 			name: "error-set-certificate-request-condition-should-not-retry-on-permanent-error",
-			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, signer.ExtraConditions, error) {
-				return signer.PEMBundle{}, signer.ExtraConditions{
-					{
+			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) signer.SignResult {
+				return signer.SignError(
+					signer.PermanentError{Err: fmt.Errorf("test error")},
+					signer.WithExtraConditions(metav1.Condition{
 						Type:    "[condition type]",
-						Status:  cmmeta.ConditionTrue,
+						Status:  metav1.ConditionTrue,
 						Reason:  "[condition reason]",
 						Message: "[condition message]",
-					},
-				}, signer.PermanentError{Err: fmt.Errorf("test error")}
+					}),
+				)
 			},
 			objects: []client.Object{
 				cmgen.CertificateRequestFrom(cr1),
@@ -780,8 +784,8 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		// Set the Ready condition to Failed if the sign function returns a permanent error.
 		{
 			name: "fail-on-permanent-error",
-			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, signer.ExtraConditions, error) {
-				return signer.PEMBundle{}, signer.ExtraConditions{}, signer.PermanentError{Err: fmt.Errorf("a specific error")}
+			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) signer.SignResult {
+				return signer.SignError(signer.PermanentError{Err: fmt.Errorf("a specific error")})
 			},
 			objects: []client.Object{
 				cmgen.CertificateRequestFrom(cr1),
@@ -809,8 +813,8 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 		// to retry.
 		{
 			name: "retry-on-error",
-			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, signer.ExtraConditions, error) {
-				return signer.PEMBundle{}, signer.ExtraConditions{}, errors.New("waiting for approval")
+			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) signer.SignResult {
+				return signer.SignError(errors.New("waiting for approval"))
 			},
 			objects: []client.Object{
 				cmgen.CertificateRequestFrom(cr1,

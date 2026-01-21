@@ -21,6 +21,7 @@ import (
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/cert-manager/cert-manager/pkg/controller/certificatesigningrequests/util"
+	"github.com/cert-manager/cert-manager/pkg/util/pki"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -168,7 +169,7 @@ func (c *certificatesigningRequestPatchHelper) SetPermanentError(err error) {
 	c.eventRecorder.Event(c.readOnlyObj, corev1.EventTypeWarning, eventRequestPermanentError, message)
 }
 
-func (c *certificatesigningRequestPatchHelper) SetIssued(bundle signer.PEMBundle) {
+func (c *certificatesigningRequestPatchHelper) SetIssued(bundle pki.PEMBundle) {
 	c.patch.Certificate = bundle.ChainPEM
 	message := "Succeeded signing the CertificateSigningRequest"
 	c.eventRecorder.Event(c.readOnlyObj, corev1.EventTypeNormal, eventRequestIssued, message)
