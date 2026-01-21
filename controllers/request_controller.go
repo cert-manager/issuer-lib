@@ -165,10 +165,10 @@ func (r *RequestController) reconcileStatusPatch(
 	}
 
 	// Select first matching issuer type and construct an issuerObject and issuerName
-	issuerObject, issuerName, err := r.matchIssuerType(requestObject)
+	issuerObject, issuerName, matchErr := r.matchIssuerType(requestObject)
 	// Ignore Request if issuerRef doesn't match one of our issuer Types
-	if err != nil {
-		logger.V(1).Info("Request has a foreign issuer. Ignoring.", "error", err)
+	if matchErr != nil {
+		logger.V(1).Info("Request has a foreign issuer. Ignoring.", "error", matchErr)
 		return result, nil, nil // done
 	}
 	issuerGvk := issuerObject.GetObjectKind().GroupVersionKind()
@@ -287,8 +287,8 @@ func (r *RequestController) reconcileStatusPatch(
 		return result, statusPatch, nil // apply patch, done
 	}
 
-	signedCertificate, err := r.Sign(log.IntoContext(ctx, logger), requestObjectHelper.RequestObject(), issuerObject)
-	if err == nil {
+	signedCertificate, signErr := r.Sign(log.IntoContext(ctx, logger), requestObjectHelper.RequestObject(), issuerObject)
+	if signErr == nil {
 		logger.V(1).Info("Successfully finished the reconciliation.")
 		statusPatch.SetIssued(signedCertificate)
 
@@ -297,7 +297,7 @@ func (r *RequestController) reconcileStatusPatch(
 
 	// An error in the issuer part of the operator should trigger a reconcile
 	// of the issuer's state.
-	if issuerError := new(signer.IssuerError); errors.As(err, issuerError) {
+	if issuerError := new(signer.IssuerError); errors.As(signErr, issuerError) {
 		if reportError := r.EventSource.ReportError(
 			issuerGvk, client.ObjectKeyFromObject(issuerObject),
 			issuerError.Err,
@@ -312,8 +312,8 @@ func (r *RequestController) reconcileStatusPatch(
 	}
 
 	didCustomConditionTransition := false
-	if targetCustom := new(signer.SetCertificateRequestConditionError); errors.As(err, targetCustom) {
-		logger.V(1).Info("Set RequestCondition error. Setting condition.", "error", err)
+	if targetCustom := new(signer.SetCertificateRequestConditionError); errors.As(signErr, targetCustom) {
+		logger.V(1).Info("Set RequestCondition error. Setting condition.", "error", signErr)
 		didCustomConditionTransition = statusPatch.SetCustomCondition(
 			string(targetCustom.ConditionType),
 			metav1.ConditionStatus(targetCustom.Status),
@@ -324,8 +324,8 @@ func (r *RequestController) reconcileStatusPatch(
 
 	// Check if we have still time to requeue & retry
 	pendingError := &signer.PendingError{}
-	isPending := errors.As(err, pendingError)
-	isPermanentError := errors.As(err, &signer.PermanentError{})
+	isPending := errors.As(signErr, pendingError)
+	isPermanentError := errors.As(signErr, &signer.PermanentError{})
 	pastMaxRetryDuration := r.Clock.Now().After(requestObject.GetCreationTimestamp().Add(r.MaxRetryDuration))
 	switch {
 	case isPending:
@@ -335,8 +335,8 @@ func (r *RequestController) reconcileStatusPatch(
 		// it isn't an error. It just means that we should poll again later.
 		// Its message gives the reason why the signing process is still in
 		// progress. Thus, we don't log any error.
-		logger.V(1).WithValues("reason", err.Error()).Info("Signing in progress.")
-		statusPatch.SetPending(fmt.Sprintf("Signing still in progress. Reason: %s", err))
+		logger.V(1).WithValues("reason", signErr.Error()).Info("Signing in progress.")
+		statusPatch.SetPending(fmt.Sprintf("Signing still in progress. Reason: %s", signErr))
 
 		// Let's not trigger an unnecessary reconciliation when we know that the
 		// user-defined condition was changed and will trigger a reconciliation.
@@ -351,24 +351,24 @@ func (r *RequestController) reconcileStatusPatch(
 			return result, statusPatch, nil // apply patch, requeue with backoff
 		}
 	case isPermanentError:
-		logger.V(1).Error(err, "Permanent Request error. Marking as failed.")
-		statusPatch.SetPermanentError(err)
-		return result, statusPatch, reconcile.TerminalError(err) // apply patch, done
+		logger.V(1).Error(signErr, "Permanent Request error. Marking as failed.")
+		statusPatch.SetPermanentError(signErr)
+		return result, statusPatch, reconcile.TerminalError(signErr) // apply patch, done
 	case pastMaxRetryDuration:
-		logger.V(1).Error(err, "Request has been retried for too long. Marking as failed.")
-		statusPatch.SetPermanentError(err)
-		return result, statusPatch, reconcile.TerminalError(err) // apply patch, done
+		logger.V(1).Error(signErr, "Request has been retried for too long. Marking as failed.")
+		statusPatch.SetPermanentError(signErr)
+		return result, statusPatch, reconcile.TerminalError(signErr) // apply patch, done
 	default:
 		// We consider all the other errors as being retryable.
-		logger.V(1).Error(err, "Got an error, will be retried.")
-		statusPatch.SetRetryableError(err)
+		logger.V(1).Error(signErr, "Got an error, will be retried.")
+		statusPatch.SetRetryableError(signErr)
 
 		// Let's not trigger an unnecessary reconciliation when we know that the
 		// user-defined condition was changed and will trigger a reconciliation.
 		if didCustomConditionTransition {
-			return result, statusPatch, reconcile.TerminalError(err) // apply patch, done
+			return result, statusPatch, reconcile.TerminalError(signErr) // apply patch, done
 		} else {
-			return result, statusPatch, err // apply patch, requeue with backoff
+			return result, statusPatch, signErr // apply patch, requeue with backoff
 		}
 	}
 }

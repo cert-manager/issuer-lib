@@ -18,12 +18,8 @@ package signer
 
 import (
 	"context"
-	"crypto/x509"
-	"time"
 
-	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/cert-manager/cert-manager/pkg/util/pki"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -34,63 +30,14 @@ import (
 // The first certificate in the ChainPEM chain is the leaf certificate, and the
 // last certificate in the chain is the highest level non-self-signed certificate.
 // The CAPEM certificate is our best guess at the CA that issued the leaf.
-// IMORTANT: the CAPEM certificate is only used when the SetCAOnCertificateRequest
-// option is enabled in the controller. This option is for backwards compatibility
-// only. The use of the CA field and the ca.crt field in the resulting Secret is
-// discouraged, instead the CA should be provisioned separately (e.g. using trust-manager).
+// IMPORTANT: the CAPEM certificate is only used when the SetCAOnCertificateRequest
+// option is enabled in the controller. This option exists for backwards compatibility
+// only. Use of the CA field and the `ca.crt` field in the resulting Secret is
+// discouraged; the CA should instead be provisioned separately (for example, using trust-manager).
 type PEMBundle pki.PEMBundle
 
 type Sign func(ctx context.Context, cr CertificateRequestObject, issuerObject v1alpha1.Issuer) (PEMBundle, error)
 type Check func(ctx context.Context, issuerObject v1alpha1.Issuer) error
-
-// CertificateRequestObject is an interface that represents either a
-// cert-manager CertificateRequest or a Kubernetes CertificateSigningRequest
-// resource. This interface hides the spec fields of the underlying resource
-// and exposes a Certificate template and the raw CSR bytes instead. This
-// allows the signer to be agnostic of the underlying resource type and also
-// agnostic of the way the spec fields should be interpreted, such as the
-// defaulting logic that is applied to it. It is still possible to access the
-// labels and annotations of the underlying resource or any other metadata
-// fields that might be useful to the signer. Also, the signer can use the
-// GetConditions method to retrieve the conditions of the underlying resource.
-// To update the conditions, the special error "SetCertificateRequestConditionError"
-// can be returned from the Sign method.
-type CertificateRequestObject interface {
-	metav1.Object
-
-	// Return the Certificate details originating from the cert-manager
-	// CertificateRequest or Kubernetes CertificateSigningRequest resources.
-	GetCertificateDetails() (details CertificateDetails, err error)
-
-	GetConditions() []cmapi.CertificateRequestCondition
-}
-
-type CertificateDetails struct {
-	CSR         []byte
-	Duration    time.Duration
-	IsCA        bool
-	MaxPathLen  *int
-	KeyUsage    x509.KeyUsage
-	ExtKeyUsage []x509.ExtKeyUsage
-}
-
-// CertificateTemplate generates a certificate template for issuance,
-// based on CertificateDetails extracted from the CertificateRequest or
-// CertificateSigningRequest resource.
-//
-// This function internally calls CertificateTemplateFromCSRPEM, which performs
-// additional work such as parsing the CSR and verifying signatures. Since this
-// operation can be expensive, issuer implementations should call this function
-// only when a certificate template is actually needed (e.g., not when proxying
-// the X.509 CSR to a CA).
-func (cd CertificateDetails) CertificateTemplate() (template *x509.Certificate, err error) {
-	return pki.CertificateTemplateFromCSRPEM(
-		cd.CSR,
-		pki.CertificateTemplateOverrideDuration(cd.Duration),
-		pki.CertificateTemplateValidateAndOverrideBasicConstraints(cd.IsCA, cd.MaxPathLen), // Override the basic constraints, but make sure they match the constraints in the CSR if present
-		pki.CertificateTemplateValidateAndOverrideKeyUsages(cd.KeyUsage, cd.ExtKeyUsage),   // Override the key usages, but make sure they match the usages in the CSR if present
-	)
-}
 
 // IgnoreIssuer is an optional function that can prevent the issuer controllers from
 // reconciling an issuer resource. By default, the controllers will reconcile all

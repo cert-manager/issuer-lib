@@ -16,15 +16,13 @@ limitations under the License.
 
 package signer
 
-// IssuerError is thrown by the CertificateRequest controller
-// to indicate that er was an error in the issuer part of the
-// reconcile process, and that the issuer's reconcile function
-// should be retriggered.
+// IssuerError is returned by the CertificateRequest controller to indicate
+// there was an error in the issuer part of the reconcile process and that
+// the issuer's reconcile function should be retried.
 //
-// This error is useful to indicate that the Sign function got
-// an error for an action that should have been checked by the
-// Check function, and that has appeared after the Check function
-// has been called.
+// This error is useful when the Sign function encounters an error for an
+// action that should have been handled by the Check function, and which
+// surfaced after Check had already succeeded.
 //
 // > This error should be returned only by the Sign function.
 type IssuerError struct {
