@@ -16,19 +16,18 @@ limitations under the License.
 
 package signer
 
-// PermanentError is returned if it is impossible for the resource to
-// get in a Ready state without being changed. It should not be used
-// if there is any way to fix the error by altering the environment/
-// other resources. The client should not try again after receiving
-// this error.
+// PermanentError is returned when it is impossible for the resource to
+// become Ready without changing the resource itself. It must not be used
+// when the issue can be resolved by modifying the environment or other
+// resources. The controller should not retry after receiving this error.
 //
 // For the Check function, this error is useful when we detected an
 // invalid configuration/ setting in the Issuer or ClusterIssuer resource.
 // This should only happen very rarely, because of webhook validation.
 //
-// For the Sign function, this error is useful when we detected an
-// error that will only get resolved by creating a new CertificateRequest,
-// for example when it is required to craft a new CSR.
+// For the Sign function, this error is useful when the problem can only be
+// resolved by creating a new CertificateRequest (for example, when a new
+// CSR must be generated).
 //
 // > This error should be returned by the Sign or Check function.
 type PermanentError struct {

@@ -18,21 +18,19 @@ package signer
 
 import "time"
 
-// PendingError should be returned if we are certain that we will converge to a
-// successful result or another type of error in a finite amount of time by
-// just retrying the same operation.
+// PendingError should be returned when retrying the same operation is expected
+// to result in either success or another error within a finite time.
 //
-// It can be used to circumvent the MaxRetryDuration
-// check, which is useful for example when the signer is waiting for an async
-// answer from an external service that is indicating that the request is still
-// being processed.
+// It can be used to bypass the MaxRetryDuration check, for example when the
+// signer is waiting for an asynchronous response from an external service
+// indicating the request is still being processed.
 //
 // > This error should be returned only by the Sign function.
 type PendingError struct {
 	Err error
 
-	// RequeueAfter can be used to specify how long to wait before retrying. By default
-	// we wait for 1s before retrying.
+	// RequeueAfter can be set to control how long to wait before retrying. By
+	// default the controller waits 1s before retrying.
 	RequeueAfter time.Duration
 }
 
