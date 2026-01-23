@@ -26,7 +26,7 @@ import (
 type SignResult struct {
 	// SignResult must be constructed using either SignSuccess or SignError,
 	// not by direct struct literal construction. This field is used to enforce that.
-	wasProperlyconstructed bool
+	wasProperlyConstructed bool
 
 	// The first certificate in the ChainPEM chain is the leaf certificate, and the
 	// last certificate in the chain is the highest level non-self-signed certificate.
@@ -45,6 +45,8 @@ type SignResult struct {
 	// reconciliation (even when signing fails); otherwise the conditions will be
 	// removed.
 	//
+	// - Type: type of condition in CamelCase or in foo.example.com/CamelCase
+	//   Should not be Ready, as that is managed by the controller instead.
 	// - Status: the condition status, one of True, False, or Unknown.
 	// - Reason: a programmatic identifier indicating why the condition last
 	//   transitioned. Producers of specific condition types may define expected
@@ -55,7 +57,7 @@ type SignResult struct {
 	//
 	// All other fields of the condition are ignored and will be set by the
 	// controller automatically.
-	extraConditions []metav1.Condition
+	otherConditions []metav1.Condition
 
 	// An error that occurred during signing.
 	//
@@ -95,7 +97,7 @@ type SignSucessOption interface {
 // last certificate in the chain is the highest level non-self-signed certificate.
 func SignSuccess(chainPEM []byte, opts ...SignSucessOption) SignResult {
 	result := SignResult{
-		wasProperlyconstructed: true,
+		wasProperlyConstructed: true,
 		chainPEM:               chainPEM,
 	}
 
@@ -137,7 +139,7 @@ type SignErrorOption interface {
 //     CertificateRequest/CertificateSigningRequest.
 func SignError(err error, opts ...SignErrorOption) SignResult {
 	result := SignResult{
-		wasProperlyconstructed: true,
+		wasProperlyConstructed: true,
 		err:                    err,
 	}
 
@@ -178,7 +180,7 @@ func WithExtraConditions(conditions ...metav1.Condition) interface {
 	SignErrorOption
 } {
 	return funcResultOption(func(r *SignResult) {
-		r.extraConditions = append(r.extraConditions, conditions...)
+		r.otherConditions = append(r.otherConditions, conditions...)
 	})
 }
 
@@ -197,12 +199,12 @@ func WithCA(caPEM []byte) SignSucessOption {
 // INTERNAL USE ONLY - do not use outside of this package (this will break in future releases)
 // Unpack extracts all data from the SignResult.
 func (sr SignResult) Unpack() (pki.PEMBundle, []metav1.Condition, error) {
-	if !sr.wasProperlyconstructed {
+	if !sr.wasProperlyConstructed {
 		panic("PROGRAMMER ERROR: SignResult must be constructed using either SignSuccess or SignError")
 	}
 
 	return pki.PEMBundle{
 		ChainPEM: sr.chainPEM,
 		CAPEM:    sr.caPEM,
-	}, sr.extraConditions, sr.err
+	}, sr.otherConditions, sr.err
 }
