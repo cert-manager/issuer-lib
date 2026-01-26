@@ -27,7 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -46,6 +46,9 @@ import (
 )
 
 const (
+	eventActionSynced     = "Synced"
+	eventActionSyncFailed = "SyncFailed"
+
 	eventIssuerChecked        = "Checked"
 	eventIssuerRetryableError = "RetryableError"
 	eventIssuerPermanentError = "PermanentError"
@@ -67,7 +70,7 @@ type IssuerReconciler struct {
 	signer.IgnoreIssuer
 
 	// EventRecorder is used for creating Kubernetes events on resources.
-	EventRecorder record.EventRecorder
+	EventRecorder events.EventRecorder
 
 	// Clock is used to mock condition transition times in tests.
 	Clock clock.PassiveClock
@@ -201,7 +204,7 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 
 	var err error
 	if (readyCondition.Status == metav1.ConditionTrue) && (reportedError != nil) {
-		// We received an error from a Certificaterequest while our current status is Ready,
+		// We received an error from a CertificateRequest while our current status is Ready,
 		// update the ready state of the issuer to reflect the error.
 		err = reportedError
 	} else {
@@ -214,7 +217,7 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 			v1alpha1.IssuerConditionReasonChecked,
 			"Succeeded checking the issuer",
 		)
-		r.EventRecorder.Event(issuer, corev1.EventTypeNormal, eventIssuerChecked, message)
+		r.EventRecorder.Eventf(issuer, nil, corev1.EventTypeNormal, eventIssuerChecked, eventActionSynced, message)
 
 		return result, issuerStatusPatch, nil // apply patch, done
 	}
@@ -228,7 +231,7 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 			v1alpha1.IssuerConditionReasonFailed,
 			fmt.Sprintf("Failed permanently: %s", err),
 		)
-		r.EventRecorder.Event(issuer, corev1.EventTypeWarning, eventIssuerPermanentError, message)
+		r.EventRecorder.Eventf(issuer, nil, corev1.EventTypeWarning, eventIssuerPermanentError, eventActionSyncFailed, message)
 		return result, issuerStatusPatch, reconcile.TerminalError(err) // apply patch, done
 	} else {
 		// retry
@@ -238,7 +241,7 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 			v1alpha1.IssuerConditionReasonPending,
 			fmt.Sprintf("Not ready yet: %s", err),
 		)
-		r.EventRecorder.Event(issuer, corev1.EventTypeWarning, eventIssuerRetryableError, message)
+		r.EventRecorder.Eventf(issuer, nil, corev1.EventTypeWarning, eventIssuerRetryableError, eventActionSyncFailed, message)
 		return result, issuerStatusPatch, err // apply patch, requeue with backoff
 	}
 }

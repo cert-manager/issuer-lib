@@ -20,7 +20,7 @@ import (
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -50,7 +50,7 @@ type RequestObjectHelper interface {
 	NewPatch(
 		clock clock.PassiveClock,
 		fieldOwner string,
-		eventRecorder record.EventRecorder,
+		eventRecorder events.EventRecorder,
 	) RequestPatchHelper
 }
 

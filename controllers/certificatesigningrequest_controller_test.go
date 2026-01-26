@@ -34,7 +34,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	clocktesting "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -798,7 +798,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			require.NoError(t, client.IgnoreNotFound(err), "unexpected error from fake client")
 
 			logger := logrtesting.NewTestLoggerWithOptions(t, logrtesting.Options{LogTimestamp: true, Verbosity: 10})
-			fakeRecorder := record.NewFakeRecorder(100)
+			fakeRecorder := events.NewFakeRecorder(100)
 
 			controller := (&CertificateSigningRequestReconciler{
 				RequestController: RequestController{

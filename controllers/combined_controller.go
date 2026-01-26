@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/clock"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -54,7 +54,7 @@ type CombinedController struct {
 	signer.IgnoreIssuer
 
 	// EventRecorder is used for creating Kubernetes events on resources.
-	EventRecorder record.EventRecorder
+	EventRecorder events.EventRecorder
 
 	// Clock is used to mock condition transition times in tests.
 	Clock clock.PassiveClock
