@@ -47,7 +47,7 @@ rules:
   verbs:
   - sign
 - apiGroups:
-  - ""
+  - events.k8s.io
   resources:
   - events
   verbs:
