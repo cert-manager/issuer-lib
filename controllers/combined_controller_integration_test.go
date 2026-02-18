@@ -84,12 +84,12 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 						return ctx.Err()
 					}
 				},
-				Sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, error) {
+				Sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) signer.SignResult {
 					select {
 					case err := <-signResult:
-						return signer.PEMBundle{}, err
+						return signer.SignError(err)
 					case <-ctx.Done():
-						return signer.PEMBundle{}, ctx.Err()
+						return signer.SignError(ctx.Err())
 					}
 				},
 				EventRecorder: events.NewFakeRecorder(100),
@@ -484,7 +484,7 @@ func TestCombinedControllerTiming(t *testing.T) { //nolint:tparallel
 							}
 							return results[resultsIndex].simulatedCheckResult.err
 						},
-						Sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, error) {
+						Sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) signer.SignResult {
 							resultsMutex.Lock()
 							defer resultsMutex.Unlock()
 							defer func() { resultsIndex++ }()
@@ -492,19 +492,20 @@ func TestCombinedControllerTiming(t *testing.T) { //nolint:tparallel
 							if resultsIndex >= len(results)-1 {
 								if resultsIndex > len(results)-1 {
 									errorCh <- fmt.Errorf("too many calls to Sign")
-									return signer.PEMBundle{}, nil
+									return signer.SignSuccess(nil)
 								}
 								defer close(done)
 							}
 							durations[resultsIndex] = time.Now()
 							if results[resultsIndex].simulatedSignResult == nil {
 								errorCh <- fmt.Errorf("unexpected call to Sign")
-								return signer.PEMBundle{}, nil
+								return signer.SignSuccess(nil)
 							}
 							result := results[resultsIndex].simulatedSignResult
-							return signer.PEMBundle{
-								ChainPEM: result.cert,
-							}, result.err
+							if result.err != nil {
+								return signer.SignError(result.err)
+							}
+							return signer.SignSuccess(result.cert)
 						},
 						EventRecorder: events.NewFakeRecorder(100),
 
