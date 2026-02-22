@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 
 	v1alpha1 "github.com/cert-manager/issuer-lib/api/v1alpha1"
 )
@@ -40,6 +41,9 @@ type CertificateRequestReconciler struct {
 	// ca.crt is discouraged. Instead, the CA certificate should be provided
 	// separately using a tool such as trust-manager.
 	SetCAOnCertificateRequest bool
+
+	// Allows callers to tune workers, rate limiter, panic recovery, etc.
+	ControllerOptions controller.Options
 }
 
 func (r *CertificateRequestReconciler) matchIssuerType(requestObject client.Object) (v1alpha1.Issuer, types.NamespacedName, error) {
@@ -96,6 +100,9 @@ func (r *CertificateRequestReconciler) SetupWithManager(ctx context.Context, mgr
 	}
 
 	r.Init()
+
+	// Propagate controller-runtime options to the underlying RequestController
+	r.RequestController.ControllerOptions = r.ControllerOptions
 
 	return r.RequestController.SetupWithManager(
 		ctx,

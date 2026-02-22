@@ -92,6 +92,9 @@ type CombinedController struct {
 	// additional setup after the controller is built and registered with the
 	// manager.
 	PostSetupWithManager func(context.Context, schema.GroupVersionKind, ctrl.Manager, controller.Controller) error
+
+	// Allows callers to tune workers, rate limiter, panic recovery, etc.
+	ControllerOptions controller.Options
 }
 
 func (r *CombinedController) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
@@ -101,6 +104,11 @@ func (r *CombinedController) SetupWithManager(ctx context.Context, mgr ctrl.Mana
 
 	if r.Clock == nil {
 		r.Clock = clock.RealClock{}
+	}
+
+	// Ensure MaxConcurrentReconciles is at least 1
+	if r.ControllerOptions.MaxConcurrentReconciles < 1 {
+		r.ControllerOptions.MaxConcurrentReconciles = 1
 	}
 
 	for _, issuerType := range append(r.IssuerTypes, r.ClusterIssuerTypes...) {
@@ -115,6 +123,9 @@ func (r *CombinedController) SetupWithManager(ctx context.Context, mgr ctrl.Mana
 			IgnoreIssuer:  r.IgnoreIssuer,
 			EventRecorder: r.EventRecorder,
 			Clock:         r.Clock,
+
+			// Propagate controller options to issuer reconciler
+			ControllerOptions: r.ControllerOptions,
 
 			PreSetupWithManager:  r.PreSetupWithManager,
 			PostSetupWithManager: r.PostSetupWithManager,
