@@ -21,6 +21,8 @@ import (
 	"testing"
 
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -30,7 +32,13 @@ func newTestManager(t *testing.T) manager.Manager {
 
 	restCfg := &rest.Config{Host: "https://example"}
 
-	mgr, err := manager.New(restCfg, manager.Options{})
+	mgr, err := manager.New(restCfg, manager.Options{
+		Controller: config.Controller{
+			// need to skip unique controller name validation
+			// since all tests need a dedicated controller
+			SkipNameValidation: ptr.To(true),
+		},
+	})
 	if err != nil {
 		t.Fatalf("failed to create test manager: %v", err)
 	}
@@ -39,28 +47,42 @@ func newTestManager(t *testing.T) manager.Manager {
 }
 
 func TestCombinedControllerControllerOptions(t *testing.T) {
-	mgr := newTestManager(t)
+	t.Run("MaxConcurrentReconciles should default to 1", func(t *testing.T) {
+		mgr := newTestManager(t)
 
-	c := &CombinedController{
-		ControllerOptions: controller.Options{
-			MaxConcurrentReconciles: 0, // will be coerced to 1
-		},
-	}
+		c := &CombinedController{
+			ControllerOptions: controller.Options{
+				MaxConcurrentReconciles: 0, // will be coerced to 1
+			},
+		}
 
-	err := c.SetupWithManager(context.Background(), mgr)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+		err := c.SetupWithManager(context.Background(), mgr)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 
-	// assert coercion
-	if c.ControllerOptions.MaxConcurrentReconciles != 1 {
-		t.Errorf("expected MaxConcurrentReconciles to be coerced to 1, got %d", c.ControllerOptions.MaxConcurrentReconciles)
-	}
+		// assert coercion
+		if c.ControllerOptions.MaxConcurrentReconciles != 1 {
+			t.Errorf("expected MaxConcurrentReconciles to be coerced to 1, got %d", c.ControllerOptions.MaxConcurrentReconciles)
+		}
+	})
 
-	// assert propagation works when changed
-	c.ControllerOptions.MaxConcurrentReconciles = 5
+	t.Run("MaxConcurrentReconciles should be more than 1", func(t *testing.T) {
+		mgr := newTestManager(t)
 
-	if c.ControllerOptions.MaxConcurrentReconciles != 5 {
-		t.Errorf("expected MaxConcurrentReconciles propagated value to be 5, got %d", c.ControllerOptions.MaxConcurrentReconciles)
-	}
+		c := &CombinedController{
+			ControllerOptions: controller.Options{
+				MaxConcurrentReconciles: 5,
+			},
+		}
+
+		err := c.SetupWithManager(context.Background(), mgr)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if c.ControllerOptions.MaxConcurrentReconciles != 5 {
+			t.Errorf("expected MaxConcurrentReconciles propagated value to be 5, got %d", c.ControllerOptions.MaxConcurrentReconciles)
+		}
+	})
 }
