@@ -86,6 +86,9 @@ type RequestController struct {
 	// manager.
 	PostSetupWithManager func(context.Context, schema.GroupVersionKind, ctrl.Manager, controller.Controller) error
 
+	// Allows callers to tune workers, rate limiter, panic recovery, etc.
+	ControllerOptions controller.Options
+
 	allIssuerTypes []IssuerType
 
 	initialised                bool
@@ -501,6 +504,9 @@ func (r *RequestController) SetupWithManager(
 			),
 		)
 	}
+
+	// Apply controller-runtime options before building
+	build = build.WithOptions(r.ControllerOptions)
 
 	if r.PreSetupWithManager != nil {
 		err := r.PreSetupWithManager(ctx, r.requestType.GetObjectKind().GroupVersionKind(), mgr, build)

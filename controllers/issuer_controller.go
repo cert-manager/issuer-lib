@@ -84,6 +84,9 @@ type IssuerReconciler struct {
 	// additional setup after the controller is built and registered with the
 	// manager.
 	PostSetupWithManager func(context.Context, schema.GroupVersionKind, ctrl.Manager, controller.Controller) error
+
+	// Allows callers to tune workers, rate limiter, panic recovery, etc.
+	ControllerOptions controller.Options
 }
 
 func (r *IssuerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, returnedError error) {
@@ -265,7 +268,8 @@ func (r *IssuerReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manage
 				IssuerPredicate{},
 			),
 		).
-		WatchesRawSource(r.EventSource.AddConsumer(forObjectGvk))
+		WatchesRawSource(r.EventSource.AddConsumer(forObjectGvk)).
+		WithOptions(r.ControllerOptions)
 
 	if r.PreSetupWithManager != nil {
 		err := r.PreSetupWithManager(ctx, forObjectGvk, mgr, build)

@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 
 	v1alpha1 "github.com/cert-manager/issuer-lib/api/v1alpha1"
 )
@@ -33,6 +34,9 @@ import (
 // CertificateSigningRequestReconciler reconciles a CertificateSigningRequest object
 type CertificateSigningRequestReconciler struct {
 	RequestController
+
+	// Allows callers to tune workers, rate limiter, panic recovery, etc.
+	ControllerOptions controller.Options
 }
 
 // matchIssuerType returns the IssuerType and IssuerName that matches the
@@ -101,6 +105,9 @@ func (r *CertificateSigningRequestReconciler) SetupWithManager(ctx context.Conte
 	}
 
 	r.Init()
+
+	// Propagate controller-runtime options to the underlying RequestController
+	r.RequestController.ControllerOptions = r.ControllerOptions
 
 	return r.RequestController.SetupWithManager(
 		ctx,
