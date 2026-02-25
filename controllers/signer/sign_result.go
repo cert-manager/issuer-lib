@@ -57,7 +57,7 @@ type SignResult struct {
 	//
 	// All other fields of the condition are ignored and will be set by the
 	// controller automatically.
-	otherConditions []metav1.Condition
+	customConditions []metav1.Condition
 
 	// An error that occurred during signing.
 	//
@@ -165,6 +165,8 @@ func (f funcResultOption) applyErrorResult(r *SignResult) {
 // reconciliation (even when signing fails); otherwise the conditions will be
 // removed.
 //
+//   - Type: type of condition in CamelCase or in foo.example.com/CamelCase
+//     Should not be Ready, as that is managed by the controller instead.
 //   - Status: the condition status, one of True, False, or Unknown.
 //   - Reason: a programmatic identifier indicating why the condition last
 //     transitioned. Producers of specific condition types may define expected
@@ -175,12 +177,12 @@ func (f funcResultOption) applyErrorResult(r *SignResult) {
 //
 // All other fields of the condition are ignored and will be set by the
 // controller automatically.
-func WithExtraConditions(conditions ...metav1.Condition) interface {
+func WithCustomConditions(conditions ...metav1.Condition) interface {
 	SignSucessOption
 	SignErrorOption
 } {
 	return funcResultOption(func(r *SignResult) {
-		r.otherConditions = append(r.otherConditions, conditions...)
+		r.customConditions = append(r.customConditions, conditions...)
 	})
 }
 
@@ -206,5 +208,5 @@ func (sr SignResult) Unpack() (pki.PEMBundle, []metav1.Condition, error) {
 	return pki.PEMBundle{
 		ChainPEM: sr.chainPEM,
 		CAPEM:    sr.caPEM,
-	}, sr.otherConditions, sr.err
+	}, sr.customConditions, sr.err
 }

@@ -236,7 +236,7 @@ func TestCertificateRequestControllerIntegrationSetCondition(t *testing.T) {
 						atomic.AddUint64(&counter, 1)
 						select {
 						case res := <-signResult:
-							return signer.SignError(res.err, signer.WithExtraConditions(res.extraConditions...))
+							return signer.SignError(res.err, signer.WithCustomConditions(res.extraConditions...))
 						case <-ctx.Done():
 							return signer.SignError(ctx.Err())
 						}

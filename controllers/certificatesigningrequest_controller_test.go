@@ -385,7 +385,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) signer.SignResult {
 				return signer.SignError(
 					fmt.Errorf("test error"),
-					signer.WithExtraConditions(metav1.Condition{
+					signer.WithCustomConditions(metav1.Condition{
 						Type:    "[condition type]",
 						Status:  metav1.ConditionTrue,
 						Reason:  "[condition reason]",
@@ -431,7 +431,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) signer.SignResult {
 				return signer.SignError(
 					fmt.Errorf("test error2"),
-					signer.WithExtraConditions(metav1.Condition{
+					signer.WithCustomConditions(metav1.Condition{
 						Type:    "[condition type]",
 						Status:  metav1.ConditionTrue,
 						Reason:  "[condition reason2]",
@@ -485,7 +485,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) signer.SignResult {
 				return signer.SignError(
 					fmt.Errorf("test error"),
-					signer.WithExtraConditions(metav1.Condition{
+					signer.WithCustomConditions(metav1.Condition{
 						Type:    "[condition type]",
 						Status:  metav1.ConditionTrue,
 						Reason:  "[condition reason]",
@@ -539,7 +539,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) signer.SignResult {
 				return signer.SignError(
 					fmt.Errorf("test error2"),
-					signer.WithExtraConditions(metav1.Condition{
+					signer.WithCustomConditions(metav1.Condition{
 						Type:    "[condition type]",
 						Status:  metav1.ConditionTrue,
 						Reason:  "[condition reason2]",
@@ -601,7 +601,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) signer.SignResult {
 				return signer.SignError(
 					signer.PendingError{Err: fmt.Errorf("test error")},
-					signer.WithExtraConditions(metav1.Condition{
+					signer.WithCustomConditions(metav1.Condition{
 						Type:    "[condition type]",
 						Status:  metav1.ConditionTrue,
 						Reason:  "[condition reason]",
@@ -646,7 +646,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) signer.SignResult {
 				return signer.SignError(
 					signer.PermanentError{Err: fmt.Errorf("test error")},
-					signer.WithExtraConditions(metav1.Condition{
+					signer.WithCustomConditions(metav1.Condition{
 						Type:    "[condition type]",
 						Status:  metav1.ConditionTrue,
 						Reason:  "[condition reason]",
