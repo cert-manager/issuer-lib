@@ -136,7 +136,7 @@ func TestCertificateRequestControllerIntegrationIssuerInitiallyNotFoundAndNotRea
 				crName.Name,
 				cmgen.SetCertificateRequestNamespace(crName.Namespace),
 				cmgen.SetCertificateRequestCSR([]byte("doo")),
-				cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
+				cmgen.SetCertificateRequestIssuer(cmmeta.IssuerReference{
 					Name:  "issuer-1",
 					Kind:  tc.issuerType,
 					Group: api.SchemeGroupVersion.Group,
@@ -260,7 +260,7 @@ func TestCertificateRequestControllerIntegrationSetCondition(t *testing.T) {
 		crName.Name,
 		cmgen.SetCertificateRequestNamespace(crName.Namespace),
 		cmgen.SetCertificateRequestCSR([]byte("doo")),
-		cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
+		cmgen.SetCertificateRequestIssuer(cmmeta.IssuerReference{
 			Name:  "issuer-1",
 			Kind:  issuerType,
 			Group: api.SchemeGroupVersion.Group,

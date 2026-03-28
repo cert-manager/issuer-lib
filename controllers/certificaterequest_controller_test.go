@@ -26,7 +26,7 @@ import (
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	cmgen "github.com/cert-manager/cert-manager/test/unit/gen"
-	logrtesting "github.com/go-logr/logr/testing"
+	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -101,7 +101,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 	cr1 := cmgen.CertificateRequest(
 		"cr1",
 		cmgen.SetCertificateRequestNamespace("ns1"),
-		cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
+		cmgen.SetCertificateRequestIssuer(cmmeta.IssuerReference{
 			Group: api.SchemeGroupVersion.Group,
 			Kind:  issuer1.Kind,
 			Name:  issuer1.Name,
@@ -917,7 +917,7 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 			err := fakeClient.Get(t.Context(), req.NamespacedName, &crBefore)
 			require.NoError(t, client.IgnoreNotFound(err), "unexpected error from fake client")
 
-			logger := logrtesting.NewTestLoggerWithOptions(t, logrtesting.Options{LogTimestamp: true, Verbosity: 10})
+			logger := testr.NewWithOptions(t, testr.Options{LogTimestamp: true, Verbosity: 10})
 			fakeRecorder := events.NewFakeRecorder(100)
 
 			controller := (&CertificateRequestReconciler{
@@ -995,7 +995,7 @@ func TestCertificateRequestMatchIssuerType(t *testing.T) {
 				Namespace: namespace,
 			},
 			Spec: cmapi.CertificateRequestSpec{
-				IssuerRef: cmmeta.ObjectReference{
+				IssuerRef: cmmeta.IssuerReference{
 					Name:  name,
 					Kind:  kind,
 					Group: group,

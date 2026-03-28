@@ -94,7 +94,7 @@ func TestSimpleCertificate(t *testing.T) {
 		cmgen.SetCertificateNamespace(namespace),
 		cmgen.SetCertificateCommonName("test.com"),
 		cmgen.SetCertificateSecretName("aaaaaaaa"),
-		cmgen.SetCertificateIssuer(v1.ObjectReference{
+		cmgen.SetCertificateIssuer(v1.IssuerReference{
 			Group: "cert-manager.io",
 			Kind:  "Issuer",
 			Name:  issuer.Name,
