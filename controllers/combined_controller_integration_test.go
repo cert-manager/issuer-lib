@@ -166,7 +166,7 @@ func TestCombinedControllerTemporaryFailedCertificateRequestRetrigger(t *testing
 				"certificate-request-1",
 				cmgen.SetCertificateRequestNamespace(namespace),
 				cmgen.SetCertificateRequestCSR([]byte("doo")),
-				cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
+				cmgen.SetCertificateRequestIssuer(cmmeta.IssuerReference{
 					Name:  issuer.Name,
 					Kind:  issuer.Kind,
 					Group: api.SchemeGroupVersion.Group,
@@ -531,7 +531,7 @@ func TestCombinedControllerTiming(t *testing.T) { //nolint:tparallel
 				"certificate-request-1",
 				cmgen.SetCertificateRequestNamespace(namespace),
 				cmgen.SetCertificateRequestCSR([]byte("doo")),
-				cmgen.SetCertificateRequestIssuer(cmmeta.ObjectReference{
+				cmgen.SetCertificateRequestIssuer(cmmeta.IssuerReference{
 					Name:  issuer.Name,
 					Kind:  issuer.Kind,
 					Group: api.SchemeGroupVersion.Group,
