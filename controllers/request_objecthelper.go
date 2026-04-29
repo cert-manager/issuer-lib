@@ -18,6 +18,7 @@ package controllers
 
 import (
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	"github.com/cert-manager/cert-manager/pkg/util/pki"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/events"
@@ -71,7 +72,7 @@ type RequestPatchHelper interface { //nolint:interfacebloat
 	SetRetryableError(error)
 	SetPermanentError(error)
 	SetUnexpectedError(error)
-	SetIssued(signer.PEMBundle)
+	SetIssued(pki.PEMBundle)
 }
 
 type RequestPatch interface {
