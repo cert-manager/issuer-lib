@@ -63,7 +63,3 @@ type SimpleClusterIssuerList struct {
 	metav1.ListMeta `json:"metadata"`
 	Items           []SimpleClusterIssuer `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&SimpleClusterIssuer{}, &SimpleClusterIssuerList{})
-}

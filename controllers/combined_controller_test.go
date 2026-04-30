@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -36,7 +35,7 @@ func newTestManager(t *testing.T) manager.Manager {
 		Controller: config.Controller{
 			// need to skip unique controller name validation
 			// since all tests need a dedicated controller
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	if err != nil {
