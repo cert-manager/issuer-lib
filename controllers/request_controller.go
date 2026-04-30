@@ -30,7 +30,6 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -128,7 +127,7 @@ func (r *RequestController) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		if err := r.Client.Status().Patch(ctx, obj, patch, &client.SubResourcePatchOptions{
 			PatchOptions: client.PatchOptions{
 				FieldManager: r.FieldOwner,
-				Force:        ptr.To(true),
+				Force:        new(true),
 			},
 		}); err != nil {
 			if !apierrors.IsNotFound(err) {

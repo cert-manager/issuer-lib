@@ -63,7 +63,3 @@ type TestIssuerList struct {
 	metav1.ListMeta `json:"metadata"`
 	Items           []TestIssuer `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&TestIssuer{}, &TestIssuerList{})
-}

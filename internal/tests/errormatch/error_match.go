@@ -20,13 +20,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"k8s.io/utils/ptr"
 )
 
 type Matcher func(t testing.TB, err error) bool
 
 func newMatcherPtr(matcher Matcher) *Matcher {
-	return ptr.To(matcher)
+	return new(matcher)
 }
 
 func NoError() *Matcher {
