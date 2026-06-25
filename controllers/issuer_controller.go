@@ -133,7 +133,7 @@ func (r *IssuerReconciler) reconcileStatusPatch(
 	logger logr.Logger,
 	ctx context.Context,
 	req ctrl.Request,
-) (result ctrl.Result, issuerStatusPatch *v1alpha1.IssuerStatus, reconcileError error) { // nolint:unparam
+) (result ctrl.Result, issuerStatusPatch *v1alpha1.IssuerStatus, reconcileError error) { //nolint:unparam
 	// Get the ClusterIssuer
 	issuer := r.ForObject.DeepCopyObject().(v1alpha1.Issuer)
 	forObjectGvk := r.ForObject.GetObjectKind().GroupVersionKind()
