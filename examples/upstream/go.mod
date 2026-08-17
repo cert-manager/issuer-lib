@@ -7,7 +7,7 @@ replace github.com/cert-manager/issuer-lib => ../../
 require (
 	github.com/cert-manager/cert-manager v1.21.1
 	github.com/cert-manager/issuer-lib v0.0.0-00010101000000-000000000000
-	github.com/stretchr/testify v1.11.1
+	github.com/stretchr/testify v1.12.0
 	go.uber.org/zap v1.28.0
 	k8s.io/api v0.36.3
 	k8s.io/apimachinery v0.36.3
