@@ -43,6 +43,11 @@ func (c *certificatesigningRequestObjectHelper) IsApproved() bool {
 	return util.CertificateSigningRequestIsApproved(c.readOnlyObj)
 }
 
+// IsDeniedByApprover reports whether an approver set the Denied condition
+func (c *certificatesigningRequestObjectHelper) IsDeniedByApprover() bool {
+	return util.CertificateSigningRequestIsDenied(c.readOnlyObj)
+}
+
 func (c *certificatesigningRequestObjectHelper) IsDenied() bool {
 	return util.CertificateSigningRequestIsDenied(c.readOnlyObj)
 }
