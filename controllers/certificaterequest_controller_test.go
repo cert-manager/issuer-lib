@@ -46,6 +46,7 @@ import (
 	"github.com/cert-manager/issuer-lib/internal/testapi/api"
 	"github.com/cert-manager/issuer-lib/internal/testapi/testutil"
 	"github.com/cert-manager/issuer-lib/internal/tests/errormatch"
+	"github.com/cert-manager/issuer-lib/intree"
 )
 
 func TestCertificateRequestReconcilerReconcile(t *testing.T) {
@@ -1070,10 +1071,82 @@ func TestCertificateRequestMatchIssuerType(t *testing.T) {
 			expectedIssuerType: &api.TestIssuer{},
 			expectedIssuerName: types.NamespacedName{Name: "name", Namespace: "namespace"},
 		},
+		{
+			name:               "empty group matches in-tree cert-manager Issuer",
+			issuerTypes:        intree.Issuers,
+			clusterIssuerTypes: intree.ClusterIssuers,
+			cr:                 createCr("name", "namespace", "", ""),
+
+			expectedIssuerType: &intree.CMIssuer{},
+			expectedIssuerName: types.NamespacedName{Name: "name", Namespace: "namespace"},
+		},
+		{
+			name:               "empty group matches in-tree cert-manager ClusterIssuer",
+			issuerTypes:        intree.Issuers,
+			clusterIssuerTypes: intree.ClusterIssuers,
+			cr:                 createCr("name", "namespace", cmapi.ClusterIssuerKind, ""),
+
+			expectedIssuerType: &intree.CMClusterIssuer{},
+			expectedIssuerName: types.NamespacedName{Name: "name"},
+		},
+		{
+			name:               "explicit cert-manager.io group matches in-tree cert-manager Issuer",
+			issuerTypes:        intree.Issuers,
+			clusterIssuerTypes: intree.ClusterIssuers,
+			cr:                 createCr("name", "namespace", cmapi.IssuerKind, cmapi.SchemeGroupVersion.Group),
+
+			expectedIssuerType: &intree.CMIssuer{},
+			expectedIssuerName: types.NamespacedName{Name: "name", Namespace: "namespace"},
+		},
+		{
+			name:               "empty group does not match third-party issuer",
+			issuerTypes:        []v1alpha1.Issuer{&api.TestIssuer{}},
+			clusterIssuerTypes: []v1alpha1.Issuer{&api.TestClusterIssuer{}},
+			cr:                 createCr("name", "namespace", "", ""),
+
+			expectedError: errormatch.ErrorContains("no issuer found for reference"),
+		},
+		{
+			name:               "third-party group does not match in-tree cert-manager issuers",
+			issuerTypes:        intree.Issuers,
+			clusterIssuerTypes: intree.ClusterIssuers,
+			cr:                 createCr("name", "namespace", "", "testing.cert-manager.io"),
+
+			expectedError: errormatch.ErrorContains("no issuer found for reference"),
+		},
+		{
+			// cert-manager core resolves an empty kind to Issuer, so a
+			// controller that only registers the in-tree ClusterIssuer must
+			// not claim such a request.
+			name:               "empty kind defaults to Issuer for cert-manager.io group",
+			issuerTypes:        nil,
+			clusterIssuerTypes: intree.ClusterIssuers,
+			cr:                 createCr("name", "namespace", "", ""),
+
+			expectedError: errormatch.ErrorContains("no issuer found for reference: [Group=\"cert-manager.io\", Kind=\"\", Name=\"name\"]"),
+		},
+		{
+			name:               "empty kind defaults to Issuer for explicit cert-manager.io group",
+			issuerTypes:        nil,
+			clusterIssuerTypes: intree.ClusterIssuers,
+			cr:                 createCr("name", "namespace", "", cmapi.SchemeGroupVersion.Group),
+
+			expectedError: errormatch.ErrorContains("no issuer found for reference"),
+		},
+		{
+			name:               "empty kind with cert-manager.io group selects Issuer when both registered",
+			issuerTypes:        intree.Issuers,
+			clusterIssuerTypes: intree.ClusterIssuers,
+			cr:                 createCr("name", "namespace", "", cmapi.SchemeGroupVersion.Group),
+
+			expectedIssuerType: &intree.CMIssuer{},
+			expectedIssuerName: types.NamespacedName{Name: "name", Namespace: "namespace"},
+		},
 	}
 
 	scheme := runtime.NewScheme()
 	require.NoError(t, api.AddToScheme(scheme))
+	require.NoError(t, cmapi.AddToScheme(scheme))
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1091,7 +1164,7 @@ func TestCertificateRequestMatchIssuerType(t *testing.T) {
 			issuerType, issuerName, err := crr.matchIssuerType(tc.cr)
 
 			if tc.expectedIssuerType != nil {
-				require.NoError(t, kubeutil.SetGroupVersionKind(scheme, tc.expectedIssuerType))
+				require.NoError(t, kubeutil.SetGroupVersionKind(scheme, kubeutil.ObjectForIssuer(tc.expectedIssuerType)))
 			}
 
 			assert.Equal(t, tc.expectedIssuerType, issuerType)
