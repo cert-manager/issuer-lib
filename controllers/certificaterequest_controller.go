@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/cert-manager/cert-manager/pkg/apis/certmanager"
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -53,12 +54,36 @@ func (r *CertificateRequestReconciler) matchIssuerType(requestObject client.Obje
 		return nil, types.NamespacedName{}, fmt.Errorf("invalid reference, CertificateRequest is nil")
 	}
 
+	// cert-manager core does not default issuerRef.group or issuerRef.kind on
+	// stored objects (the CRD has no defaults for issuerRef), yet users
+	// routinely omit them. Core resolves an omitted group to "cert-manager.io"
+	// and an omitted kind to "Issuer". For in-tree issuer types (see the
+	// intree package) we must apply the same rules so that this controller
+	// and core agree on which issuer a CertificateRequest refers to.
+	//
+	// The group default is unconditional, but the kind default only applies
+	// to the cert-manager.io group: for third-party groups core has no
+	// opinion, and issuer-lib keeps its behaviour of treating an empty kind
+	// as a wildcard that matches the first registered type.
+	group := cr.Spec.IssuerRef.Group
+	if group == "" {
+		group = certmanager.GroupName
+	}
+
 	// Search for matching issuer
 	for _, issuerType := range r.AllIssuerTypes() {
 		gvk := issuerType.Type.GetObjectKind().GroupVersionKind()
 
-		if (cr.Spec.IssuerRef.Group != gvk.Group) ||
-			(cr.Spec.IssuerRef.Kind != "" && cr.Spec.IssuerRef.Kind != gvk.Kind) {
+		if group != gvk.Group {
+			continue
+		}
+
+		kind := cr.Spec.IssuerRef.Kind
+		if kind == "" && gvk.Group == certmanager.GroupName {
+			kind = cmapi.IssuerKind
+		}
+
+		if kind != "" && kind != gvk.Kind {
 			continue
 		}
 
@@ -75,7 +100,7 @@ func (r *CertificateRequestReconciler) matchIssuerType(requestObject client.Obje
 		return issuerObject, issuerName, nil
 	}
 
-	return nil, types.NamespacedName{}, fmt.Errorf("no issuer found for reference: [Group=%q, Kind=%q, Name=%q]", cr.Spec.IssuerRef.Group, cr.Spec.IssuerRef.Kind, cr.Spec.IssuerRef.Name)
+	return nil, types.NamespacedName{}, fmt.Errorf("no issuer found for reference: [Group=%q, Kind=%q, Name=%q]", group, cr.Spec.IssuerRef.Kind, cr.Spec.IssuerRef.Name)
 }
 
 func (r *CertificateRequestReconciler) Init() *CertificateRequestReconciler {
