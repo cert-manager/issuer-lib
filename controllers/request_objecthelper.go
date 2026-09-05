@@ -41,6 +41,7 @@ const (
 
 type RequestObjectHelper interface {
 	IsApproved() bool
+	IsDeniedByApprover() bool
 	IsDenied() bool
 	IsReady() bool
 	IsFailed() bool
