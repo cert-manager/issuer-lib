@@ -19,24 +19,13 @@ package signer
 import (
 	"context"
 
-	"github.com/cert-manager/cert-manager/pkg/util/pki"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/cert-manager/issuer-lib/api/v1alpha1"
 )
 
-// PEMBundle includes the PEM encoded X.509 certificate chain and CA.
-// The first certificate in the ChainPEM chain is the leaf certificate, and the
-// last certificate in the chain is the highest level non-self-signed certificate.
-// The CAPEM certificate is our best guess at the CA that issued the leaf.
-// IMPORTANT: the CAPEM certificate is only used when the SetCAOnCertificateRequest
-// option is enabled in the controller. This option exists for backwards compatibility
-// only. Use of the CA field and the `ca.crt` field in the resulting Secret is
-// discouraged; the CA should instead be provisioned separately (for example, using trust-manager).
-type PEMBundle pki.PEMBundle
-
-type Sign func(ctx context.Context, cr CertificateRequestObject, issuerObject v1alpha1.Issuer) (PEMBundle, error)
+type Sign func(ctx context.Context, cr CertificateRequestObject, issuerObject v1alpha1.Issuer) SignResult
 type Check func(ctx context.Context, issuerObject v1alpha1.Issuer) error
 
 // IgnoreIssuer is an optional function that can prevent the issuer controllers from
