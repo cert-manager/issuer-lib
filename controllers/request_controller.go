@@ -180,7 +180,7 @@ func (r *RequestController) reconcileStatusPatch(
 
 	// Ignore Request if it has not yet been assigned an approval
 	// status condition by an approval controller.
-	if !requestObjectHelper.IsApproved() && !requestObjectHelper.IsDenied() {
+	if !requestObjectHelper.IsApproved() && !requestObjectHelper.IsDeniedByApprover() {
 		logger.V(1).Info("Request has not been approved or denied. Ignoring.")
 		return result, nil, nil // done
 	}
