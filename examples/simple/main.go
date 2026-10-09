@@ -179,7 +179,7 @@ func run(
 		return fmt.Errorf("unable to start manager: %w", err)
 	}
 
-	if err = (&controller.Signer{}).SetupWithManager(ctx, mgr); err != nil {
+	if err = controller.NewSigner().SetupWithManager(ctx, mgr); err != nil {
 		return fmt.Errorf("unable to create controller: %w", err)
 	}
 	// +kubebuilder:scaffold:builder
