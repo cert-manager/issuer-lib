@@ -45,6 +45,11 @@ func (c *certificateRequestObjectHelper) IsApproved() bool {
 	return cmutil.CertificateRequestIsApproved(c.readOnlyObj)
 }
 
+// IsDeniedByApprover reports whether an approver set the Denied condition
+func (c *certificateRequestObjectHelper) IsDeniedByApprover() bool {
+	return cmutil.CertificateRequestIsDenied(c.readOnlyObj)
+}
+
 func (c *certificateRequestObjectHelper) IsDenied() bool {
 	return cmutil.CertificateRequestHasCondition(c.readOnlyObj, cmapi.CertificateRequestCondition{
 		Type:   cmapi.CertificateRequestConditionReady,
