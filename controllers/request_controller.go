@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -95,11 +96,13 @@ type RequestController struct {
 	requestPredicate           predicate.Predicate
 	matchIssuerType            MatchIssuerType
 	requestObjectHelperCreator RequestObjectHelperCreator
+	authorizeRequest           AuthorizeRequest
 }
 
 type (
 	MatchIssuerType            func(client.Object) (v1alpha1.Issuer, client.ObjectKey, error)
 	RequestObjectHelperCreator func(client.Object) RequestObjectHelper
+	AuthorizeRequest           func(ctx context.Context, request client.Object, issuerObj v1alpha1.Issuer, issuerName client.ObjectKey) error
 )
 
 type IssuerType struct {
@@ -266,6 +269,36 @@ func (r *RequestController) reconcileStatusPatch(
 		}
 	}
 
+	if r.authorizeRequest != nil {
+		if err := r.authorizeRequest(ctx, requestObject, issuerObject, issuerName); err != nil {
+			var denied signer.RequestDeniedError
+			if errors.As(err, &denied) {
+				logger.V(1).Info("Request is not authorized to access the referenced issuer", "reason", denied.Reason, "message", denied.Message)
+
+				statusPatch.SetCustomCondition(
+					string(certificatesv1.CertificateFailed),
+					metav1.ConditionTrue,
+					denied.Reason,
+					denied.Message,
+				)
+
+				return result, statusPatch, reconcile.TerminalError(err) // apply patch, done
+			}
+
+			logger.V(1).Error(err, "Unexpected error while authorizing Request")
+
+			statusPatch.SetUnexpectedError(err)
+
+			if denied.RequeueAfter == time.Duration(0) {
+				result.RequeueAfter = 1 * time.Second
+			} else {
+				result.RequeueAfter = denied.RequeueAfter
+			}
+
+			return result, nil, fmt.Errorf("unexpected error while authorizing Request: %w", err) // requeue with backoff
+		}
+	}
+
 	readyCondition := conditions.GetIssuerStatusCondition(
 		issuerObject.GetConditions(),
 		v1alpha1.IssuerConditionTypeReady,
@@ -410,11 +443,13 @@ func (r *RequestController) Init(
 	requestPredicate predicate.Predicate,
 	matchIssuerType MatchIssuerType,
 	requestObjectHelperCreator RequestObjectHelperCreator,
+	authorizeRequest AuthorizeRequest,
 ) *RequestController {
 	r.requestType = requestType
 	r.requestPredicate = requestPredicate
 	r.matchIssuerType = matchIssuerType
 	r.requestObjectHelperCreator = requestObjectHelperCreator
+	r.authorizeRequest = authorizeRequest
 
 	r.initialised = true
 
