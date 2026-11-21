@@ -22,6 +22,7 @@ import (
 	cmutil "github.com/cert-manager/cert-manager/pkg/api/util"
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
+	"github.com/cert-manager/cert-manager/pkg/util/pki"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/events"
@@ -241,7 +242,7 @@ func (c *certificateRequestPatchHelper) SetPermanentError(err error) {
 	c.eventRecorder.Eventf(c.readOnlyObj, nil, corev1.EventTypeWarning, eventRequestPermanentError, eventActionSyncFailed, message)
 }
 
-func (c *certificateRequestPatchHelper) SetIssued(bundle signer.PEMBundle) {
+func (c *certificateRequestPatchHelper) SetIssued(bundle pki.PEMBundle) {
 	c.patch.Certificate = bundle.ChainPEM
 	if c.setCAOnCertificateRequest {
 		c.patch.CA = bundle.CAPEM
