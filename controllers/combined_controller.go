@@ -83,6 +83,19 @@ type CombinedController struct {
 	// controller.
 	DisableKubernetesCSRController bool
 
+	// EnableNamespacedIssuerCSR lets Kubernetes CSRs use namespaced issuers.
+	// It is disabled by default. It mirrors the experimental CSR support in
+	// cert-manager.
+	//
+	// The signer name format is "<issuer-type-id>/<namespace>.<name>".
+	//
+	// The requester needs the "reference" verb on the "signers" resource in
+	// the issuer's API group and namespace.
+	//
+	// The controller needs the "create" verb on "subjectaccessreviews" in
+	// the "authorization.k8s.io" API group.
+	EnableNamespacedIssuerCSR bool
+
 	// PreSetupWithManager is an optional function that can be used to perform
 	// additional setup before the controller is built and registered with the
 	// manager.
@@ -185,8 +198,9 @@ func (r *CombinedController) SetupWithManager(ctx context.Context, mgr ctrl.Mana
 				PreSetupWithManager:  r.PreSetupWithManager,
 				PostSetupWithManager: r.PostSetupWithManager,
 			},
+			EnableNamespacedIssuerCSR: r.EnableNamespacedIssuerCSR,
 		}).SetupWithManager(ctx, mgr); err != nil {
-			return fmt.Errorf("CertificateRequestReconciler: %w", err)
+			return fmt.Errorf("CertificateSigningRequestReconciler: %w", err)
 		}
 	}
 

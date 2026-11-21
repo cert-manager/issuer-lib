@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strings"
 
+	authzv1 "k8s.io/api/authorization/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -29,11 +30,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
 	v1alpha1 "github.com/cert-manager/issuer-lib/api/v1alpha1"
+	"github.com/cert-manager/issuer-lib/controllers/signer"
 )
 
 // CertificateSigningRequestReconciler reconciles a CertificateSigningRequest object
 type CertificateSigningRequestReconciler struct {
 	RequestController
+
+	EnableNamespacedIssuerCSR bool
 
 	// Allows callers to tune workers, rate limiter, panic recovery, etc.
 	ControllerOptions controller.Options
@@ -69,21 +73,85 @@ func (r *CertificateSigningRequestReconciler) matchIssuerType(requestObject clie
 
 		issuerObject := issuerType.Type.DeepCopyObject().(v1alpha1.Issuer)
 
-		issuerName := types.NamespacedName{
-			Name: issuerIdentifier,
+		if !issuerType.IsNamespaced {
+			return issuerObject, types.NamespacedName{
+				Name: issuerIdentifier,
+			}, nil
 		}
 
-		if issuerType.IsNamespaced {
+		if !r.EnableNamespacedIssuerCSR {
 			return nil, types.NamespacedName{}, fmt.Errorf("invalid SignerName, %q is a namespaced issuer type, namespaced issuers are not supported for Kubernetes CSRs", issuerTypeIdentifier)
 		}
 
-		return issuerObject, issuerName, nil
+		ns, name, ok := strings.Cut(issuerIdentifier, ".")
+
+		if !ok || ns == "" || name == "" {
+			return nil, types.NamespacedName{}, fmt.Errorf("invalid signer name, should have format %s/<namespace>.<name>: %q", issuerTypeIdentifier, csr.Spec.SignerName)
+		}
+
+		return issuerObject, types.NamespacedName{
+			Namespace: ns,
+			Name:      name,
+		}, nil
 	}
 
 	return nil, types.NamespacedName{}, fmt.Errorf("no issuer found for signer name: %q", csr.Spec.SignerName)
 }
 
+func (r *CertificateSigningRequestReconciler) authorizeRequest(ctx context.Context, requestObject client.Object, issuerObj v1alpha1.Issuer, issuerName types.NamespacedName) error {
+	if issuerName.Namespace == "" {
+		return nil
+	}
+
+	csr := requestObject.(*certificatesv1.CertificateSigningRequest)
+
+	extra := make(map[string]authzv1.ExtraValue)
+	for k, v := range csr.Spec.Extra {
+		extra[k] = authzv1.ExtraValue(v)
+	}
+
+	group := issuerObj.GetObjectKind().GroupVersionKind().Group
+
+	for _, name := range []string{issuerName.Name, "*"} {
+		sar := &authzv1.SubjectAccessReview{
+			Spec: authzv1.SubjectAccessReviewSpec{
+				User:   csr.Spec.Username,
+				Groups: csr.Spec.Groups,
+				Extra:  extra,
+				UID:    csr.Spec.UID,
+
+				ResourceAttributes: &authzv1.ResourceAttributes{
+					Group:     group,
+					Resource:  "signers",
+					Verb:      "reference",
+					Namespace: issuerName.Namespace,
+					Name:      name,
+					Version:   "*",
+				},
+			},
+		}
+
+		if err := r.Client.Create(ctx, sar); err != nil {
+			return fmt.Errorf("failed to create SubjectAccessReview for signer %q: %w", csr.Spec.SignerName, err)
+		}
+
+		if sar.Status.Allowed {
+			return nil
+		}
+	}
+
+	return signer.RequestDeniedError{
+		Reason:  "DeniedReference",
+		Message: fmt.Sprintf("Requester may not reference Namespaced Issuer %s/%s", issuerName.Namespace, issuerName.Name),
+	}
+}
+
 func (r *CertificateSigningRequestReconciler) Init() *CertificateSigningRequestReconciler {
+	var authorize AuthorizeRequest
+	if r.EnableNamespacedIssuerCSR {
+		authorize = r.authorizeRequest
+	}
+
 	r.RequestController.Init(
 		&certificatesv1.CertificateSigningRequest{},
 		CertificateSigningRequestPredicate{},
@@ -93,6 +161,7 @@ func (r *CertificateSigningRequestReconciler) Init() *CertificateSigningRequestR
 				readOnlyObj: o.(*certificatesv1.CertificateSigningRequest),
 			}
 		},
+		authorize,
 	)
 
 	return r
@@ -116,5 +185,8 @@ func (r *CertificateSigningRequestReconciler) SetupWithManager(ctx context.Conte
 }
 
 func setupCertificateSigningRequestReconcilerScheme(scheme *runtime.Scheme) error {
-	return certificatesv1.AddToScheme(scheme)
+	if err := certificatesv1.AddToScheme(scheme); err != nil {
+		return err
+	}
+	return authzv1.AddToScheme(scheme)
 }
