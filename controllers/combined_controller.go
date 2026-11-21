@@ -200,7 +200,7 @@ func (r *CombinedController) SetupWithManager(ctx context.Context, mgr ctrl.Mana
 			},
 			EnableNamespacedIssuerCSR: r.EnableNamespacedIssuerCSR,
 		}).SetupWithManager(ctx, mgr); err != nil {
-			return fmt.Errorf("CertificateRequestReconciler: %w", err)
+			return fmt.Errorf("CertificateSigningRequestReconciler: %w", err)
 		}
 	}
 
