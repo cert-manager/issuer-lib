@@ -148,6 +148,16 @@ func TestCertificateSigningRequestNamespacedIssuerAuthorization(t *testing.T) { 
 			expectCertificate: true,
 		},
 		{
+			name: "allowed-with-reference-permission-for-wildcard-name",
+			referenceRule: &rbacv1.PolicyRule{
+				APIGroups:     []string{api.SchemeGroupVersion.Group},
+				Resources:     []string{"signers"},
+				Verbs:         []string{"reference"},
+				ResourceNames: []string{"*"},
+			},
+			expectCertificate: true,
+		},
+		{
 			name: "denied-with-reference-permission-for-other-issuer-name",
 			referenceRule: &rbacv1.PolicyRule{
 				APIGroups:     []string{api.SchemeGroupVersion.Group},
