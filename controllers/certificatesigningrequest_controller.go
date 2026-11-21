@@ -24,6 +24,7 @@ import (
 	authzv1 "k8s.io/api/authorization/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -98,7 +99,7 @@ func (r *CertificateSigningRequestReconciler) matchIssuerType(requestObject clie
 	return nil, types.NamespacedName{}, fmt.Errorf("no issuer found for signer name: %q", csr.Spec.SignerName)
 }
 
-func (r *CertificateSigningRequestReconciler) authorizeRequest(ctx context.Context, requestObject client.Object, issuerObj v1alpha1.Issuer, issuerName types.NamespacedName) error {
+func (r *CertificateSigningRequestReconciler) authorizeRequest(ctx context.Context, requestObject client.Object, issuerGvk schema.GroupVersionKind, issuerName types.NamespacedName) error {
 	if issuerName.Namespace == "" {
 		return nil
 	}
@@ -110,7 +111,9 @@ func (r *CertificateSigningRequestReconciler) authorizeRequest(ctx context.Conte
 		extra[k] = authzv1.ExtraValue(v)
 	}
 
-	group := issuerObj.GetObjectKind().GroupVersionKind().Group
+	// Use the GVK captured from the registered issuer type. A typed object that
+	// went through a client Get may have an empty TypeMeta.
+	group := issuerGvk.Group
 
 	for _, name := range []string{issuerName.Name, "*"} {
 		sar := &authzv1.SubjectAccessReview{

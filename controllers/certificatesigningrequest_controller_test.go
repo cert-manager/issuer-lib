@@ -211,6 +211,27 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			},
 		},
 
+		// Gate on, Issuer missing: the Issuer Get (and IgnoreIssuer) run before
+		// authorization, so the result is WaitingForIssuerExist and no SAR is
+		// created. This mirrors cert-manager's CSR controller and ensures we never
+		// mark a request Failed for an Issuer this controller does not own.
+		{
+			name:                      "namespaced-issuer-missing-skips-authorization",
+			enableNamespacedIssuerCSR: true,
+			// Empty map: any SAR call fails the test via the fake client interceptor.
+			sarAllowed: map[string]bool{},
+			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, error) {
+				panic("Sign must not be called when the Issuer is missing")
+			},
+			objects: []client.Object{crNs},
+			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
+				Conditions: nil,
+			},
+			expectedEvents: []string{
+				"Normal WaitingForIssuerExist testissuers.testing.cert-manager.io \"issuer-1\" not found. Waiting for it to be created.",
+			},
+		},
+
 		// Ignore CertificateSigningRequest with an unknown SignerName group.
 		{
 			name: "issuer-ref-unknown-group",
@@ -868,6 +889,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 						assert.Equal(t, "uid-alice", sar.Spec.UID)
 						require.NotNil(t, sar.Spec.ResourceAttributes)
 
+						assert.Equal(t, "testing.cert-manager.io", sar.Spec.ResourceAttributes.Group)
 						assert.Equal(t, "signers", sar.Spec.ResourceAttributes.Resource)
 						assert.Equal(t, "reference", sar.Spec.ResourceAttributes.Verb)
 						assert.Equal(t, "ns1", sar.Spec.ResourceAttributes.Namespace)

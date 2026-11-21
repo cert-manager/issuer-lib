@@ -102,7 +102,7 @@ type RequestController struct {
 type (
 	MatchIssuerType            func(client.Object) (v1alpha1.Issuer, client.ObjectKey, error)
 	RequestObjectHelperCreator func(client.Object) RequestObjectHelper
-	AuthorizeRequest           func(ctx context.Context, request client.Object, issuerObj v1alpha1.Issuer, issuerName client.ObjectKey) error
+	AuthorizeRequest           func(ctx context.Context, request client.Object, issuerGvk schema.GroupVersionKind, issuerName client.ObjectKey) error
 )
 
 type IssuerType struct {
@@ -270,9 +270,10 @@ func (r *RequestController) reconcileStatusPatch(
 	}
 
 	if r.authorizeRequest != nil {
-		if err := r.authorizeRequest(ctx, requestObject, issuerObject, issuerName); err != nil {
+		if err := r.authorizeRequest(ctx, requestObject, issuerGvk, issuerName); err != nil {
 			var denied signer.RequestDeniedError
-			if errors.As(err, &denied) {
+			var ok bool
+			if denied, ok = errors.AsType[signer.RequestDeniedError](err); ok {
 				logger.V(1).Info("Request is not authorized to access the referenced issuer", "reason", denied.Reason, "message", denied.Message)
 
 				statusPatch.SetCustomCondition(
@@ -288,12 +289,6 @@ func (r *RequestController) reconcileStatusPatch(
 			logger.V(1).Error(err, "Unexpected error while authorizing Request")
 
 			statusPatch.SetUnexpectedError(err)
-
-			if denied.RequeueAfter == time.Duration(0) {
-				result.RequeueAfter = 1 * time.Second
-			} else {
-				result.RequeueAfter = denied.RequeueAfter
-			}
 
 			return result, nil, fmt.Errorf("unexpected error while authorizing Request: %w", err) // requeue with backoff
 		}
