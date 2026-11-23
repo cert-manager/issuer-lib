@@ -29,6 +29,7 @@ import (
 	logrtesting "github.com/go-logr/logr/testing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	authzv1 "k8s.io/api/authorization/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,6 +40,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/cert-manager/issuer-lib/api/v1alpha1"
@@ -56,13 +58,16 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 	fieldOwner := "test-certificate-request-reconciler-reconcile"
 
 	type testCase struct {
-		name                string
-		sign                signer.Sign
-		objects             []client.Object
-		validateError       *errormatch.Matcher
-		expectedResult      reconcile.Result
-		expectedStatusPatch *certificatesv1.CertificateSigningRequestStatus
-		expectedEvents      []string
+		name                      string
+		sign                      signer.Sign
+		objects                   []client.Object
+		validateError             *errormatch.Matcher
+		expectedResult            reconcile.Result
+		expectedStatusPatch       *certificatesv1.CertificateSigningRequestStatus
+		expectedEvents            []string
+		enableNamespacedIssuerCSR bool
+		sarAllowed                map[string]bool
+		sarError                  error
 	}
 
 	randTime := randomTime()
@@ -116,6 +121,14 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 		},
 	)
 
+	crNs := cmgen.CertificateSigningRequestFrom(
+		cr1,
+		cmgen.SetCertificateSigningRequestSignerName(fmt.Sprintf("%s/%s.%s", issuer1.GetIssuerTypeIdentifier(), issuer1.Namespace, issuer1.Name)),
+		cmgen.SetCertificateSigningRequestUsername("alice"),
+		cmgen.SetCertificateSigningRequestGroups([]string{"system:authenticated"}),
+		cmgen.SetCertificateSigningRequestUID("uid-alice"),
+	)
+
 	successSigner := func(cert string) signer.Sign {
 		return func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, error) {
 			return signer.PEMBundle{
@@ -141,6 +154,81 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 				cmgen.CertificateSigningRequestFrom(cr1, func(cr *certificatesv1.CertificateSigningRequest) {
 					cr.Status.Conditions = nil
 				}),
+			},
+		},
+
+		// Gate on, requester allowed by exact name: signs
+		{
+			name:                      "namespaced-issuer-allowed-by-name",
+			enableNamespacedIssuerCSR: true,
+			sarAllowed:                map[string]bool{"issuer-1": true, "*": false},
+			sign:                      successSigner("a-signed-certificate"),
+			objects:                   []client.Object{crNs, issuer1},
+			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
+				Certificate: []byte("a-signed-certificate"),
+			},
+			expectedEvents: []string{
+				"Normal Issued Succeeded signing the CertificateSigningRequest",
+			},
+		},
+
+		// Gate on, requester allowed only by wildcard: signs.
+		{
+			name:                      "namespaced-issuer-allowed-by-wildcard",
+			enableNamespacedIssuerCSR: true,
+			sarAllowed:                map[string]bool{"issuer-1": false, "*": true},
+			sign:                      successSigner("a-signed-certificate"),
+			objects:                   []client.Object{crNs, issuer1},
+			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
+				Certificate: []byte("a-signed-certificate"),
+			},
+			expectedEvents: []string{
+				"Normal Issued Succeeded signing the CertificateSigningRequest",
+			},
+		},
+
+		// Gate on, requester denied: terminal Failed with DeniedReference, no sign call.
+		{
+			name:                      "namespaced-issuer-denied-reference",
+			enableNamespacedIssuerCSR: true,
+			sarAllowed:                map[string]bool{"issuer-1": false, "*": false},
+			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, error) {
+				panic("Sign must not be called when the requester is denied")
+			},
+			objects:       []client.Object{crNs, issuer1},
+			validateError: errormatch.ErrorContains("terminal error: Requester may not reference Namespaced Issuer ns1/issuer-1"),
+			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
+				Conditions: []certificatesv1.CertificateSigningRequestCondition{
+					{
+						Type:               certificatesv1.CertificateFailed,
+						Status:             v1.ConditionTrue,
+						Reason:             "DeniedReference",
+						Message:            "Requester may not reference Namespaced Issuer ns1/issuer-1",
+						LastTransitionTime: fakeTimeObj2,
+						LastUpdateTime:     fakeTimeObj2,
+					},
+				},
+			},
+		},
+
+		// Gate on, Issuer missing: the Issuer Get (and IgnoreIssuer) run before
+		// authorization, so the result is WaitingForIssuerExist and no SAR is
+		// created. This mirrors cert-manager's CSR controller and ensures we never
+		// mark a request Failed for an Issuer this controller does not own.
+		{
+			name:                      "namespaced-issuer-missing-skips-authorization",
+			enableNamespacedIssuerCSR: true,
+			// Empty map: any SAR call fails the test via the fake client interceptor.
+			sarAllowed: map[string]bool{},
+			sign: func(_ context.Context, _ signer.CertificateRequestObject, _ v1alpha1.Issuer) (signer.PEMBundle, error) {
+				panic("Sign must not be called when the Issuer is missing")
+			},
+			objects: []client.Object{crNs},
+			expectedStatusPatch: &certificatesv1.CertificateSigningRequestStatus{
+				Conditions: nil,
+			},
+			expectedEvents: []string{
+				"Normal WaitingForIssuerExist testissuers.testing.cert-manager.io \"issuer-1\" not found. Waiting for it to be created.",
 			},
 		},
 
@@ -784,6 +872,34 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().
 				WithScheme(scheme).
 				WithObjects(tc.objects...).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Create: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+						sar, ok := obj.(*authzv1.SubjectAccessReview)
+
+						if !ok {
+							return client.Create(ctx, obj, opts...)
+						}
+
+						if tc.sarError != nil {
+							return tc.sarError
+						}
+
+						assert.Equal(t, "alice", sar.Spec.User)
+						assert.Equal(t, []string{"system:authenticated"}, sar.Spec.Groups)
+						assert.Equal(t, "uid-alice", sar.Spec.UID)
+						require.NotNil(t, sar.Spec.ResourceAttributes)
+
+						assert.Equal(t, "testing.cert-manager.io", sar.Spec.ResourceAttributes.Group)
+						assert.Equal(t, "signers", sar.Spec.ResourceAttributes.Resource)
+						assert.Equal(t, "reference", sar.Spec.ResourceAttributes.Verb)
+						assert.Equal(t, "ns1", sar.Spec.ResourceAttributes.Namespace)
+
+						allowed, ok := tc.sarAllowed[sar.Spec.ResourceAttributes.Name]
+						require.True(t, ok, "unexpected SAR for resource name %q", sar.Spec.ResourceAttributes.Name)
+						sar.Status.Allowed = allowed
+						return nil
+					},
+				}).
 				Build()
 
 			req := reconcile.Request{
@@ -812,6 +928,7 @@ func TestCertificateSigningRequestReconcilerReconcile(t *testing.T) {
 					EventRecorder:      fakeRecorder,
 					Clock:              fakeClock2,
 				},
+				EnableNamespacedIssuerCSR: tc.enableNamespacedIssuerCSR,
 			}).Init()
 
 			err = controller.setAllIssuerTypesWithGroupVersionKind(scheme)
@@ -843,9 +960,10 @@ func TestCertificateSigningRequestMatchIssuerType(t *testing.T) {
 	type testcase struct {
 		name string
 
-		issuerTypes        []v1alpha1.Issuer
-		clusterIssuerTypes []v1alpha1.Issuer
-		csr                *certificatesv1.CertificateSigningRequest
+		issuerTypes               []v1alpha1.Issuer
+		clusterIssuerTypes        []v1alpha1.Issuer
+		csr                       *certificatesv1.CertificateSigningRequest
+		enableNamespacedIssuerCSR bool
 
 		expectedIssuerType v1alpha1.Issuer
 		expectedIssuerName types.NamespacedName
@@ -892,7 +1010,7 @@ func TestCertificateSigningRequestMatchIssuerType(t *testing.T) {
 			expectedError:      errormatch.ErrorContains("no issuer found for signer name: \"aaaaa.testing.cert-manager.io/namespace.name\""),
 		},
 		{
-			name:               "match issuer",
+			name:               "namespaced issuer rejected when gate off",
 			issuerTypes:        []v1alpha1.Issuer{&api.TestIssuer{}},
 			clusterIssuerTypes: []v1alpha1.Issuer{&api.TestClusterIssuer{}},
 			csr:                createCsr("testissuers.testing.cert-manager.io/namespace.name"),
@@ -900,6 +1018,16 @@ func TestCertificateSigningRequestMatchIssuerType(t *testing.T) {
 			expectedIssuerType: nil,
 			expectedIssuerName: types.NamespacedName{},
 			expectedError:      errormatch.ErrorContains("invalid SignerName, \"testissuers.testing.cert-manager.io\" is a namespaced issuer type, namespaced issuers are not supported for Kubernetes CSRs"),
+		},
+		{
+			name:                      "match issuer with namespace",
+			enableNamespacedIssuerCSR: true,
+			issuerTypes:               []v1alpha1.Issuer{&api.TestIssuer{}},
+			clusterIssuerTypes:        []v1alpha1.Issuer{&api.TestClusterIssuer{}},
+			csr:                       createCsr("testissuers.testing.cert-manager.io/namespace.name"),
+
+			expectedIssuerType: &api.TestIssuer{},
+			expectedIssuerName: types.NamespacedName{Namespace: "namespace", Name: "name"},
 		},
 		{
 			name:               "match cluster issuer",
@@ -942,6 +1070,7 @@ func TestCertificateSigningRequestMatchIssuerType(t *testing.T) {
 					IssuerTypes:        tc.issuerTypes,
 					ClusterIssuerTypes: tc.clusterIssuerTypes,
 				},
+				EnableNamespacedIssuerCSR: tc.enableNamespacedIssuerCSR,
 			}
 
 			require.NoError(t, crr.setAllIssuerTypesWithGroupVersionKind(scheme))

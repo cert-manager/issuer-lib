@@ -114,6 +114,7 @@ func (r *CertificateRequestReconciler) Init() *CertificateRequestReconciler {
 				setCAOnCertificateRequest: r.SetCAOnCertificateRequest,
 			}
 		},
+		nil,
 	)
 
 	return r

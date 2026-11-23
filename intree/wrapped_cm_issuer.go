@@ -45,7 +45,7 @@ func (i *CMIssuer) GetConditions() (conditions []metav1.Condition) {
 }
 
 func (i *CMIssuer) GetIssuerTypeIdentifier() string {
-	return "cmissuers.issuer.cert-manager.io"
+	return "issuers.cert-manager.io"
 }
 
 func (i *CMIssuer) Unwrap() client.Object {
