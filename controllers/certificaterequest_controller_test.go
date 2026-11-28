@@ -267,6 +267,38 @@ func TestCertificateRequestReconcilerReconcile(t *testing.T) {
 			},
 		},
 
+		// If denied before the issuer has added any conditions, set Ready condition status to
+		// false and reason to denied.
+		{
+			name: "set-ready-denied-without-approved-or-ready",
+			objects: []client.Object{
+				cmgen.CertificateRequestFrom(cr1,
+					func(cr *cmapi.CertificateRequest) {
+						cr.Status.Conditions = nil
+					},
+					cmgen.SetCertificateRequestStatusCondition(cmapi.CertificateRequestCondition{
+						Type:   cmapi.CertificateRequestConditionDenied,
+						Status: cmmeta.ConditionTrue,
+					}),
+				),
+			},
+			expectedStatusPatch: &cmapi.CertificateRequestStatus{
+				Conditions: []cmapi.CertificateRequestCondition{
+					{
+						Type:               cmapi.CertificateRequestConditionReady,
+						Status:             cmmeta.ConditionFalse,
+						Reason:             cmapi.CertificateRequestReasonDenied,
+						Message:            "Detected that the CertificateRequest is denied, so it will never be Ready.",
+						LastTransitionTime: &fakeTimeObj2,
+					},
+				},
+				FailureTime: &fakeTimeObj2,
+			},
+			expectedEvents: []string{
+				"Warning PermanentError Detected that the CertificateRequest is denied, so it will never be Ready.",
+			},
+		},
+
 		// If issuer is missing, set Ready condition status to false and reason to pending.
 		{
 			name: "set-ready-pending-missing-issuer",
